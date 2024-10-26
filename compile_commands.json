@@ -1,0 +1,34 @@
+[
+  {
+    "arguments": [
+      "/opt/homebrew/opt/llvm/bin/clang",
+      "-Wall",
+      "-Wextra",
+      "-g",
+      "-I./include/",
+      "-c",
+      "-o",
+      "build//hello.o",
+      "src//hello.c"
+    ],
+    "directory": "/Users/michaelshepherd/Documents/C/MGS-Lang",
+    "file": "/Users/michaelshepherd/Documents/C/MGS-Lang/src/hello.c",
+    "output": "/Users/michaelshepherd/Documents/C/MGS-Lang/build/hello.o"
+  },
+  {
+    "arguments": [
+      "/opt/homebrew/opt/llvm/bin/clang",
+      "-Wall",
+      "-Wextra",
+      "-g",
+      "-I./include/",
+      "-c",
+      "-o",
+      "build//main.o",
+      "src//main.c"
+    ],
+    "directory": "/Users/michaelshepherd/Documents/C/MGS-Lang",
+    "file": "/Users/michaelshepherd/Documents/C/MGS-Lang/src/main.c",
+    "output": "/Users/michaelshepherd/Documents/C/MGS-Lang/build/main.o"
+  }
+]

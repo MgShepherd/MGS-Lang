@@ -1,3 +1,4 @@
 (executable
  (public_name MGSLang)
- (name main))
+ (name main)
+ (modules main lexer))

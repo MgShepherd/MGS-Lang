@@ -1,12 +1,4 @@
-type token_type = T_OPERATOR | T_VALUE | T_TYPE | T_SEMI | T_BRACKET
-type token = { value : string; t_type : token_type }
-
-let token_type_to_str = function
-  | T_OPERATOR -> "Operator"
-  | T_VALUE -> "Value"
-  | T_TYPE -> "Type"
-  | T_SEMI -> "Semicolon"
-  | T_BRACKET -> "Bracket"
+open Token
 
 let get_token_string token = String.of_seq (List.to_seq (List.rev token))
 
@@ -46,10 +38,4 @@ let rec process_tokens tokens acc_token file =
     | x -> process_tokens tokens (x :: acc_token) file
   with _ -> tokens
 
-let rec display_tokens = function
-  | [] -> ()
-  | x :: xs ->
-      print_endline (x.value ^ " " ^ token_type_to_str x.t_type);
-      display_tokens xs
-
-let process_file file = display_tokens (List.rev (process_tokens [] [] file))
+let process_file file = List.rev (process_tokens [] [] file)

@@ -1,4 +1,4 @@
 (executable
  (public_name MGSLang)
  (name main)
- (modules main token lexer syntax))
+ (modules main token lexer parse_tree))

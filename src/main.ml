@@ -10,15 +10,10 @@ let () =
     print_endline "\nParse Tree output:";
     display_tree
       (Node
-         ( { t_type = T_DIGIT; value = '1' },
+         ( T_DIGIT 1,
            [
-             Node
-               ( { t_type = T_DIGIT; value = '9' },
-                 [
-                   Leaf { t_type = T_DIGIT; value = '7' };
-                   Leaf { t_type = T_DIGIT; value = '4' };
-                 ] );
-             Leaf { t_type = T_OPERATOR; value = '+' };
+             Node (T_DIGIT 9, [ Leaf (T_DIGIT 7); Leaf (T_DIGIT 4) ]);
+             Leaf T_ADD;
            ] ));
     close_in file
   with e ->

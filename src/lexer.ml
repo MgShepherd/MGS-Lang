@@ -3,8 +3,9 @@ open Token
 let parse_token token =
   match token with
   | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '0' ->
-      { value = token; t_type = T_DIGIT }
-  | '+' | '-' | '*' | '/' -> { value = token; t_type = T_OPERATOR }
+      T_DIGIT (int_of_char token)
+  | '+' -> T_ADD
+  | '=' -> T_EQUALS
   | _ -> raise (Failure "Unknown token type")
 
 let rec process_tokens tokens file =

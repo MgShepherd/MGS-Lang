@@ -1,5 +1,16 @@
 open Token
 
+(***
+     Language Context Free Grammar:
+     Start Symbol: Expression
+     Non Terminals: Expression, Operator, Digit
+
+     Production Rules:
+     <Expression> ::= <Digit><Operator><Digit>
+     <Digit> ::= 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9
+     <Operator> ::= + | - | / | *
+  ***)
+
 type parse_node = Leaf of token | Node of token * parse_node list
 
 let rec display_tree_aux indent = function

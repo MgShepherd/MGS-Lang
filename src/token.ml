@@ -1,10 +1,9 @@
-type token_type = T_DIGIT | T_OPERATOR
-type token = { value : char; t_type : token_type }
+type token = T_EQUALS | T_ADD | T_DIGIT of int
 
-let token_type_to_str = function T_OPERATOR -> "Operator" | T_DIGIT -> "Digit"
-
-let print_token x =
-  Printf.printf "(%s: %c)" (token_type_to_str x.t_type) x.value
+let print_token = function
+  | T_EQUALS -> print_endline "="
+  | T_ADD -> print_endline "+"
+  | T_DIGIT x -> Printf.printf "%d" x
 
 let rec display_tokens = function
   | [] -> ()

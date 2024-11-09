@@ -1,20 +1,14 @@
 let file_name = "examples/basic.mgs"
 
-open Token
-open Parse_tree
+open Parser
 
 let () =
   let file = open_in file_name in
   try
-    display_tokens (Lexer.process_file file);
+    let tokens = Lexer.process_file file in
     print_endline "\nParse Tree output:";
-    display_tree
-      (Node
-         ( T_DIGIT 1,
-           [
-             Node (T_DIGIT 9, [ Leaf (T_DIGIT 7); Leaf (T_DIGIT 4) ]);
-             Leaf T_ADD;
-           ] ));
+    let tree = create_tree tokens in
+    display_tree tree;
     close_in file
   with e ->
     close_in_noerr file;

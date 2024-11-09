@@ -3,7 +3,7 @@ open Token
 let parse_token token =
   match token with
   | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '0' ->
-      T_DIGIT (int_of_char token)
+      T_DIGIT (int_of_char token - int_of_char '0')
   | '+' -> T_ADD
   | '=' -> T_EQUALS
   | _ -> raise (Failure "Unknown token type")

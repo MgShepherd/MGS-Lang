@@ -1,12 +1,12 @@
 type token = T_EQUALS | T_ADD | T_DIGIT of int
 
-let print_token = function
-  | T_EQUALS -> print_endline "="
-  | T_ADD -> print_endline "+"
-  | T_DIGIT x -> Printf.printf "%d" x
+let get_token_string = function
+  | T_EQUALS -> "="
+  | T_ADD -> "+"
+  | T_DIGIT x -> Printf.sprintf "%d" x
 
 let rec display_tokens = function
   | [] -> ()
   | x :: xs ->
-      print_token x;
+      Printf.printf "%s" (get_token_string x);
       display_tokens xs

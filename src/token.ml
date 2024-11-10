@@ -1,9 +1,10 @@
-type token = T_EQUALS | T_ADD | T_DIGIT of int
+type token = T_EQUALS | T_ADD | T_DIGIT of int | T_SEMI
 
 let get_token_string = function
   | T_EQUALS -> "="
   | T_ADD -> "+"
   | T_DIGIT x -> Printf.sprintf "%d" x
+  | T_SEMI -> ";"
 
 let rec display_tokens = function
   | [] -> ()

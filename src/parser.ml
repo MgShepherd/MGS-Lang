@@ -24,15 +24,16 @@ let unprocessable_token_error token =
   in
   raise (Failure error_message)
 
-let parse_expression = function
-  | [ T_DIGIT x; T_ADD; T_DIGIT y ] ->
-      ExprAdd (ExprToken (T_DIGIT x), ExprToken (T_DIGIT y))
-  | [] -> raise (Failure "Invalid Empty Statement\n")
-  | x :: _ -> unprocessable_token_error x
+let rec parse_expression left = function
+  | T_ADD :: xs ->
+      ExprAdd (parse_expression [] (List.rev left), parse_expression [] xs)
+  | [ T_DIGIT x ] -> ExprToken (T_DIGIT x)
+  | x :: xs -> parse_expression (x :: left) xs
+  | [] -> raise (Failure "Some tokens have not been fully processed\n")
 
 let rec parse_program current_expr = function
   | T_SEMI :: xs ->
-      parse_expression (List.rev current_expr) :: parse_program [] xs
+      parse_expression [] (List.rev current_expr) :: parse_program [] xs
   | x :: xs -> parse_program (x :: current_expr) xs
   | [] ->
       if List.length current_expr = 0 then []
@@ -42,12 +43,13 @@ let create_tree tokens = ExprProgram (parse_program [] tokens)
 
 let rec display_tree_aux indent = function
   | ExprProgram elements ->
-      Printf.printf "Program ->\n";
-      List.iter (fun x -> display_tree_aux "\t" x) elements
-  | ExprAdd (ExprToken x, ExprToken y) ->
-      Printf.printf "%s+ -> %s %s\n" indent (get_token_string x)
-        (get_token_string y)
-  | ExprToken x -> Printf.printf "%s\n" (get_token_string x)
-  | _ -> ()
+      Printf.printf "Program ->";
+      List.iter (fun x -> display_tree_aux "\t" x) elements;
+      print_endline ""
+  | ExprAdd (x, y) ->
+      Printf.printf "\n%sExprAdd -> " indent;
+      display_tree_aux ("\t" ^ indent) x;
+      display_tree_aux ("\t" ^ indent) y
+  | ExprToken x -> Printf.printf "%s " (get_token_string x)
 
 let display_tree tree = display_tree_aux "" tree

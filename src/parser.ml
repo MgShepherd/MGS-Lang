@@ -22,7 +22,12 @@ let rec parse_tokens = function
       ExprAdd (ExprToken (T_DIGIT x), ExprToken (T_DIGIT y))
       :: parse_tokens remaining
   | [] -> []
-  | _ -> raise (Failure "Unprocessable tokens")
+  | x :: _ ->
+      let error_message =
+        Printf.sprintf "Parser Error: Unprocessable Token: %s\n"
+          (get_token_string x)
+      in
+      raise (Failure error_message)
 
 let create_tree tokens = ExprProgram (parse_tokens tokens)
 

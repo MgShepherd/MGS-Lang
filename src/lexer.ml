@@ -6,7 +6,11 @@ let parse_token token =
       T_DIGIT (int_of_char token - int_of_char '0')
   | '+' -> T_ADD
   | '=' -> T_EQUALS
-  | _ -> raise (Failure "Unknown token type")
+  | x ->
+      let error_message =
+        Printf.sprintf "Lexer Error: Unknown Token Type %c\n" x
+      in
+      raise (Failure error_message)
 
 let rec process_tokens tokens file =
   let char = input_char file in
@@ -14,6 +18,8 @@ let rec process_tokens tokens file =
     match char with
     | '\n' | ' ' -> process_tokens tokens file
     | x -> process_tokens (parse_token x :: tokens) file
-  with _ -> tokens
+  with
+  | End_of_file -> tokens
+  | e -> raise e
 
 let process_file file = List.rev (process_tokens [] file)

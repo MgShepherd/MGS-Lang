@@ -6,6 +6,8 @@ let parse_token token =
       T_DIGIT (int_of_char token - int_of_char '0')
   | '+' -> T_ADD
   | ';' -> T_SEMI
+  | '(' -> T_OPEN_PAREN
+  | ')' -> T_CLOSE_PAREN
   | x ->
       let error_message =
         Printf.sprintf "Lexer Error: Unknown Token Type %c\n" x

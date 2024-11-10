@@ -24,24 +24,42 @@ let unprocessable_token_error token =
   in
   raise (Failure error_message)
 
-let rec parse_expression prev = function
+let rec parse_expression prev nesting = function
+  | T_OPEN_PAREN :: xs ->
+      let result, remaining =
+        parse_expression None (T_OPEN_PAREN :: nesting) xs
+      in
+      parse_expression (Some result) nesting remaining
+  | T_CLOSE_PAREN :: xs -> (
+      match prev with
+      | None -> raise (Failure "Empty Paratheses\n")
+      | Some x -> (
+          match nesting with
+          | T_OPEN_PAREN :: _ -> (x, xs)
+          | _ -> raise (Failure "Unbalanced Parentheses\n")))
   | T_DIGIT x :: xs -> (
       match prev with
-      | None -> parse_expression (Some (ExprToken (T_DIGIT x))) xs
-      | Some _ -> raise (Failure "Unproccessed Elements\n"))
+      | Some _ -> raise (Failure "Invalid digit location\n")
+      | None -> parse_expression (Some (ExprToken (T_DIGIT x))) nesting xs)
   | T_ADD :: xs -> (
       match prev with
-      | Some x -> ExprAdd (x, parse_expression None xs)
-      | None -> raise (Failure "No left operand of addition\n"))
+      | None -> raise (Failure "Invalid addition operator\n")
+      | Some left ->
+          let right, remaining = parse_expression None nesting xs in
+          (ExprAdd (left, right), remaining))
   | [] -> (
       match prev with
-      | Some (ExprToken x) -> ExprToken x
-      | _ -> raise (Failure "Unprocessed Elements\n"))
-  | _ -> raise (Failure "Unrecogonised Token\n")
+      | Some x -> (x, [])
+      | _ -> raise (Failure "Unproccessed Elements\n"))
+  | _ -> raise (Failure "Unrecognised Token\n")
 
 let rec parse_program current_expr = function
   | T_SEMI :: xs ->
-      parse_expression None (List.rev current_expr) :: parse_program [] xs
+      let result, remaining =
+        parse_expression None [] (List.rev current_expr)
+      in
+      if remaining = [] then result :: parse_program [] xs
+      else raise (Failure "Not all tokens processed\n")
   | x :: xs -> parse_program (x :: current_expr) xs
   | [] ->
       if List.length current_expr = 0 then []
@@ -51,13 +69,16 @@ let create_tree tokens = ExprProgram (parse_program [] tokens)
 
 let rec display_tree_aux indent = function
   | ExprProgram elements ->
-      Printf.printf "Program ->";
+      Printf.printf "Program ->\n\t";
       List.iter (fun x -> display_tree_aux "\t" x) elements;
       print_endline ""
   | ExprAdd (x, y) ->
-      Printf.printf "\n%sExprAdd -> " indent;
-      display_tree_aux ("\t" ^ indent) x;
-      display_tree_aux ("\t" ^ indent) y
+      let new_indent = "\t" ^ indent in
+      Printf.printf "ExprAdd ->\n%s" new_indent;
+      display_tree_aux new_indent x;
+      Printf.printf "\n%s" new_indent;
+      display_tree_aux new_indent y;
+      print_endline ""
   | ExprToken x -> Printf.printf "%s " (get_token_string x)
 
 let display_tree tree = display_tree_aux "" tree

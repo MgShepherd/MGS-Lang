@@ -5,7 +5,6 @@ let parse_token token =
   | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '0' ->
       T_DIGIT (int_of_char token - int_of_char '0')
   | '+' -> T_ADD
-  | '=' -> T_EQUALS
   | ';' -> T_SEMI
   | x ->
       let error_message =

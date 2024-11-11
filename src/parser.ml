@@ -14,7 +14,7 @@ open Token
 
 type expr =
   | ExprProgram of expr list
-  | ExprAdd of expr * expr
+  | ExprArithmetic of token * expr * expr
   | ExprToken of token
 
 let unprocessable_token_error token =
@@ -24,33 +24,41 @@ let unprocessable_token_error token =
   in
   raise (Failure error_message)
 
-let rec parse_expression prev nesting = function
-  | T_OPEN_PAREN :: xs ->
-      let result, remaining =
-        parse_expression None (T_OPEN_PAREN :: nesting) xs
-      in
-      parse_expression (Some result) nesting remaining
-  | T_CLOSE_PAREN :: xs -> (
-      match prev with
-      | None -> raise (Failure "Empty Paratheses\n")
-      | Some x -> (
-          match nesting with
-          | T_OPEN_PAREN :: _ -> (x, xs)
-          | _ -> raise (Failure "Unbalanced Parentheses\n")))
-  | T_DIGIT x :: xs -> (
-      match prev with
-      | Some _ -> raise (Failure "Invalid digit location\n")
-      | None -> parse_expression (Some (ExprToken (T_DIGIT x))) nesting xs)
-  | T_ADD :: xs -> (
-      match prev with
-      | None -> raise (Failure "Invalid addition operator\n")
-      | Some left ->
-          let right, remaining = parse_expression None nesting xs in
-          (ExprAdd (left, right), remaining))
-  | [] -> (
-      match prev with
-      | Some x -> (x, [])
-      | _ -> raise (Failure "Unproccessed Elements\n"))
+let rec parse_open_paren nesting xs =
+  let result, remaining = parse_expression None (T_OPEN_PAREN :: nesting) xs in
+  parse_expression (Some result) nesting remaining
+
+and parse_close_paren prev nesting xs =
+  match prev with
+  | None -> raise (Failure "Empty Paratheses\n")
+  | Some x -> (
+      match nesting with
+      | T_OPEN_PAREN :: _ -> (x, xs)
+      | _ -> raise (Failure "Unbalanced Parentheses\n"))
+
+and parse_digit x prev nesting xs =
+  match prev with
+  | Some _ -> raise (Failure "Invalid digit location\n")
+  | None -> parse_expression (Some (ExprToken (T_DIGIT x))) nesting xs
+
+and parse_arithmetic x prev nesting xs =
+  match prev with
+  | None -> raise (Failure "Invalid addition operator\n")
+  | Some left ->
+      let right, remaining = parse_expression None nesting xs in
+      (ExprArithmetic (T_ARITHMETIC x, left, right), remaining)
+
+and handle_empty_tokens prev =
+  match prev with
+  | Some x -> (x, [])
+  | _ -> raise (Failure "Unproccessed Elements\n")
+
+and parse_expression prev nesting = function
+  | T_OPEN_PAREN :: xs -> parse_open_paren nesting xs
+  | T_CLOSE_PAREN :: xs -> parse_close_paren prev nesting xs
+  | T_DIGIT x :: xs -> parse_digit x prev nesting xs
+  | T_ARITHMETIC x :: xs -> parse_arithmetic x prev nesting xs
+  | [] -> handle_empty_tokens prev
   | _ -> raise (Failure "Unrecognised Token\n")
 
 let rec parse_program current_expr = function
@@ -72,13 +80,14 @@ let rec display_tree_aux indent = function
       Printf.printf "Program ->\n\t";
       List.iter (fun x -> display_tree_aux "\t" x) elements;
       print_endline ""
-  | ExprAdd (x, y) ->
+  | ExprArithmetic (T_ARITHMETIC op, x, y) ->
       let new_indent = "\t" ^ indent in
-      Printf.printf "ExprAdd ->\n%s" new_indent;
+      Printf.printf "Arithmetic %c ->\n%s" op new_indent;
       display_tree_aux new_indent x;
       Printf.printf "\n%s" new_indent;
       display_tree_aux new_indent y;
       print_endline ""
   | ExprToken x -> Printf.printf "%s " (get_token_string x)
+  | _ -> ()
 
 let display_tree tree = display_tree_aux "" tree

@@ -1,14 +1,12 @@
 let file_name = "examples/basic.mgs"
 
-open Parser
-
 let process_file file =
   try
     let tokens = Lexer.process_file file in
     Token.display_tokens tokens;
-    let tree = create_tree tokens in
+    let tree = Parser.create_tree tokens in
     print_endline "\nParse Tree output:";
-    display_tree tree;
+    Printer.display_tree tree;
     close_in file
   with Failure e -> Printf.printf "Unexpected Exception Occurred\n%s" e
 

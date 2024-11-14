@@ -4,9 +4,11 @@ let parse_token token =
   let token_str = String.of_seq (List.to_seq token) in
   match token_str with
   | "+" | "-" | "*" | "/" -> T_ARITHMETIC token_str
+  | "i8" -> T_TYPE token_str
   | ";" -> T_SEMI
   | "(" -> T_OPEN_PAREN
   | ")" -> T_CLOSE_PAREN
+  | "=" -> T_EQUALS
   | "" -> raise (Failure "Empty Token\n")
   | x -> T_VALUE x
 

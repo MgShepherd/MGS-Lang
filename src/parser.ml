@@ -12,10 +12,9 @@ open Token
      <Operator> ::= + | - | / | *
   ***)
 
-type expr =
-  | ExprProgram of expr list
-  | ExprArithmetic of token * expr * expr
-  | ExprToken of token
+type expr = ExprArithmetic of token * expr * expr | ExprToken of token
+type statement = AssignmentStatement of token * token * token * expr
+type program = Program of statement list
 
 let unprocessable_token_error token =
   let error_message =
@@ -61,33 +60,21 @@ and parse_expression prev nesting = function
   | [] -> handle_empty_tokens prev
   | _ -> raise (Failure "Unrecognised Token\n")
 
-let rec parse_program current_expr = function
+let parse_statement = function
+  | T_TYPE x :: T_VALUE y :: T_EQUALS :: xs ->
+      let expression, remaining = parse_expression None [] xs in
+      if List.length remaining > 0 then
+        raise (Failure "Unproccessed tokens in statement\n")
+      else AssignmentStatement (T_TYPE x, T_VALUE y, T_EQUALS, expression)
+  | _ -> raise (Failure "Invalid statement format\n")
+
+let rec parse_program current_statement = function
   | T_SEMI :: xs ->
-      let result, remaining =
-        parse_expression None [] (List.rev current_expr)
-      in
-      if remaining = [] then result :: parse_program [] xs
-      else raise (Failure "Not all tokens processed\n")
-  | x :: xs -> parse_program (x :: current_expr) xs
+      let statement = parse_statement (List.rev current_statement) in
+      statement :: parse_program [] xs
+  | x :: xs -> parse_program (x :: current_statement) xs
   | [] ->
-      if List.length current_expr = 0 then []
+      if List.length current_statement = 0 then []
       else raise (Failure "Unprocessed Input at end of file\n")
 
-let create_tree tokens = ExprProgram (parse_program [] tokens)
-
-let rec display_tree_aux indent = function
-  | ExprProgram elements ->
-      Printf.printf "Program ->\n\t";
-      List.iter (fun x -> display_tree_aux "\t" x) elements;
-      print_endline ""
-  | ExprArithmetic (T_ARITHMETIC op, x, y) ->
-      let new_indent = "\t" ^ indent in
-      Printf.printf "Arithmetic %s ->\n%s" op new_indent;
-      display_tree_aux new_indent x;
-      Printf.printf "\n%s" new_indent;
-      display_tree_aux new_indent y;
-      print_endline ""
-  | ExprToken x -> Printf.printf "%s " (get_token_string x)
-  | _ -> ()
-
-let display_tree tree = display_tree_aux "" tree
+let create_tree tokens = Program (parse_program [] tokens)

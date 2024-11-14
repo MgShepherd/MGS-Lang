@@ -1,27 +1,32 @@
 open Token
 
 let parse_token token =
-  match token with
-  | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '0' ->
-      T_DIGIT (int_of_char token - int_of_char '0')
-  | '+' | '-' | '*' | '/' -> T_ARITHMETIC token
-  | ';' -> T_SEMI
-  | '(' -> T_OPEN_PAREN
-  | ')' -> T_CLOSE_PAREN
-  | x ->
-      let error_message =
-        Printf.sprintf "Lexer Error: Unknown Token Type %c\n" x
-      in
-      raise (Failure error_message)
+  let token_str = String.of_seq (List.to_seq token) in
+  match token_str with
+  | "+" | "-" | "*" | "/" -> T_ARITHMETIC token_str
+  | ";" -> T_SEMI
+  | "(" -> T_OPEN_PAREN
+  | ")" -> T_CLOSE_PAREN
+  | "" -> raise (Failure "Empty Token\n")
+  | x -> T_VALUE x
 
-let rec process_tokens tokens file =
+let rec process_tokens acc_token tokens file =
   let char = input_char file in
   try
     match char with
-    | '\n' | ' ' -> process_tokens tokens file
-    | x -> process_tokens (parse_token x :: tokens) file
+    | '\n' | ' ' ->
+        if List.length acc_token > 0 then
+          process_tokens [] (parse_token (List.rev acc_token) :: tokens) file
+        else process_tokens [] tokens file
+    | ';' | '(' | ')' ->
+        if List.length acc_token > 0 then
+          process_tokens []
+            (parse_token [ char ] :: parse_token (List.rev acc_token) :: tokens)
+            file
+        else process_tokens [] (parse_token [ char ] :: tokens) file
+    | x -> process_tokens (x :: acc_token) tokens file
   with
   | End_of_file -> tokens
   | e -> raise e
 
-let process_file file = List.rev (process_tokens [] file)
+let process_file file = List.rev (process_tokens [] [] file)

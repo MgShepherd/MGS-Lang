@@ -5,6 +5,7 @@ open Parser
 let process_file file =
   try
     let tokens = Lexer.process_file file in
+    Token.display_tokens tokens;
     let tree = create_tree tokens in
     print_endline "\nParse Tree output:";
     display_tree tree;

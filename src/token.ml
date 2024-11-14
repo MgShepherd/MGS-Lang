@@ -1,13 +1,12 @@
 type token =
-  | T_ARITHMETIC of char
-  | T_DIGIT of int
+  | T_ARITHMETIC of string
+  | T_VALUE of string
   | T_OPEN_PAREN
   | T_CLOSE_PAREN
   | T_SEMI
 
 let get_token_string = function
-  | T_ARITHMETIC x -> Printf.sprintf "%c" x
-  | T_DIGIT x -> Printf.sprintf "%d" x
+  | T_ARITHMETIC x | T_VALUE x -> x
   | T_SEMI -> ";"
   | T_OPEN_PAREN -> "("
   | T_CLOSE_PAREN -> ")"

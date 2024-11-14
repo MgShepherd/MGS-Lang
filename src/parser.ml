@@ -36,10 +36,10 @@ and parse_close_paren prev nesting xs =
       | T_OPEN_PAREN :: _ -> (x, xs)
       | _ -> raise (Failure "Unbalanced Parentheses\n"))
 
-and parse_digit x prev nesting xs =
+and parse_value x prev nesting xs =
   match prev with
-  | Some _ -> raise (Failure "Invalid digit location\n")
-  | None -> parse_expression (Some (ExprToken (T_DIGIT x))) nesting xs
+  | Some _ -> raise (Failure "Invalid value location\n")
+  | None -> parse_expression (Some (ExprToken (T_VALUE x))) nesting xs
 
 and parse_arithmetic x prev nesting xs =
   match prev with
@@ -56,7 +56,7 @@ and handle_empty_tokens prev =
 and parse_expression prev nesting = function
   | T_OPEN_PAREN :: xs -> parse_open_paren nesting xs
   | T_CLOSE_PAREN :: xs -> parse_close_paren prev nesting xs
-  | T_DIGIT x :: xs -> parse_digit x prev nesting xs
+  | T_VALUE x :: xs -> parse_value x prev nesting xs
   | T_ARITHMETIC x :: xs -> parse_arithmetic x prev nesting xs
   | [] -> handle_empty_tokens prev
   | _ -> raise (Failure "Unrecognised Token\n")
@@ -82,7 +82,7 @@ let rec display_tree_aux indent = function
       print_endline ""
   | ExprArithmetic (T_ARITHMETIC op, x, y) ->
       let new_indent = "\t" ^ indent in
-      Printf.printf "Arithmetic %c ->\n%s" op new_indent;
+      Printf.printf "Arithmetic %s ->\n%s" op new_indent;
       display_tree_aux new_indent x;
       Printf.printf "\n%s" new_indent;
       display_tree_aux new_indent y;

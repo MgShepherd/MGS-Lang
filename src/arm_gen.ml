@@ -1,14 +1,21 @@
+open Parser
+
 let create_start_function = ".global _start\n_start:\n"
 
-let rec process_expression = function
-  | Parser.ExprToken (T_VALUE x) -> Printf.sprintf "#%s" x
-  | Parser.ExprArithmetic (T_ARITHMETIC "+", left, right) ->
-      Printf.sprintf "\tMOV X1, %s\n\tADD X0, X1, %s\n"
-        (process_expression left) (process_expression right)
-  | _ -> ""
+let rec process_expression current_reg expr =
+  if current_reg > 30 then raise (Failure "Too many operands in expression")
+  else
+    match expr with
+    | ExprToken (T_VALUE x) -> Printf.sprintf "\tMOV X%d, #%s\n" current_reg x
+    | ExprArithmetic (T_ARITHMETIC "+", left, right) ->
+        Printf.sprintf "%s%s\tADD X%d, X%d, X%d\n"
+          (process_expression (current_reg + 1) left)
+          (process_expression (current_reg + 2) right)
+          current_reg (current_reg + 1) (current_reg + 2)
+    | _ -> ""
 
 let process_statement = function
-  | Parser.AssignmentStatement (_, _, _, expr) -> process_expression expr
+  | AssignmentStatement (_, _, _, expr) -> process_expression 0 expr
 
 let rec process_statements acc = function
   | [] -> acc
@@ -17,7 +24,7 @@ let rec process_statements acc = function
 let create_exit_function = "\tMOV X8, #93\n\tSVC 0\n"
 
 let generate_assembly = function
-  | Parser.Program statements ->
+  | Program statements ->
       create_start_function
       ^ process_statements "" statements
       ^ create_exit_function

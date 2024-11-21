@@ -2,15 +2,21 @@ open Parser
 
 let create_start_function = ".global _start\n_start:\n"
 
+let process_arithmetic_operator = function
+  | "+" -> "ADD"
+  | "-" -> "SUB"
+  | _ -> ""
+
 let rec process_expression current_reg expr =
   if current_reg > 30 then raise (Failure "Too many operands in expression")
   else
     match expr with
     | ExprToken (T_VALUE x) -> Printf.sprintf "\tMOV X%d, #%s\n" current_reg x
-    | ExprArithmetic (T_ARITHMETIC "+", left, right) ->
-        Printf.sprintf "%s%s\tADD X%d, X%d, X%d\n"
+    | ExprArithmetic (T_ARITHMETIC operator, left, right) ->
+        Printf.sprintf "%s%s\t%s X%d, X%d, X%d\n"
           (process_expression (current_reg + 1) left)
           (process_expression (current_reg + 2) right)
+          (process_arithmetic_operator operator)
           current_reg (current_reg + 1) (current_reg + 2)
     | _ -> ""
 

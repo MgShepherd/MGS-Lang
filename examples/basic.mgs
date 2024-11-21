@@ -1,1 +1,1 @@
-i8 my_variable = 10 + 7 + (2 + 5) + 3;
+i8 my_variable = 10 + 7 + (5 - 2) + 3;

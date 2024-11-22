@@ -1,17 +1,5 @@
 open Token
 
-(***
-     Language Context Free Grammar:
-     Start Symbol: Program
-     Non Terminals: Expression, Operator, Digit
-
-     Production Rules:
-     <Program> ::= <Expression> | <Expression><Program>
-     <Expression> ::= <Expression><Operator><Expression>;  | (<Expression>) | <Digit>
-     <Digit> ::= 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9
-     <Operator> ::= + | - | / | *
-  ***)
-
 type expr = ExprArithmetic of token * expr * expr | ExprToken of token
 type statement = AssignmentStatement of token * token * token * expr
 type program = Program of statement list
@@ -68,13 +56,26 @@ let parse_statement = function
       else AssignmentStatement (T_TYPE x, T_VALUE y, T_EQUALS, expression)
   | _ -> raise (Failure "Invalid statement format\n")
 
-let rec parse_program current_statement = function
+let rec parse_statements acc_statements current_statement = function
   | T_SEMI :: xs ->
-      let statement = parse_statement (List.rev current_statement) in
-      statement :: parse_program [] xs
-  | x :: xs -> parse_program (x :: current_statement) xs
+      parse_statements
+        (parse_statement (List.rev current_statement) :: acc_statements)
+        [] xs
+  | x :: xs -> parse_statements acc_statements (x :: current_statement) xs
   | [] ->
-      if List.length current_statement = 0 then []
-      else raise (Failure "Unprocessed Input at end of file\n")
+      if List.length current_statement > 0 then
+        raise (Failure "Invalid end of statements")
+      else List.rev acc_statements
 
-let create_tree tokens = Program (parse_program [] tokens)
+let rec parse_block current_block = function
+  | T_CLOSE_BLOCK :: xs -> (parse_statements [] [] (List.rev current_block), xs)
+  | x :: xs -> parse_block (x :: current_block) xs
+  | [] -> raise (Failure "Unclosed block")
+
+let create_tree = function
+  | T_OPEN_BLOCK :: xs ->
+      let statements, remaining = parse_block [] xs in
+      if List.length remaining > 0 then
+        raise (Failure "Unprocessed tokens at end of program")
+      else Program statements
+  | _ -> raise (Failure "All programs must be inside a block")

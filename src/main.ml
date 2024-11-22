@@ -5,7 +5,9 @@ let process_file file =
     let tokens = Lexer.process_file file in
     Token.display_tokens tokens;
     close_in file;
-    Parser.create_tree tokens
+    let tree = Parser.create_tree tokens in
+    Printer.display_tree tree;
+    tree
   with Failure e ->
     raise (Failure (Printf.sprintf "Unexpected Exception Occurred\n%s" e))
 

@@ -1,7 +1,6 @@
 {
-	i8 my_variable = 10 + 7;
-	if 10 > 5 {
+	i8 my_variable = 12 - 7;
+	if test > 5 {
 		i8 my_variable = 10 + 7;
 	}
-	i8 my_variable = 10 + 7;
 }

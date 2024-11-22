@@ -7,6 +7,8 @@ let process_arithmetic_operator = function
   | "-" -> "SUB"
   | _ -> ""
 
+let process_comparison_operator = function "<" -> "LT" | ">" -> "GT" | _ -> ""
+
 let rec process_expression current_reg expr =
   if current_reg > 30 then raise (Failure "Too many operands in expression")
   else
@@ -18,13 +20,22 @@ let rec process_expression current_reg expr =
           (process_expression (current_reg + 2) right)
           (process_arithmetic_operator operator)
           current_reg (current_reg + 1) (current_reg + 2)
+    (*** Ignoring left for now due to hardcoding comparison with register X0***)
+    | ExprComparison (T_COMPARISON operator, _left, right) ->
+        Printf.sprintf "%s\tCMP X%d, X%d\n\tB.%s _ifbody\n\tB _endif\n"
+          (process_expression (current_reg + 1) right)
+          current_reg (current_reg + 1)
+          (process_comparison_operator operator)
     | _ -> ""
 
-let process_statement = function
+let rec process_statement = function
   | AssignmentStatement (_, _, _, expr) -> process_expression 0 expr
-  | _ -> ""
+  | IfStatement (comparison, body) ->
+      Printf.sprintf "%s_ifbody:\n%s_endif:\n"
+        (process_expression 0 comparison)
+        (process_statements "" body)
 
-let rec process_statements acc = function
+and process_statements acc = function
   | [] -> acc
   | x :: xs -> process_statements (acc ^ process_statement x) xs
 

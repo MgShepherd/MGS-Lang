@@ -22,6 +22,7 @@ let rec process_expression current_reg expr =
 
 let process_statement = function
   | AssignmentStatement (_, _, _, expr) -> process_expression 0 expr
+  | _ -> ""
 
 let rec process_statements acc = function
   | [] -> acc

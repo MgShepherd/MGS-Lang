@@ -1,6 +1,6 @@
 type token =
   | T_ARITHMETIC of string
-  | T_COMPARISION of string
+  | T_COMPARISON of string
   | T_VALUE of string
   | T_EQUALS
   | T_TYPE of string
@@ -14,7 +14,7 @@ type token =
 let get_token_string = function
   | T_VALUE x -> Printf.sprintf "(VALUE:%s)" x
   | T_ARITHMETIC x -> Printf.sprintf "(ARITHMETIC:%s)" x
-  | T_COMPARISION x -> Printf.sprintf "(COMPARISION:%s)" x
+  | T_COMPARISON x -> Printf.sprintf "(COMPARISION:%s)" x
   | T_TYPE x -> Printf.sprintf "(TYPE:%s)" x
   | T_SEMI -> "(SEMI)"
   | T_OPEN_PAREN -> "(OPEN_PAREN)"

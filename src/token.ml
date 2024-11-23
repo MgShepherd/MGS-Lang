@@ -10,6 +10,7 @@ type token =
   | T_IF
   | T_OPEN_BLOCK
   | T_CLOSE_BLOCK
+  | T_PRINT_FUNCTION
 
 let get_token_string = function
   | T_VALUE x -> Printf.sprintf "(VALUE:%s)" x
@@ -23,6 +24,7 @@ let get_token_string = function
   | T_IF -> "(IF)"
   | T_OPEN_BLOCK -> "(T_OPEN_BLOCK)"
   | T_CLOSE_BLOCK -> "(T_CLOSE_BLOCK)"
+  | T_PRINT_FUNCTION -> "(T_PRINT_FUNCTION)"
 
 let rec display_tokens = function
   | [] -> Printf.printf "\n"

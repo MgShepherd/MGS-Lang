@@ -29,6 +29,9 @@ let rec display_statement indent = function
       display_expression new_indent comparison;
       Printf.printf "\n%sBody ->\n\t" new_indent;
       List.iter (fun x -> display_statement new_indent x) body
+  | PrintStatement x ->
+      Printf.printf "PrintStatement -> \n\t\t";
+      display_expression ("\t" ^ indent) (ExprToken x)
   | _ -> ()
 
 let display_program = function

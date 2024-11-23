@@ -3,4 +3,5 @@
 	if test > 5 {
 		i8 my_variable = 10 + 7;
 	}
+	print "This an example string printed using the MGS programming langauge\n";
 }

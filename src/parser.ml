@@ -8,6 +8,7 @@ type expr =
 type statement =
   | AssignmentStatement of token * token * token * expr
   | IfStatement of expr * statement list
+  | PrintStatement of token
 
 type program = Program of statement list
 
@@ -73,6 +74,7 @@ let parse_statement = function
       if List.length remaining > 0 then
         raise (Failure "Unproccessed tokens in statement\n")
       else AssignmentStatement (T_TYPE x, T_VALUE y, T_EQUALS, expression)
+  | [ T_PRINT_FUNCTION; T_VALUE x ] -> PrintStatement (T_VALUE x)
   | _ -> raise (Failure "Invalid statement format\n")
 
 let rec parse_if_statement acc_condition = function

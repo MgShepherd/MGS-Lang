@@ -13,8 +13,17 @@ let parse_token token =
   | "{" -> T_OPEN_BLOCK
   | "}" -> T_CLOSE_BLOCK
   | "=" -> T_EQUALS
+  | "print" -> T_PRINT_FUNCTION
   | "" -> raise (Failure "Empty Token\n")
   | x -> T_VALUE x
+
+let rec process_double_quotes acc_chars file =
+  let char = input_char file in
+  try
+    match char with
+    | '"' -> List.rev ('"' :: acc_chars)
+    | x -> process_double_quotes (x :: acc_chars) file
+  with _ -> raise (Failure "Unable to process quote string")
 
 let rec process_tokens acc_token tokens file =
   let char = input_char file in
@@ -30,6 +39,9 @@ let rec process_tokens acc_token tokens file =
             (parse_token [ char ] :: parse_token (List.rev acc_token) :: tokens)
             file
         else process_tokens [] (parse_token [ char ] :: tokens) file
+    | '"' ->
+        let str_val = process_double_quotes [ '"' ] file in
+        process_tokens [] (parse_token str_val :: tokens) file
     | x -> process_tokens (x :: acc_token) tokens file
   with
   | End_of_file ->

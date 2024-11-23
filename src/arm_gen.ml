@@ -1,5 +1,7 @@
 open Parser
 
+let sys_exit = 93
+let sys_write = 64
 let create_start_function = ".global _start\n_start:\n"
 
 let process_arithmetic_operator = function
@@ -28,21 +30,41 @@ let rec process_expression current_reg expr =
           (process_comparison_operator operator)
     | _ -> ""
 
-let rec process_statement = function
-  | AssignmentStatement (_, _, _, expr) -> process_expression 0 expr
+let rec process_statement data = function
+  | AssignmentStatement (_, _, _, expr) -> (data, process_expression 0 expr)
   | IfStatement (comparison, body) ->
-      Printf.sprintf "%s_ifbody:\n%s_endif:\n"
-        (process_expression 0 comparison)
-        (process_statements "" body)
+      let new_data, statements = process_statements data "" body in
+      ( new_data,
+        Printf.sprintf "%s_ifbody:\n%s_endif:\n"
+          (process_expression 0 comparison)
+          statements )
+  | PrintStatement (T_VALUE x) ->
+      let var_name = Printf.sprintf "V%d" (List.length data) in
+      ( (var_name, x) :: data,
+        Printf.sprintf
+          "\tMOV X0, #1\n\tLDR X1, =%s\n\tMOV X2, #%d\n\tMOV X8, #%d\n\tSVC 0\n"
+          var_name (String.length x) sys_write )
+  | _ -> (data, "")
 
-and process_statements acc = function
+and process_statements data acc = function
+  | [] -> (data, acc)
+  | x :: xs ->
+      let new_data, statement = process_statement data x in
+      process_statements new_data (acc ^ statement) xs
+
+let create_exit_function =
+  Printf.sprintf "\tMOV X0, #0\n\tMOV X8, #%d\n\tSVC 0\n" sys_exit
+
+let rec create_data_elements acc = function
   | [] -> acc
-  | x :: xs -> process_statements (acc ^ process_statement x) xs
+  | (k, v) :: xs ->
+      create_data_elements (acc ^ Printf.sprintf "%s: .asciz %s\n" k v) xs
 
-let create_exit_function = "\tMOV X8, #93\n\tSVC 0\n"
+let create_data_section data =
+  Printf.sprintf ".data\n%s" (create_data_elements "" data)
 
 let generate_assembly = function
   | Program statements ->
-      create_start_function
-      ^ process_statements "" statements
-      ^ create_exit_function
+      let data, statements = process_statements [] "" statements in
+      create_start_function ^ statements ^ create_exit_function
+      ^ create_data_section data

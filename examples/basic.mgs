@@ -1,7 +1,7 @@
 {
-	i8 my_variable = 12 - 7;
+	i8 my_variable = 12 - 6;
 	if test > 5 {
-		i8 my_variable = 10 + 7;
+		print "This an example string printed using the MGS programming langauge\n";
 	}
-	print "This an example string printed using the MGS programming langauge\n";
+	print "Hello World\n";
 }

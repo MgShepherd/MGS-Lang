@@ -10,7 +10,7 @@ let parse_token token =
   match token_str with
   | "+" | "-" | "*" | "/" -> T_ARITHMETIC token_str
   | ">" | ">=" | "<=" | "<" -> T_COMPARISON token_str
-  | "i32" -> T_TYPE token_str
+  | "i16" -> T_TYPE token_str
   | "if" -> T_IF
   | ";" -> T_SEMI
   | "(" -> T_OPEN_PAREN

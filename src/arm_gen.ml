@@ -15,7 +15,7 @@ let rec process_expression current_reg expr =
   if current_reg > 30 then raise (Failure "Too many operands in expression")
   else
     match expr with
-    | ExprToken (T_STRING x) -> Printf.sprintf "\tMOV X%d, #%s\n" current_reg x
+    | ExprToken (T_NUMBER x) -> Printf.sprintf "\tMOV X%d, #%s\n" current_reg x
     | ExprArithmetic (T_ARITHMETIC operator, left, right) ->
         Printf.sprintf "%s%s\t%s X%d, X%d, X%d\n"
           (process_expression (current_reg + 1) left)
@@ -30,8 +30,15 @@ let rec process_expression current_reg expr =
           (process_comparison_operator operator)
     | _ -> ""
 
+(*** For now can only assign 16 bit values***)
+let process_assignment current_reg expr =
+  Printf.sprintf "%s\tSUB SP, SP, #16\n\tSTR W%d, [SP]\n"
+    (process_expression 0 expr)
+    current_reg
+
 let rec process_statement data = function
-  | AssignmentStatement (_, _, _, expr) -> (data, process_expression 0 expr)
+  | AssignmentStatement (T_TYPE _t, T_VARIABLE _v, _, expr) ->
+      (data, process_assignment 0 expr)
   | IfStatement (comparison, body) ->
       let new_data, statements = process_statements data "" body in
       ( new_data,

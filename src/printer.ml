@@ -20,7 +20,7 @@ let rec display_expression indent = function
   | _ -> ()
 
 let rec display_statement indent = function
-  | AssignmentStatement (T_TYPE t, T_VALUE v, _, expression) ->
+  | AssignmentStatement (T_TYPE t, T_VARIABLE v, _, expression) ->
       Printf.printf "%sStatement -> %s %s ->\n\t" indent t v;
       display_expression ("\t" ^ indent) expression
   | IfStatement (comparison, body) ->

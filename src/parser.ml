@@ -34,7 +34,7 @@ and parse_close_paren prev nesting xs =
 and parse_value x prev nesting xs =
   match prev with
   | Some _ -> raise (Failure "Invalid value location\n")
-  | None -> parse_expression (Some (ExprToken (T_VALUE x))) nesting xs
+  | None -> parse_expression (Some (ExprToken x)) nesting xs
 
 and parse_arithmetic x prev nesting xs =
   match prev with
@@ -58,7 +58,9 @@ and handle_empty_tokens prev =
 and parse_expression prev nesting = function
   | T_OPEN_PAREN :: xs -> parse_open_paren nesting xs
   | T_CLOSE_PAREN :: xs -> parse_close_paren prev nesting xs
-  | T_VALUE x :: xs -> parse_value x prev nesting xs
+  | T_STRING x :: xs -> parse_value (T_STRING x) prev nesting xs
+  | T_NUMBER x :: xs -> parse_value (T_NUMBER x) prev nesting xs
+  | T_VARIABLE x :: xs -> parse_value (T_VARIABLE x) prev nesting xs
   | T_ARITHMETIC x :: xs -> parse_arithmetic x prev nesting xs
   | T_COMPARISON x :: xs -> parse_comparision x prev nesting xs
   | [] -> handle_empty_tokens prev
@@ -69,12 +71,12 @@ and parse_expression prev nesting = function
       raise (Failure error_message)
 
 let parse_statement = function
-  | T_TYPE x :: T_VALUE y :: T_EQUALS :: xs ->
+  | T_TYPE x :: T_VARIABLE y :: T_EQUALS :: xs ->
       let expression, remaining = parse_expression None [] xs in
       if List.length remaining > 0 then
         raise (Failure "Unproccessed tokens in statement\n")
-      else AssignmentStatement (T_TYPE x, T_VALUE y, T_EQUALS, expression)
-  | [ T_PRINT_FUNCTION; T_VALUE x ] -> PrintStatement (T_VALUE x)
+      else AssignmentStatement (T_TYPE x, T_VARIABLE y, T_EQUALS, expression)
+  | [ T_PRINT_FUNCTION; T_STRING x ] -> PrintStatement (T_STRING x)
   | _ -> raise (Failure "Invalid statement format\n")
 
 let rec parse_if_statement acc_condition = function

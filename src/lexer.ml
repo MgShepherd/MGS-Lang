@@ -1,11 +1,16 @@
 open Token
 
+let parse_value x =
+  if Str.string_match (Str.regexp "[0-9]+") x 0 then T_NUMBER x
+  else if Str.string_match (Str.regexp "\".*\"") x 0 then T_STRING x
+  else T_VARIABLE x
+
 let parse_token token =
   let token_str = String.of_seq (List.to_seq token) in
   match token_str with
   | "+" | "-" | "*" | "/" -> T_ARITHMETIC token_str
   | ">" | ">=" | "<=" | "<" -> T_COMPARISON token_str
-  | "i8" -> T_TYPE token_str
+  | "i32" -> T_TYPE token_str
   | "if" -> T_IF
   | ";" -> T_SEMI
   | "(" -> T_OPEN_PAREN
@@ -15,7 +20,7 @@ let parse_token token =
   | "=" -> T_EQUALS
   | "print" -> T_PRINT_FUNCTION
   | "" -> raise (Failure "Empty Token\n")
-  | x -> T_VALUE x
+  | x -> parse_value x
 
 let rec process_double_quotes acc_chars file =
   let char = input_char file in

@@ -1,7 +1,9 @@
 type token =
   | T_ARITHMETIC of string
   | T_COMPARISON of string
-  | T_VALUE of string
+  | T_STRING of string
+  | T_NUMBER of string
+  | T_VARIABLE of string
   | T_EQUALS
   | T_TYPE of string
   | T_OPEN_PAREN
@@ -13,7 +15,9 @@ type token =
   | T_PRINT_FUNCTION
 
 let get_token_string = function
-  | T_VALUE x -> Printf.sprintf "(VALUE:%s)" x
+  | T_STRING x -> Printf.sprintf "(STRING:%s)" x
+  | T_NUMBER x -> Printf.sprintf "(NUMBER:%s)" x
+  | T_VARIABLE x -> Printf.sprintf "(VARIABLE:%s)" x
   | T_ARITHMETIC x -> Printf.sprintf "(ARITHMETIC:%s)" x
   | T_COMPARISON x -> Printf.sprintf "(COMPARISION:%s)" x
   | T_TYPE x -> Printf.sprintf "(TYPE:%s)" x

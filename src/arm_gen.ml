@@ -15,7 +15,7 @@ let rec process_expression current_reg expr =
   if current_reg > 30 then raise (Failure "Too many operands in expression")
   else
     match expr with
-    | ExprToken (T_VALUE x) -> Printf.sprintf "\tMOV X%d, #%s\n" current_reg x
+    | ExprToken (T_STRING x) -> Printf.sprintf "\tMOV X%d, #%s\n" current_reg x
     | ExprArithmetic (T_ARITHMETIC operator, left, right) ->
         Printf.sprintf "%s%s\t%s X%d, X%d, X%d\n"
           (process_expression (current_reg + 1) left)
@@ -38,7 +38,7 @@ let rec process_statement data = function
         Printf.sprintf "%s_ifbody:\n%s_endif:\n"
           (process_expression 0 comparison)
           statements )
-  | PrintStatement (T_VALUE x) ->
+  | PrintStatement (T_STRING x) ->
       let var_name = Printf.sprintf "V%d" (List.length data) in
       ( (var_name, x) :: data,
         Printf.sprintf

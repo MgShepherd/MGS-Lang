@@ -1,5 +1,6 @@
 open Token
 open Parser
+module StringMap = Map.Make (String)
 
 let rec display_expression indent = function
   | ExprArithmetic (T_ARITHMETIC op, x, y) ->
@@ -41,3 +42,8 @@ let display_program = function
       print_endline ""
 
 let display_tree tree = display_program tree
+
+let display_map map =
+  StringMap.iter
+    (fun key value -> Printf.printf "Key: %s, Value %d\n" key value)
+    map

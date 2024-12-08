@@ -1,8 +1,8 @@
 {
-	i16 my_variable = 10;
-	i16 my_variable2 = 12 - 6;
+	i16 my_variable = 12 - 6;
+	i16 my_variable2 = 10;
 
-	if my_variable > 6 {
+	if my_variable > 5 {
 		print "Hello World!\n";
 	}
 }

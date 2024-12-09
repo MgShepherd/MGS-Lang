@@ -5,4 +5,8 @@
 	if my_variable > 5 {
 		print "Hello World!\n";
 	}
+
+	if my_variable2 > 9 {
+		print "2nd variable is greater than 9\n";
+	}
 }

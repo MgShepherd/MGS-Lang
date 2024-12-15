@@ -1,12 +1,8 @@
 {
 	i16 my_variable = 12 - 6;
-	i16 my_variable2 = 10;
+	i16 my_variable2 = 6;
 
-	if my_variable > 5 {
+	if my_variable2 <= my_variable {
 		print "Hello World!\n";
-	}
-
-	if my_variable2 > 9 {
-		print "2nd variable is greater than 9\n";
 	}
 }

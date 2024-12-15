@@ -15,7 +15,13 @@ let process_arithmetic_operator = function
   | "-" -> "SUB"
   | _ -> ""
 
-let process_comparison_operator = function "<" -> "LT" | ">" -> "GT" | _ -> ""
+let process_comparison_operator = function
+  | "<" -> "LT"
+  | ">" -> "GT"
+  | "==" -> "EQ"
+  | ">=" -> "GE"
+  | "<=" -> "LE"
+  | _ -> ""
 
 let get_value_from_map map key =
   try StringMap.find key map

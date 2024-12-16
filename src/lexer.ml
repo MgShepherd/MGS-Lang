@@ -12,6 +12,7 @@ let parse_token token =
   | ">" | ">=" | "<=" | "<" | "==" -> T_COMPARISON token_str
   | "i16" -> T_TYPE token_str
   | "if" -> T_IF
+  | "else" -> T_ELSE
   | ";" -> T_SEMI
   | "(" -> T_OPEN_PAREN
   | ")" -> T_CLOSE_PAREN

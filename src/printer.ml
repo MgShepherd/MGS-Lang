@@ -24,12 +24,15 @@ let rec display_statement indent = function
   | AssignmentStatement (T_TYPE t, T_VARIABLE v, _, expression) ->
       Printf.printf "%sStatement -> %s %s ->\n\t" indent t v;
       display_expression ("\t" ^ indent) expression
-  | IfStatement (comparison, body) ->
+  | IfStatement segments ->
       let new_indent = "\t\t" ^ indent in
       Printf.printf "IfStatement -> \n";
-      display_expression new_indent comparison;
-      Printf.printf "\n%sBody ->\n\t" new_indent;
-      List.iter (fun x -> display_statement new_indent x) body
+      List.iter
+        (fun (comparison, body) ->
+          display_expression new_indent comparison;
+          Printf.printf "\n%sBody ->\n\t" new_indent;
+          List.iter (fun x -> display_statement new_indent x) body)
+        segments
   | PrintStatement x ->
       Printf.printf "PrintStatement -> \n\t\t";
       display_expression ("\t" ^ indent) (ExprToken x)

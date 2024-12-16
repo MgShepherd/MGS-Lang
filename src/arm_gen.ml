@@ -72,17 +72,18 @@ let rec process_statement constants stack_vars label_num = function
         process_assignment stack_vars v label_num expr
       in
       (constants, new_stack, label_num, statements)
-  | IfStatement (comparison, body) ->
-      let new_data, new_stack, statements =
-        process_statements constants stack_vars label_num "" body
-      in
-      let new_label_num = label_num + 1 in
-      ( new_data,
-        new_stack,
-        new_label_num,
-        Printf.sprintf "%s_ifbody%d:\n%s_endif%d:\n"
-          (process_expression 0 comparison stack_vars label_num)
-          label_num statements label_num )
+  (*** | IfStatement (comparison, body) ->
+       let new_data, new_stack, statements =
+         process_statements constants stack_vars label_num "" body
+       in
+       let new_label_num = label_num + 1 in
+       ( new_data,
+         new_stack,
+         new_label_num,
+         Printf.sprintf "%s_ifbody%d:\n%s_endif%d:\n"
+           (process_expression 0 comparison stack_vars label_num)
+           label_num statements label_num )
+       ***)
   | PrintStatement (T_STRING x) ->
       let const_name = Printf.sprintf "V%d" (List.length constants) in
       ( (const_name, x) :: constants,

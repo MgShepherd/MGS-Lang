@@ -7,7 +7,7 @@ type expr =
 
 type statement =
   | AssignmentStatement of token * token * token * expr
-  | IfStatement of expr * statement list
+  | IfStatement of (expr * statement list) list
   | PrintStatement of token
 
 type program = Program of statement list
@@ -63,6 +63,7 @@ and parse_expression prev nesting = function
   | T_VARIABLE x :: xs -> parse_value (T_VARIABLE x) prev nesting xs
   | T_ARITHMETIC x :: xs -> parse_arithmetic x prev nesting xs
   | T_COMPARISON x :: xs -> parse_comparision x prev nesting xs
+  | [ T_ELSE ] -> (ExprToken T_ELSE, [])
   | [] -> handle_empty_tokens prev
   | x :: _ ->
       let error_message =
@@ -70,39 +71,57 @@ and parse_expression prev nesting = function
       in
       raise (Failure error_message)
 
-let parse_statement = function
+let rec parse_statement = function
   | T_TYPE x :: T_VARIABLE y :: T_EQUALS :: xs ->
       let expression, remaining = parse_expression None [] xs in
       if List.length remaining > 0 then
         raise (Failure "Unproccessed tokens in statement\n")
       else AssignmentStatement (T_TYPE x, T_VARIABLE y, T_EQUALS, expression)
+  | T_IF :: xs -> parse_if_block [] [] true xs
   | [ T_PRINT_FUNCTION; T_STRING x ] -> PrintStatement (T_STRING x)
   | _ -> raise (Failure "Invalid statement format\n")
 
-let rec parse_if_statement acc_condition = function
+and parse_if_block acc_condition acc_segments has_valid_start = function
   | T_OPEN_BLOCK :: xs ->
-      let block, remaining = parse_block 0 [] xs in
-      let condition, expr_remaining =
-        parse_expression None [] (List.rev acc_condition)
-      in
-      if List.length expr_remaining > 0 then
-        raise (Failure "Invalid if statement condition")
-      else (IfStatement (condition, block), remaining)
-  | x :: xs -> parse_if_statement (x :: acc_condition) xs
-  | [] -> raise (Failure "Invalid if statement format")
+      if has_valid_start then
+        let block, remaining = parse_block 0 [] xs in
+        let condition, expr_remaining =
+          parse_expression None [] (List.rev acc_condition)
+        in
+        if List.length expr_remaining > 0 then
+          raise (Failure "Invalid if statement condition")
+        else
+          parse_if_block [] ((condition, block) :: acc_segments) false remaining
+      else raise (Failure "Invalid if statement condition location")
+  | T_ELSE :: xs ->
+      if has_valid_start then
+        raise (Failure "Invalid location for else statement")
+      else Printf.printf "Found start of else block\n";
+      parse_if_block [ T_ELSE ] acc_segments true xs
+  | x :: xs ->
+      parse_if_block (x :: acc_condition) acc_segments has_valid_start xs
+  | [] -> IfStatement (List.rev acc_segments)
 
-and parse_statements acc_statements current_statement = function
+and parse_statements acc_statements current_statement nested_level = function
   | T_SEMI :: xs ->
-      parse_statements
-        (parse_statement (List.rev current_statement) :: acc_statements)
-        [] xs
-  | T_IF :: xs ->
-      if List.length current_statement > 0 then
-        raise (Failure "Invalid if statement location")
+      if nested_level = 0 then
+        parse_statements
+          (parse_statement (List.rev current_statement) :: acc_statements)
+          [] nested_level xs
       else
-        let statement, remaining = parse_if_statement [] xs in
-        parse_statements (statement :: acc_statements) [] remaining
-  | x :: xs -> parse_statements acc_statements (x :: current_statement) xs
+        parse_statements acc_statements
+          (T_SEMI :: current_statement)
+          nested_level xs
+  | T_OPEN_BLOCK :: xs ->
+      parse_statements acc_statements
+        (T_OPEN_BLOCK :: current_statement)
+        (nested_level + 1) xs
+  | T_CLOSE_BLOCK :: xs ->
+      parse_statements acc_statements
+        (T_CLOSE_BLOCK :: current_statement)
+        (nested_level - 1) xs
+  | x :: xs ->
+      parse_statements acc_statements (x :: current_statement) nested_level xs
   | [] ->
       if List.length current_statement > 0 then
         raise (Failure "Invalid end of statements")
@@ -111,7 +130,7 @@ and parse_statements acc_statements current_statement = function
 and parse_block nested_level current_block = function
   | T_CLOSE_BLOCK :: xs ->
       if nested_level = 0 then
-        (parse_statements [] [] (List.rev current_block), xs)
+        (parse_statements [] [] 0 (List.rev current_block), xs)
       else parse_block (nested_level - 1) (T_CLOSE_BLOCK :: current_block) xs
   | T_OPEN_BLOCK :: xs ->
       parse_block (nested_level + 1) (T_OPEN_BLOCK :: current_block) xs

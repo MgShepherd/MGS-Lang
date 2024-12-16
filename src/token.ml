@@ -10,6 +10,7 @@ type token =
   | T_CLOSE_PAREN
   | T_SEMI
   | T_IF
+  | T_ELSE
   | T_OPEN_BLOCK
   | T_CLOSE_BLOCK
   | T_PRINT_FUNCTION
@@ -26,6 +27,7 @@ let get_token_string = function
   | T_CLOSE_PAREN -> "(CLOSE_PAREN)"
   | T_EQUALS -> "(EQUALS)"
   | T_IF -> "(IF)"
+  | T_ELSE -> "(ELSE)"
   | T_OPEN_BLOCK -> "(T_OPEN_BLOCK)"
   | T_CLOSE_BLOCK -> "(T_CLOSE_BLOCK)"
   | T_PRINT_FUNCTION -> "(T_PRINT_FUNCTION)"

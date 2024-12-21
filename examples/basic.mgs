@@ -1,10 +1,10 @@
 {
 	i16 my_variable = 12 - 6;
-	i16 my_variable2 = 6;
+	i16 my_variable2 = 7;
 
 	if my_variable2 <= my_variable {
-		print "Hello World!\n";
+		print "Var 2 is less than or equal to var 1\n";
 	} else {
-		print "This is the else condition\n";
+		print "This is the else block \n";
 	};
 }

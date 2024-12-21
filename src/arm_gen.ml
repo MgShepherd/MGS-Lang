@@ -34,7 +34,7 @@ let process_variable current_reg var_name stack_vars =
   Printf.sprintf "\tLDR W%d, [X%d, #-%d]\n" current_reg frame_pointer_register
     value
 
-let rec process_expression current_reg expr stack_vars label_num =
+let rec process_expression current_reg expr stack_vars label_num block_num =
   if current_reg > 30 then raise (Failure "Too many operands in expression")
   else
     match expr with
@@ -42,17 +42,20 @@ let rec process_expression current_reg expr stack_vars label_num =
     | ExprToken (T_VARIABLE x) -> process_variable current_reg x stack_vars
     | ExprArithmetic (T_ARITHMETIC operator, left, right) ->
         Printf.sprintf "%s%s\t%s X%d, X%d, X%d\n"
-          (process_expression (current_reg + 1) left stack_vars label_num)
-          (process_expression (current_reg + 2) right stack_vars label_num)
+          (process_expression (current_reg + 1) left stack_vars label_num
+             block_num)
+          (process_expression (current_reg + 2) right stack_vars label_num
+             block_num)
           (process_arithmetic_operator operator)
           current_reg (current_reg + 1) (current_reg + 2)
     | ExprComparison (T_COMPARISON operator, left, right) ->
-        Printf.sprintf "%s%s\tCMP X%d, X%d\n\tB.%s _ifbody%d\n\tB _endif%d\n"
-          (process_expression current_reg left stack_vars label_num)
-          (process_expression (current_reg + 1) right stack_vars label_num)
+        Printf.sprintf "%s%s\tCMP X%d, X%d\n\tB.%s _%dif%d\n\tB _%dif%d\n"
+          (process_expression current_reg left stack_vars label_num block_num)
+          (process_expression (current_reg + 1) right stack_vars label_num
+             block_num)
           current_reg (current_reg + 1)
           (process_comparison_operator operator)
-          label_num label_num
+          block_num label_num (block_num + 1) label_num
     | _ -> ""
 
 (*** For now can only assign 16 bit values***)
@@ -64,26 +67,38 @@ let process_assignment stack_vars var_name label_num expr =
   in
   ( new_stack,
     Printf.sprintf "%s\tSUB SP, SP, #16\n\tSTR W0, [SP]\n"
-      (process_expression 0 expr stack_vars label_num) )
+      (process_expression 0 expr stack_vars label_num 0) )
 
-let rec process_statement constants stack_vars label_num = function
+let rec process_if_blocks constants stack_vars label_num block_num num_blocks
+    acc_str = function
+  | (comparison, block) :: xs ->
+      let new_constants, new_stack, statements =
+        process_statements constants stack_vars label_num "" block
+      in
+      let expr =
+        process_expression 0 comparison stack_vars label_num block_num
+      in
+      let str =
+        Printf.sprintf "%s_%dif%d:\n%s\tB _%dif%d\n" expr block_num label_num
+          statements num_blocks label_num
+      in
+      process_if_blocks new_constants new_stack label_num (block_num + 1)
+        num_blocks (acc_str ^ str) xs
+  | [] ->
+      let full_if =
+        Printf.sprintf "%s_%dif%d:\n" acc_str num_blocks label_num
+      in
+      (constants, stack_vars, label_num + 1, full_if)
+
+and process_statement constants stack_vars label_num = function
   | AssignmentStatement (T_TYPE _t, T_VARIABLE v, _, expr) ->
       let new_stack, statements =
         process_assignment stack_vars v label_num expr
       in
       (constants, new_stack, label_num, statements)
-  (*** | IfStatement (comparison, body) ->
-       let new_data, new_stack, statements =
-         process_statements constants stack_vars label_num "" body
-       in
-       let new_label_num = label_num + 1 in
-       ( new_data,
-         new_stack,
-         new_label_num,
-         Printf.sprintf "%s_ifbody%d:\n%s_endif%d:\n"
-           (process_expression 0 comparison stack_vars label_num)
-           label_num statements label_num )
-       ***)
+  | IfStatement blocks ->
+      process_if_blocks constants stack_vars label_num 0 (List.length blocks) ""
+        blocks
   | PrintStatement (T_STRING x) ->
       let const_name = Printf.sprintf "V%d" (List.length constants) in
       ( (const_name, x) :: constants,

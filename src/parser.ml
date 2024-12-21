@@ -93,11 +93,14 @@ and parse_if_block acc_condition acc_segments has_valid_start = function
         else
           parse_if_block [] ((condition, block) :: acc_segments) false remaining
       else raise (Failure "Invalid if statement condition location")
+  | T_ELIF :: xs ->
+      if has_valid_start then
+        raise (Failure "Invalid location for elif statement")
+      else parse_if_block [] acc_segments true xs
   | T_ELSE :: xs ->
       if has_valid_start then
         raise (Failure "Invalid location for else statement")
-      else Printf.printf "Found start of else block\n";
-      parse_if_block [ T_ELSE ] acc_segments true xs
+      else parse_if_block [ T_ELSE ] acc_segments true xs
   | x :: xs ->
       parse_if_block (x :: acc_condition) acc_segments has_valid_start xs
   | [] -> IfStatement (List.rev acc_segments)

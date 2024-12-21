@@ -40,6 +40,7 @@ let rec process_expression current_reg expr stack_vars label_num block_num =
     match expr with
     | ExprToken (T_NUMBER x) -> Printf.sprintf "\tMOV X%d, #%s\n" current_reg x
     | ExprToken (T_VARIABLE x) -> process_variable current_reg x stack_vars
+    | ExprToken T_ELSE -> Printf.sprintf "\tB _%dif%d\n" block_num label_num
     | ExprArithmetic (T_ARITHMETIC operator, left, right) ->
         Printf.sprintf "%s%s\t%s X%d, X%d, X%d\n"
           (process_expression (current_reg + 1) left stack_vars label_num
@@ -49,13 +50,13 @@ let rec process_expression current_reg expr stack_vars label_num block_num =
           (process_arithmetic_operator operator)
           current_reg (current_reg + 1) (current_reg + 2)
     | ExprComparison (T_COMPARISON operator, left, right) ->
-        Printf.sprintf "%s%s\tCMP X%d, X%d\n\tB.%s _%dif%d\n\tB _%dif%d\n"
+        Printf.sprintf "%s%s\tCMP X%d, X%d\n\tB.%s _%dif%d\n"
           (process_expression current_reg left stack_vars label_num block_num)
           (process_expression (current_reg + 1) right stack_vars label_num
              block_num)
           current_reg (current_reg + 1)
           (process_comparison_operator operator)
-          block_num label_num (block_num + 1) label_num
+          block_num label_num
     | _ -> ""
 
 (*** For now can only assign 16 bit values***)
@@ -69,26 +70,47 @@ let process_assignment stack_vars var_name label_num expr =
     Printf.sprintf "%s\tSUB SP, SP, #16\n\tSTR W0, [SP]\n"
       (process_expression 0 expr stack_vars label_num 0) )
 
-let rec process_if_blocks constants stack_vars label_num block_num num_blocks
-    acc_str = function
-  | (comparison, block) :: xs ->
-      let new_constants, new_stack, statements =
-        process_statements constants stack_vars label_num "" block
+let rec process_if_comparisions index stack_vars label_num processed_comparisons
+    num_blocks = function
+  | x :: xs ->
+      let comp = process_expression 0 x stack_vars label_num index in
+      process_if_comparisions (index + 1) stack_vars label_num
+        (processed_comparisons ^ comp)
+        num_blocks xs
+  | [] -> processed_comparisons
+
+let rec process_if_statements index constants stack_vars label_num num_blocks
+    processed_statements = function
+  | x :: xs ->
+      let new_constants, _, statement =
+        process_statements constants stack_vars label_num "" x
       in
-      let expr =
-        process_expression 0 comparison stack_vars label_num block_num
+      let if_statement =
+        Printf.sprintf "_%dif%d:\n%s\tB _%dif%d\n" index label_num statement
+          num_blocks label_num
       in
-      let str =
-        Printf.sprintf "%s_%dif%d:\n%s\tB _%dif%d\n" expr block_num label_num
-          statements num_blocks label_num
-      in
-      process_if_blocks new_constants new_stack label_num (block_num + 1)
-        num_blocks (acc_str ^ str) xs
-  | [] ->
-      let full_if =
-        Printf.sprintf "%s_%dif%d:\n" acc_str num_blocks label_num
-      in
-      (constants, stack_vars, label_num + 1, full_if)
+      process_if_statements (index + 1) new_constants stack_vars label_num
+        num_blocks
+        (processed_statements ^ if_statement)
+        xs
+  | [] -> (constants, processed_statements)
+
+and process_if_blocks constants stack_vars label_num blocks =
+  let num_blocks = List.length blocks in
+  let comparisions = List.map (fun (comp, _) -> comp) blocks in
+  let statements = List.map (fun (_, statement) -> statement) blocks in
+  let processed_comparisions =
+    process_if_comparisions 0 stack_vars label_num "" num_blocks comparisions
+  in
+  let new_constants, processed_statements =
+    process_if_statements 0 constants stack_vars label_num num_blocks ""
+      statements
+  in
+  ( new_constants,
+    stack_vars,
+    label_num,
+    Printf.sprintf "%s%s_%dif%d:\n" processed_comparisions processed_statements
+      num_blocks label_num )
 
 and process_statement constants stack_vars label_num = function
   | AssignmentStatement (T_TYPE _t, T_VARIABLE v, _, expr) ->
@@ -97,8 +119,7 @@ and process_statement constants stack_vars label_num = function
       in
       (constants, new_stack, label_num, statements)
   | IfStatement blocks ->
-      process_if_blocks constants stack_vars label_num 0 (List.length blocks) ""
-        blocks
+      process_if_blocks constants stack_vars label_num blocks
   | PrintStatement (T_STRING x) ->
       let const_name = Printf.sprintf "V%d" (List.length constants) in
       ( (const_name, x) :: constants,

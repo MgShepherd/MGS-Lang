@@ -2,6 +2,9 @@ S_FILES = build/basic.s
 OBJ_FILES = build/basic.o
 OUT_DIR = build
 
+%.s:
+	dune exec MGSLang
+
 %.o : %.s | $(OUT_DIR)
 	as -g $< -o $@
 

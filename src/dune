@@ -1,6 +1,6 @@
 (executable
  (public_name MGSLang)
  (name main)
- (modules main token lexer parser printer arm_gen)
+ (modules main token lexer parser printer arm_gen logger)
  (promote (into ../build))
  (libraries str))

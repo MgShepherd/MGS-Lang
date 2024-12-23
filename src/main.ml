@@ -1,5 +1,6 @@
 let output_dir = "build/"
 let assembly_extension = ".s"
+let object_extension = ".o"
 let input_file_path = ref ""
 let arglist = [ ("-f", Arg.Set_string input_file_path, "File to be compiled") ]
 let anon_arg_func _ = ()
@@ -27,17 +28,35 @@ let process_file file =
   with Failure e ->
     raise (Failure (Printf.sprintf "Unexpected Exception Occurred\n%s" e))
 
-let write_string contents =
+let write_string file_name contents =
   if not (Sys.file_exists output_dir) then Sys.mkdir output_dir 0o755;
-  let oc =
-    open_out (output_dir ^ get_file_name !input_file_path ^ assembly_extension)
-  in
+  let oc = open_out (output_dir ^ file_name ^ assembly_extension) in
   Printf.fprintf oc "%s\n" contents;
   close_out oc
+
+let produce_executable file_name =
+  ignore
+    (Sys.command
+       (Printf.sprintf "as -o %s %s"
+          (output_dir ^ file_name ^ object_extension)
+          (output_dir ^ file_name ^ assembly_extension)));
+  ignore
+    (Sys.command
+       (Printf.sprintf "ld -o %s %s" (output_dir ^ file_name)
+          (output_dir ^ file_name ^ object_extension)));
+  ignore
+    (Sys.command
+       (Printf.sprintf "rm %s" (output_dir ^ file_name ^ object_extension)));
+  ignore
+    (Sys.command
+       (Printf.sprintf "rm %s" (output_dir ^ file_name ^ assembly_extension)))
 
 let () =
   Arg.parse arglist anon_arg_func arg_usage_msg;
   let file = try Some (open_in !input_file_path) with _ -> None in
+  let file_name = get_file_name !input_file_path in
   match file with
-  | Some x -> write_string (Arm_gen.generate_assembly (process_file x))
+  | Some x ->
+      write_string file_name (Arm_gen.generate_assembly (process_file x));
+      produce_executable file_name
   | None -> Printf.printf "Unable to open file: %s\n" !input_file_path

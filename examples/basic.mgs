@@ -1,6 +1,6 @@
 {
 	i16 my_variable = 12 - 6;
-	i16 my_variable2 = 6;
+	i16 my_variable2 = 7;
 
 	if my_variable2 < my_variable {
 		print "Var 2 is less than to var 1\n";

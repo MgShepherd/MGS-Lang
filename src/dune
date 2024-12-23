@@ -2,4 +2,5 @@
  (public_name MGSLang)
  (name main)
  (modules main token lexer parser printer arm_gen)
+ (promote (into ../build))
  (libraries str))

@@ -1,17 +1,10 @@
-S_FILES = build/basic.s
-OBJ_FILES = build/basic.o
 OUT_DIR = build
 
-%.s:
-	dune exec MGSLang
+compiler: | $(OUT_DIR)
+	dune build
+	rm -rf _build
 
-%.o : %.s | $(OUT_DIR)
-	as -g $< -o $@
-
-main: $(OBJ_FILES) 
-	ld -o $(OUT_DIR)/main $(OBJ_FILES)
-
-all: main
+all: compiler
 
 $(OUT_DIR):
 	mkdir -p $(OUT_DIR)

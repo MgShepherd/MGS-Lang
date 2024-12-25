@@ -38,26 +38,28 @@ let rec process_expression current_reg expr stack_vars label_num block_num =
   if current_reg > 30 then raise (Failure "Too many operands in expression")
   else
     match expr with
-    | ExprToken (T_NUMBER x) -> Printf.sprintf "\tMOV X%d, #%s\n" current_reg x
-    | ExprToken (T_VARIABLE x) -> process_variable current_reg x stack_vars
-    | ExprToken T_ELSE -> Printf.sprintf "\tB _%dif%d\n" block_num label_num
-    | ExprArithmetic (T_ARITHMETIC operator, left, right) ->
+    | ExprToken x -> (
+        match x.t_type with
+        | T_NUMBER -> Printf.sprintf "\tMOV X%d, #%s\n" current_reg x.t_str
+        | T_VARIABLE -> process_variable current_reg x.t_str stack_vars
+        | T_ELSE -> Printf.sprintf "\tB _%dif%d\n" block_num label_num
+        | _ -> "")
+    | ExprArithmetic (operator, left, right) ->
         Printf.sprintf "%s%s\t%s X%d, X%d, X%d\n"
           (process_expression (current_reg + 1) left stack_vars label_num
              block_num)
           (process_expression (current_reg + 2) right stack_vars label_num
              block_num)
-          (process_arithmetic_operator operator)
+          (process_arithmetic_operator operator.t_str)
           current_reg (current_reg + 1) (current_reg + 2)
-    | ExprComparison (T_COMPARISON operator, left, right) ->
+    | ExprComparison (operator, left, right) ->
         Printf.sprintf "%s%s\tCMP X%d, X%d\n\tB.%s _%dif%d\n"
           (process_expression current_reg left stack_vars label_num block_num)
           (process_expression (current_reg + 1) right stack_vars label_num
              block_num)
           current_reg (current_reg + 1)
-          (process_comparison_operator operator)
+          (process_comparison_operator operator.t_str)
           block_num label_num
-    | _ -> ""
 
 (*** For now can only assign 16 bit values***)
 let process_assignment stack_vars var_name label_num expr =
@@ -113,22 +115,21 @@ and process_if_blocks constants stack_vars label_num blocks =
       num_blocks label_num )
 
 and process_statement constants stack_vars label_num = function
-  | AssignmentStatement (T_TYPE _t, T_VARIABLE v, _, expr) ->
+  | AssignmentStatement (_, v, _, expr) ->
       let new_stack, statements =
-        process_assignment stack_vars v label_num expr
+        process_assignment stack_vars v.t_str label_num expr
       in
       (constants, new_stack, label_num, statements)
   | IfStatement blocks ->
       process_if_blocks constants stack_vars label_num blocks
-  | PrintStatement (T_STRING x) ->
+  | PrintStatement x ->
       let const_name = Printf.sprintf "V%d" (List.length constants) in
-      ( (const_name, x) :: constants,
+      ( (const_name, x.t_str) :: constants,
         stack_vars,
         label_num,
         Printf.sprintf
           "\tMOV X0, #1\n\tLDR X1, =%s\n\tMOV X2, #%d\n\tMOV X8, #%d\n\tSVC 0\n"
-          const_name (String.length x) sys_write )
-  | _ -> (constants, stack_vars, label_num, "")
+          const_name (String.length x.t_str) sys_write )
 
 and process_statements constants stack_vars label_num acc = function
   | [] -> (constants, stack_vars, acc)
@@ -154,9 +155,8 @@ let create_data_section constants =
 
 let generate_assembly = function
   | Program statements ->
-      let constants, stack_vars, statements =
+      let constants, _, statements =
         process_statements [] StringMap.empty 0 "" statements
       in
-      Printer.display_map stack_vars;
       create_start_function ^ statements ^ create_exit_function
       ^ create_data_section constants

@@ -26,7 +26,6 @@ let process_file file =
   Token.display_tokens tokens;
   close_in file;
   let tree = Parser.create_tree tokens in
-  Printer.display_tree tree;
   tree
 
 let write_string file_name contents =

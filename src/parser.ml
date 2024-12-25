@@ -41,14 +41,14 @@ and parse_arithmetic x prev nesting xs =
   | None -> raise (Failure "Invalid arithmetic operator\n")
   | Some left ->
       let right, remaining = parse_expression None nesting xs in
-      (ExprArithmetic (T_ARITHMETIC x, left, right), remaining)
+      (ExprArithmetic (x, left, right), remaining)
 
 and parse_comparision x prev nesting xs =
   match prev with
   | None -> raise (Failure "Invalid comparision operator\n")
   | Some left ->
       let right, remaining = parse_expression None nesting xs in
-      (ExprComparison (T_COMPARISON x, left, right), remaining)
+      (ExprComparison (x, left, right), remaining)
 
 and handle_empty_tokens prev =
   match prev with
@@ -56,92 +56,105 @@ and handle_empty_tokens prev =
   | _ -> raise (Failure "Unproccessed Elements\n")
 
 and parse_expression prev nesting = function
-  | T_OPEN_PAREN :: xs -> parse_open_paren nesting xs
-  | T_CLOSE_PAREN :: xs -> parse_close_paren prev nesting xs
-  | T_STRING x :: xs -> parse_value (T_STRING x) prev nesting xs
-  | T_NUMBER x :: xs -> parse_value (T_NUMBER x) prev nesting xs
-  | T_VARIABLE x :: xs -> parse_value (T_VARIABLE x) prev nesting xs
-  | T_ARITHMETIC x :: xs -> parse_arithmetic x prev nesting xs
-  | T_COMPARISON x :: xs -> parse_comparision x prev nesting xs
-  | [ T_ELSE ] -> (ExprToken T_ELSE, [])
+  | x :: xs -> (
+      match x.t_type with
+      | T_OPEN_PAREN -> parse_open_paren nesting xs
+      | T_CLOSE_PAREN -> parse_close_paren prev nesting xs
+      | T_STRING -> parse_value x prev nesting xs
+      | T_NUMBER -> parse_value x prev nesting xs
+      | T_VARIABLE -> parse_value x prev nesting xs
+      | T_ARITHMETIC -> parse_arithmetic x prev nesting xs
+      | T_COMPARISON -> parse_comparision x prev nesting xs
+      | T_ELSE -> (ExprToken x, [])
+      | _ ->
+          let error_message =
+            Printf.sprintf "Unrecognised Token %s\n" (get_token_string x)
+          in
+          raise (Failure error_message))
   | [] -> handle_empty_tokens prev
-  | x :: _ ->
-      let error_message =
-        Printf.sprintf "Unrecognised Token %s\n" (get_token_string x)
-      in
-      raise (Failure error_message)
+
+let is_assignment_statement x y z =
+  x.t_type = T_TYPE && y.t_type = T_VARIABLE && z.t_type = T_EQUALS
+
+let is_if_statement x = x.t_type = T_IF
+let is_print_statement x y = x.t_type = T_PRINT_FUNCTION && y.t_type = T_STRING
 
 let rec parse_statement = function
-  | T_TYPE x :: T_VARIABLE y :: T_EQUALS :: xs ->
+  | x :: y :: z :: xs when is_assignment_statement x y z ->
       let expression, remaining = parse_expression None [] xs in
       if List.length remaining > 0 then
         raise (Failure "Unproccessed tokens in statement\n")
-      else AssignmentStatement (T_TYPE x, T_VARIABLE y, T_EQUALS, expression)
-  | T_IF :: xs -> parse_if_block [] [] true xs
-  | [ T_PRINT_FUNCTION; T_STRING x ] -> PrintStatement (T_STRING x)
+      else AssignmentStatement (x, y, z, expression)
+  | x :: xs when is_if_statement x -> parse_if_block [] [] true xs
+  | [ x; y ] when is_print_statement x y -> PrintStatement y
   | _ -> raise (Failure "Invalid statement format\n")
 
 and parse_if_block acc_condition acc_segments has_valid_start = function
-  | T_OPEN_BLOCK :: xs ->
-      if has_valid_start then
-        let block, remaining = parse_block 0 [] xs in
-        let condition, expr_remaining =
-          parse_expression None [] (List.rev acc_condition)
-        in
-        if List.length expr_remaining > 0 then
-          raise (Failure "Invalid if statement condition")
-        else
-          parse_if_block [] ((condition, block) :: acc_segments) false remaining
-      else raise (Failure "Invalid if statement condition location")
-  | T_ELIF :: xs ->
-      if has_valid_start then
-        raise (Failure "Invalid location for elif statement")
-      else parse_if_block [] acc_segments true xs
-  | T_ELSE :: xs ->
-      if has_valid_start then
-        raise (Failure "Invalid location for else statement")
-      else parse_if_block [ T_ELSE ] acc_segments true xs
-  | x :: xs ->
-      parse_if_block (x :: acc_condition) acc_segments has_valid_start xs
+  | x :: xs -> (
+      match x.t_type with
+      | T_OPEN_BLOCK ->
+          if has_valid_start then
+            let block, remaining = parse_block 0 [] xs in
+            let condition, expr_remaining =
+              parse_expression None [] (List.rev acc_condition)
+            in
+            if List.length expr_remaining > 0 then
+              raise (Failure "Invalid if statement condition")
+            else
+              parse_if_block []
+                ((condition, block) :: acc_segments)
+                false remaining
+          else raise (Failure "Invalid if statement condition location")
+      | T_ELIF ->
+          if has_valid_start then
+            raise (Failure "Invalid location for elif statement")
+          else parse_if_block [] acc_segments true xs
+      | T_ELSE ->
+          if has_valid_start then
+            raise (Failure "Invalid location for else statement")
+          else parse_if_block [ x ] acc_segments true xs
+      | _ -> parse_if_block (x :: acc_condition) acc_segments has_valid_start xs
+      )
   | [] -> IfStatement (List.rev acc_segments)
 
 and parse_statements acc_statements current_statement nested_level = function
-  | T_SEMI :: xs ->
-      if nested_level = 0 then
-        parse_statements
-          (parse_statement (List.rev current_statement) :: acc_statements)
-          [] nested_level xs
-      else
-        parse_statements acc_statements
-          (T_SEMI :: current_statement)
-          nested_level xs
-  | T_OPEN_BLOCK :: xs ->
-      parse_statements acc_statements
-        (T_OPEN_BLOCK :: current_statement)
-        (nested_level + 1) xs
-  | T_CLOSE_BLOCK :: xs ->
-      parse_statements acc_statements
-        (T_CLOSE_BLOCK :: current_statement)
-        (nested_level - 1) xs
-  | x :: xs ->
-      parse_statements acc_statements (x :: current_statement) nested_level xs
+  | x :: xs -> (
+      match x.t_type with
+      | T_SEMI ->
+          if nested_level = 0 then
+            parse_statements
+              (parse_statement (List.rev current_statement) :: acc_statements)
+              [] nested_level xs
+          else
+            parse_statements acc_statements (x :: current_statement)
+              nested_level xs
+      | T_OPEN_BLOCK ->
+          parse_statements acc_statements (x :: current_statement)
+            (nested_level + 1) xs
+      | T_CLOSE_BLOCK ->
+          parse_statements acc_statements (x :: current_statement)
+            (nested_level - 1) xs
+      | _ ->
+          parse_statements acc_statements (x :: current_statement) nested_level
+            xs)
   | [] ->
       if List.length current_statement > 0 then
         raise (Failure "Invalid end of statements")
       else List.rev acc_statements
 
 and parse_block nested_level current_block = function
-  | T_CLOSE_BLOCK :: xs ->
-      if nested_level = 0 then
-        (parse_statements [] [] 0 (List.rev current_block), xs)
-      else parse_block (nested_level - 1) (T_CLOSE_BLOCK :: current_block) xs
-  | T_OPEN_BLOCK :: xs ->
-      parse_block (nested_level + 1) (T_OPEN_BLOCK :: current_block) xs
-  | x :: xs -> parse_block nested_level (x :: current_block) xs
+  | x :: xs -> (
+      match x.t_type with
+      | T_CLOSE_BLOCK ->
+          if nested_level = 0 then
+            (parse_statements [] [] 0 (List.rev current_block), xs)
+          else parse_block (nested_level - 1) (x :: current_block) xs
+      | T_OPEN_BLOCK -> parse_block (nested_level + 1) (x :: current_block) xs
+      | _ -> parse_block nested_level (x :: current_block) xs)
   | [] -> raise (Failure "Unclosed block")
 
 let create_tree = function
-  | T_OPEN_BLOCK :: xs ->
+  | { t_type = T_OPEN_BLOCK; _ } :: xs ->
       let statements, remaining = parse_block 0 [] xs in
       if List.length remaining > 0 then
         raise (Failure "Unprocessed tokens at end of program")

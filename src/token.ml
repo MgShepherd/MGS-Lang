@@ -1,11 +1,11 @@
-type token =
-  | T_ARITHMETIC of string
-  | T_COMPARISON of string
-  | T_STRING of string
-  | T_NUMBER of string
-  | T_VARIABLE of string
+type token_type =
+  | T_ARITHMETIC
+  | T_COMPARISON
+  | T_STRING
+  | T_NUMBER
+  | T_VARIABLE
   | T_EQUALS
-  | T_TYPE of string
+  | T_TYPE
   | T_OPEN_PAREN
   | T_CLOSE_PAREN
   | T_SEMI
@@ -16,13 +16,16 @@ type token =
   | T_CLOSE_BLOCK
   | T_PRINT_FUNCTION
 
-let get_token_string = function
-  | T_STRING x -> Printf.sprintf "(STRING:%s)" x
-  | T_NUMBER x -> Printf.sprintf "(NUMBER:%s)" x
-  | T_VARIABLE x -> Printf.sprintf "(VARIABLE:%s)" x
-  | T_ARITHMETIC x -> Printf.sprintf "(ARITHMETIC:%s)" x
-  | T_COMPARISON x -> Printf.sprintf "(COMPARISION:%s)" x
-  | T_TYPE x -> Printf.sprintf "(TYPE:%s)" x
+type token = { t_type : token_type; t_str : string }
+
+let get_token_string t =
+  match t.t_type with
+  | T_STRING -> Printf.sprintf "(STRING:%s)" t.t_str
+  | T_NUMBER -> Printf.sprintf "(NUMBER:%s)" t.t_str
+  | T_VARIABLE -> Printf.sprintf "(VARIABLE:%s)" t.t_str
+  | T_ARITHMETIC -> Printf.sprintf "(ARITHMETIC:%s)" t.t_str
+  | T_COMPARISON -> Printf.sprintf "(COMPARISION:%s)" t.t_str
+  | T_TYPE -> Printf.sprintf "(TYPE:%s)" t.t_str
   | T_SEMI -> "(SEMI)"
   | T_OPEN_PAREN -> "(OPEN_PAREN)"
   | T_CLOSE_PAREN -> "(CLOSE_PAREN)"

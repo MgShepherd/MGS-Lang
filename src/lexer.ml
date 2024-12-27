@@ -23,10 +23,10 @@ let get_t_type t_str =
   | "" -> raise (Failure "Empty Token\n")
   | x -> parse_value x
 
-let parse_token t =
+let parse_token t line_num =
   let t_str = String.of_seq (List.to_seq t) in
   let t_type = get_t_type t_str in
-  { t_type; t_str }
+  { t_type; t_str; line_num }
 
 let rec process_double_quotes acc_chars file =
   let char = input_char file in
@@ -36,29 +36,37 @@ let rec process_double_quotes acc_chars file =
     | x -> process_double_quotes (x :: acc_chars) file
   with _ -> raise (Failure "Unable to process quote string")
 
-let rec process_tokens acc_token tokens file =
+let rec process_tokens acc_token tokens line_num file =
   let char = input_char file in
   try
     match char with
-    | '\n' | ' ' | '\t' ->
+    | ' ' | '\t' ->
         if List.length acc_token > 0 then
-          process_tokens [] (parse_token (List.rev acc_token) :: tokens) file
-        else process_tokens [] tokens file
+          process_tokens []
+            (parse_token (List.rev acc_token) line_num :: tokens)
+            line_num file
+        else process_tokens [] tokens line_num file
+    | '\n' -> process_tokens acc_token tokens (line_num + 1) file
     | ';' | '(' | ')' ->
         if List.length acc_token > 0 then
           process_tokens []
-            (parse_token [ char ] :: parse_token (List.rev acc_token) :: tokens)
-            file
-        else process_tokens [] (parse_token [ char ] :: tokens) file
+            (parse_token [ char ] line_num
+            :: parse_token (List.rev acc_token) line_num
+            :: tokens)
+            line_num file
+        else
+          process_tokens []
+            (parse_token [ char ] line_num :: tokens)
+            line_num file
     | '"' ->
         let str_val = process_double_quotes [ '"' ] file in
-        process_tokens [] (parse_token str_val :: tokens) file
-    | x -> process_tokens (x :: acc_token) tokens file
+        process_tokens [] (parse_token str_val line_num :: tokens) line_num file
+    | x -> process_tokens (x :: acc_token) tokens line_num file
   with
   | End_of_file ->
       if List.length acc_token > 0 then
-        parse_token (List.rev acc_token) :: tokens
+        parse_token (List.rev acc_token) line_num :: tokens
       else tokens
   | e -> raise e
 
-let process_file file = List.rev (process_tokens [] [] file)
+let process_file file = List.rev (process_tokens [] [] 1 file)

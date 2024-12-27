@@ -16,7 +16,7 @@ type token_type =
   | T_CLOSE_BLOCK
   | T_PRINT_FUNCTION
 
-type token = { t_type : token_type; t_str : string }
+type token = { t_type : token_type; t_str : string; line_num : int }
 
 let get_token_string t =
   match t.t_type with

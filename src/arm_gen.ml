@@ -85,7 +85,7 @@ let rec process_if_statements index constants stack_vars label_num num_blocks
     processed_statements = function
   | x :: xs ->
       let new_constants, _, statement =
-        process_statements constants stack_vars label_num "" x
+        process_statements constants stack_vars (label_num + 1) "" x
       in
       let if_statement =
         Printf.sprintf "_%dif%d:\n%s\tB _%dif%d\n" index label_num statement

@@ -1,14 +1,19 @@
 {
-	i16 my_variable = 12 - 6;
-	i16 my_variable2 = 7;
+	i16 my_variable = 12 - 2;
+	i16 my_variable2 = 10;
 
-	if my_variable2 < my_variable {
-		print "Var 2 is less than to var 1\n";
+	if my_variable2 <= my_variable {
+		if my_variable2 == my_variable {
+			if my_variable == 10 {
+				print "The two variables are equal to 10\n";
+			} else {
+				print "The two variables are equal but are not 10\n";
+			};
+		}	else {
+			print "Var 2 is less than var 1\n";
+		};
 	} 
-	elif my_variable2 == my_variable {
-		print "The two variables are equal\n";
-	}
-	else {
-		print "This is the else block \n";
+	else my_variable2 == my_variable {
+		print "Var 2 is greater than Var 1\n";
 	};
 }

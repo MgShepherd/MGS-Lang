@@ -15,6 +15,7 @@ type token_type =
   | T_OPEN_BLOCK
   | T_CLOSE_BLOCK
   | T_PRINT_FUNCTION
+  | T_WHILE
 
 type token = { t_type : token_type; t_str : string; line_num : int }
 
@@ -36,6 +37,7 @@ let get_token_string t =
   | T_OPEN_BLOCK -> "(T_OPEN_BLOCK)"
   | T_CLOSE_BLOCK -> "(T_CLOSE_BLOCK)"
   | T_PRINT_FUNCTION -> "(T_PRINT_FUNCTION)"
+  | T_WHILE -> "(T_WHILE)"
 
 let rec display_tokens = function
   | [] -> Printf.printf "\n"

@@ -20,6 +20,7 @@ let get_t_type t_str =
   | "}" -> T_CLOSE_BLOCK
   | "=" -> T_EQUALS
   | "print" -> T_PRINT_FUNCTION
+  | "while" -> T_WHILE
   | "" -> raise (Failure "Empty Token\n")
   | x -> parse_value x
 

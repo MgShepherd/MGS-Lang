@@ -23,6 +23,7 @@ let get_file_name path =
 
 let process_file file =
   let tokens = Lexer.process_file file in
+  Token.display_tokens tokens;
   close_in file;
   let tree = Parser.create_tree tokens in
   tree

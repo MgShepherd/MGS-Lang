@@ -6,6 +6,7 @@ type expr =
 type statement =
   | AssignmentStatement of Token.token * Token.token * Token.token * expr
   | IfStatement of (expr * statement list) list
+  | WhileStatement of expr * statement list
   | PrintStatement of Token.token
 
 type program = Program of statement list

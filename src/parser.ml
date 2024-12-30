@@ -9,6 +9,7 @@ type expr =
 type statement =
   | AssignmentStatement of token * token * token * expr
   | IfStatement of (expr * statement list) list
+  | WhileStatement of expr * statement list
   | PrintStatement of token
 
 type program = Program of statement list
@@ -68,7 +69,7 @@ and parse_expression prev nesting = function
 let is_assignment_statement x y z =
   x.t_type = T_TYPE && y.t_type = T_VARIABLE && z.t_type = T_EQUALS
 
-let is_if_statement x = x.t_type = T_IF
+let is_statement_type st_type x = x.t_type = st_type
 let is_print_statement x y = x.t_type = T_PRINT_FUNCTION && y.t_type = T_STRING
 
 let rec parse_statement = function
@@ -77,9 +78,24 @@ let rec parse_statement = function
       if List.length remaining > 0 then
         fatal_err_with_line "Unproccessed tokens in statement" x.line_num
       else AssignmentStatement (x, y, z, expression)
-  | x :: xs when is_if_statement x -> parse_if_block [] [] true xs
+  | x :: xs when is_statement_type T_IF x -> parse_if_block [] [] true xs
+  | x :: xs when is_statement_type T_WHILE x -> parse_while_block [] xs
   | [ x; y ] when is_print_statement x y -> PrintStatement y
-  | _ -> fatal_err "Unrecognised statement type"
+  | _ ->
+      Printf.printf "Reached error";
+      fatal_err "Unrecognised statement type"
+
+and parse_while_block acc_condition = function
+  | x :: xs -> (
+      match x.t_type with
+      | T_OPEN_BLOCK ->
+          let block, _remaining = parse_block 0 [] xs in
+          let condition, _expr_remaining =
+            parse_expression None [] (List.rev acc_condition)
+          in
+          WhileStatement (condition, block)
+      | _ -> parse_while_block (x :: acc_condition) xs)
+  | [] -> fatal_err "Unprocessable while loop"
 
 and parse_if_block acc_condition acc_segments has_valid_start = function
   | x :: xs -> (

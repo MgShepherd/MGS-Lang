@@ -1,5 +1,6 @@
 open Parser
 open Logger
+open Token
 module StringMap = Map.Make (String)
 
 let sys_exit = 93
@@ -24,13 +25,13 @@ let process_comparison_operator = function
   | "<=" -> "LE"
   | _ -> ""
 
-let get_value_from_map map (var_token : Token.token) =
+let get_value_from_map map var_token =
   try StringMap.find var_token.t_str map
   with _ ->
     let msg = Printf.sprintf "Undefined variable: %s" var_token.t_str in
     fatal_err_with_line msg var_token.line_num
 
-let process_variable current_reg (var_token : Token.token) stack_vars =
+let process_variable current_reg var_token stack_vars =
   let value = get_value_from_map stack_vars var_token in
   Printf.sprintf "\tLDR W%d, [X%d, #-%d]\n" current_reg frame_pointer_register
     value

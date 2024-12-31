@@ -53,7 +53,7 @@ let rec process_expression current_reg expr stack_vars label_num block_num =
         (process_arithmetic_operator operator.t_str)
         current_reg (current_reg + 1) (current_reg + 2)
   | ExprComparison (operator, left, right) ->
-      Printf.sprintf "%s%s\tCMP X%d, X%d\n\tB.%s _%dif%d\n"
+      Printf.sprintf "%s%s\tCMP X%d, X%d\n\tB.%s _%dblock%d\n"
         (process_expression current_reg left stack_vars label_num block_num)
         (process_expression (current_reg + 1) right stack_vars label_num
            block_num)
@@ -97,8 +97,8 @@ let rec process_if_statements index constants stack_vars label_num num_blocks
         process_statements constants stack_vars (label_num + 1) "" x
       in
       let if_statement =
-        Printf.sprintf "_%dif%d:\n%s\tB _%dif%d\n" index label_num statement
-          num_blocks label_num
+        Printf.sprintf "_%dblock%d:\n%s\tB _%dblock%d\n" index label_num
+          statement num_blocks label_num
       in
       process_if_statements (index + 1) new_constants stack_vars label_num
         num_blocks
@@ -120,8 +120,21 @@ and process_if_blocks constants stack_vars label_num blocks =
   ( new_constants,
     stack_vars,
     label_num,
-    Printf.sprintf "%s%s_%dif%d:\n" processed_comparisions processed_statements
-      num_blocks label_num )
+    Printf.sprintf "%s%s_%dblock%d:\n" processed_comparisions
+      processed_statements num_blocks label_num )
+
+and process_while_block constants stack_vars label_num expr statements =
+  let processed_comp = process_expression 0 expr stack_vars label_num 1 in
+  let new_constants, _, processed_statements =
+    process_statements constants stack_vars (label_num + 1) "" statements
+  in
+  let while_loop =
+    Printf.sprintf
+      "_0block%d:\n%s\tB _2block%d\n_1block%d:\n%s\tB _0block%d\n_2block%d:\n"
+      label_num processed_comp label_num label_num processed_statements
+      label_num label_num
+  in
+  (new_constants, stack_vars, label_num, while_loop)
 
 and process_statement constants stack_vars label_num = function
   | DeclarationStatement (_, v, _, expr) ->
@@ -134,8 +147,8 @@ and process_statement constants stack_vars label_num = function
       (constants, stack_vars, label_num, statements)
   | IfStatement blocks ->
       process_if_blocks constants stack_vars label_num blocks
-  | WhileStatement (_expr, _statement) ->
-      (constants, stack_vars, label_num, Printf.sprintf "")
+  | WhileStatement (expr, statements) ->
+      process_while_block constants stack_vars label_num expr statements
   | PrintStatement x ->
       let const_name = Printf.sprintf "V%d" (List.length constants) in
       ( (const_name, x.t_str) :: constants,

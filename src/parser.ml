@@ -7,7 +7,8 @@ type expr =
   | ExprToken of token
 
 type statement =
-  | AssignmentStatement of token * token * token * expr
+  | DeclarationStatement of token * token * token * expr
+  | AssignmentStatement of token * token * expr
   | IfStatement of (expr * statement list) list
   | WhileStatement of expr * statement list
   | PrintStatement of token
@@ -66,18 +67,24 @@ and parse_expression prev nesting = function
       | _ -> unexpected_token x)
   | [] -> handle_empty_tokens prev
 
-let is_assignment_statement x y z =
+let is_declaration_statement x y z =
   x.t_type = T_TYPE && y.t_type = T_VARIABLE && z.t_type = T_EQUALS
 
+let is_assignment_statement x y = x.t_type = T_VARIABLE && y.t_type == T_EQUALS
 let is_statement_type st_type x = x.t_type = st_type
 let is_print_statement x y = x.t_type = T_PRINT_FUNCTION && y.t_type = T_STRING
 
 let rec parse_statement = function
-  | x :: y :: z :: xs when is_assignment_statement x y z ->
+  | x :: y :: z :: xs when is_declaration_statement x y z ->
       let expression, remaining = parse_expression None [] xs in
       if List.length remaining > 0 then
         fatal_err_with_line "Unproccessed tokens in statement" x.line_num
-      else AssignmentStatement (x, y, z, expression)
+      else DeclarationStatement (x, y, z, expression)
+  | x :: y :: xs when is_assignment_statement x y ->
+      let expression, remaining = parse_expression None [] xs in
+      if List.length remaining > 0 then
+        fatal_err_with_line "Unprocessed tokens in statement" x.line_num
+      else AssignmentStatement (x, y, expression)
   | x :: xs when is_statement_type T_IF x -> parse_if_block [] [] true xs
   | x :: xs when is_statement_type T_WHILE x -> parse_while_block [] xs
   | [ x; y ] when is_print_statement x y -> PrintStatement y

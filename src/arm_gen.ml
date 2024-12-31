@@ -62,7 +62,7 @@ let rec process_expression current_reg expr stack_vars label_num block_num =
         block_num label_num
 
 (*** For now can only assign 16 bit values***)
-let process_assignment stack_vars var_name label_num expr =
+let process_declaration stack_vars var_name label_num expr =
   let new_stack =
     StringMap.add var_name
       ((StringMap.cardinal stack_vars + 1) * stack_alignment)
@@ -71,6 +71,15 @@ let process_assignment stack_vars var_name label_num expr =
   ( new_stack,
     Printf.sprintf "%s\tSUB SP, SP, #16\n\tSTR W0, [SP]\n"
       (process_expression 0 expr stack_vars label_num 0) )
+
+let process_assignment stack_vars var_token label_num expr =
+  let processed_expr = process_expression 0 expr stack_vars label_num 0 in
+  let variable_location = get_value_from_map stack_vars var_token in
+  let store_var =
+    Printf.sprintf "\tSTR W0, [X%d, #-%d]\n" frame_pointer_register
+      variable_location
+  in
+  processed_expr ^ store_var
 
 let rec process_if_comparisions index stack_vars label_num processed_comparisons
     num_blocks = function
@@ -115,13 +124,18 @@ and process_if_blocks constants stack_vars label_num blocks =
       num_blocks label_num )
 
 and process_statement constants stack_vars label_num = function
-  | AssignmentStatement (_, v, _, expr) ->
+  | DeclarationStatement (_, v, _, expr) ->
       let new_stack, statements =
-        process_assignment stack_vars v.t_str label_num expr
+        process_declaration stack_vars v.t_str label_num expr
       in
       (constants, new_stack, label_num, statements)
+  | AssignmentStatement (v, _, expr) ->
+      let statements = process_assignment stack_vars v label_num expr in
+      (constants, stack_vars, label_num, statements)
   | IfStatement blocks ->
       process_if_blocks constants stack_vars label_num blocks
+  | WhileStatement (_expr, _statement) ->
+      (constants, stack_vars, label_num, Printf.sprintf "")
   | PrintStatement x ->
       let const_name = Printf.sprintf "V%d" (List.length constants) in
       ( (const_name, x.t_str) :: constants,

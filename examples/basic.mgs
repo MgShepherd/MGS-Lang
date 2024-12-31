@@ -1,7 +1,9 @@
 {
-	i16 index = 0;
-
-	while index < 10 {
-		print "Looping";
+	i16 index = 10;
+	index = index + 1;
+	if index == 11 {
+		print "Updating the varaible worked correctly\n";
+	} else {
+		print "Updating didn't work correctly\n";
 	};
 }

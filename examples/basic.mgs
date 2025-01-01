@@ -2,6 +2,11 @@
 	i16 index = 0;
 	while index < 10 {
 		print "Looping\n";	
+		if index == 3 {
+			print "Index is 3\n";
+		} elif index == 5 {
+			print "Index is 5\n";
+		};
 		index = index + 1;
 	};
 }

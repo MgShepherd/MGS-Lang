@@ -42,7 +42,7 @@ let rec process_expression current_reg expr stack_vars label_num block_num =
       match x.t_type with
       | T_NUMBER -> Printf.sprintf "\tMOV X%d, #%s\n" current_reg x.t_str
       | T_VARIABLE -> process_variable current_reg x stack_vars
-      | T_ELSE -> Printf.sprintf "\tB _%dif%d\n" block_num label_num
+      | T_ELSE -> Printf.sprintf "\tB _%dblock%d\n" block_num label_num
       | _ -> "")
   | ExprArithmetic (operator, left, right) ->
       Printf.sprintf "%s%s\t%s X%d, X%d, X%d\n"
@@ -88,7 +88,9 @@ let rec process_if_comparisions index stack_vars label_num processed_comparisons
       process_if_comparisions (index + 1) stack_vars label_num
         (processed_comparisons ^ comp)
         num_blocks xs
-  | [] -> processed_comparisons
+  | [] ->
+      Printf.sprintf "%s\tB _%dblock%d\n" processed_comparisons num_blocks
+        label_num
 
 let rec process_if_statements index constants stack_vars label_num num_blocks
     processed_statements = function

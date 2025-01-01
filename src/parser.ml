@@ -70,7 +70,10 @@ and parse_expression prev nesting = function
 let is_declaration_statement x y z =
   x.t_type = T_TYPE && y.t_type = T_VARIABLE && z.t_type = T_EQUALS
 
-let is_assignment_statement x y = x.t_type = T_VARIABLE && y.t_type == T_EQUALS
+let is_assignment_statement x y =
+  x.t_type = T_VARIABLE
+  && (y.t_type == T_EQUALS || y.t_type == T_COMPOUND_ASSIGNMENT)
+
 let is_statement_type st_type x = x.t_type = st_type
 let is_print_statement x y = x.t_type = T_PRINT_FUNCTION && y.t_type = T_STRING
 

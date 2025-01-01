@@ -7,6 +7,6 @@
 		} elif index == 5 {
 			print "Index is 5\n";
 		};
-		index = index + 1;
+		index += 1;
 	};
 }

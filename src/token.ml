@@ -1,5 +1,6 @@
 type token_type =
   | T_ARITHMETIC
+  | T_COMPOUND_ASSIGNMENT
   | T_COMPARISON
   | T_STRING
   | T_NUMBER
@@ -25,6 +26,7 @@ let get_token_string t =
   | T_NUMBER -> Printf.sprintf "(NUMBER:%s)" t.t_str
   | T_VARIABLE -> Printf.sprintf "(VARIABLE:%s)" t.t_str
   | T_ARITHMETIC -> Printf.sprintf "(ARITHMETIC:%s)" t.t_str
+  | T_COMPOUND_ASSIGNMENT -> Printf.sprintf "(COMPOUND_ASSIGNMENT:%s)" t.t_str
   | T_COMPARISON -> Printf.sprintf "(COMPARISION:%s)" t.t_str
   | T_TYPE -> Printf.sprintf "(TYPE:%s)" t.t_str
   | T_SEMI -> "(SEMI)"

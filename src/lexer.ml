@@ -8,6 +8,7 @@ let parse_value x =
 let get_t_type t_str =
   match t_str with
   | "+" | "-" | "*" | "/" -> T_ARITHMETIC
+  | "+=" | "-=" -> T_COMPOUND_ASSIGNMENT
   | ">" | ">=" | "<=" | "<" | "==" -> T_COMPARISON
   | "i16" -> T_TYPE
   | "if" -> T_IF

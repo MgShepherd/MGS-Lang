@@ -13,8 +13,8 @@ let create_start_function =
     frame_pointer_register
 
 let process_arithmetic_operator = function
-  | "+" -> "ADD"
-  | "-" -> "SUB"
+  | '+' -> "ADD"
+  | '-' -> "SUB"
   | _ -> ""
 
 let process_comparison_operator = function
@@ -50,7 +50,7 @@ let rec process_expression current_reg expr stack_vars label_num block_num =
            block_num)
         (process_expression (current_reg + 2) right stack_vars label_num
            block_num)
-        (process_arithmetic_operator operator.t_str)
+        (process_arithmetic_operator operator.t_str.[0])
         current_reg (current_reg + 1) (current_reg + 2)
   | ExprComparison (operator, left, right) ->
       Printf.sprintf "%s%s\tCMP X%d, X%d\n\tB.%s _%dblock%d\n"
@@ -80,6 +80,21 @@ let process_assignment stack_vars var_token label_num expr =
       variable_location
   in
   processed_expr ^ store_var
+
+let process_compound_assignment stack_vars var_token label_num expr op_str =
+  let processed_expr = process_expression 1 expr stack_vars label_num 0 in
+  let variable_location = get_value_from_map stack_vars var_token in
+  let load_variable =
+    Printf.sprintf "\tLDR W0, [X%d, #-%d]\n" frame_pointer_register
+      variable_location
+  in
+  let op_val = process_arithmetic_operator op_str.[0] in
+  let compound_update = Printf.sprintf "\t%s W0, W0, W1\n" op_val in
+  let store_variable =
+    Printf.sprintf "\tSTR W0, [X%d, #-%d]\n" frame_pointer_register
+      variable_location
+  in
+  processed_expr ^ load_variable ^ compound_update ^ store_variable
 
 let rec process_if_comparisions index stack_vars label_num processed_comparisons
     num_blocks = function
@@ -138,14 +153,20 @@ and process_while_block constants stack_vars label_num expr statements =
   in
   (new_constants, stack_vars, label_num, while_loop)
 
+and handle_assignment stack_vars var_token label_num expr op =
+  match op.t_type with
+  | T_COMPOUND_ASSIGNMENT ->
+      process_compound_assignment stack_vars var_token label_num expr op.t_str
+  | _ -> process_assignment stack_vars var_token label_num expr
+
 and process_statement constants stack_vars label_num = function
   | DeclarationStatement (_, v, _, expr) ->
       let new_stack, statements =
         process_declaration stack_vars v.t_str label_num expr
       in
       (constants, new_stack, label_num, statements)
-  | AssignmentStatement (v, _, expr) ->
-      let statements = process_assignment stack_vars v label_num expr in
+  | AssignmentStatement (v, op, expr) ->
+      let statements = handle_assignment stack_vars v label_num expr op in
       (constants, stack_vars, label_num, statements)
   | IfStatement blocks ->
       process_if_blocks constants stack_vars label_num blocks

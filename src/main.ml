@@ -1,4 +1,5 @@
-open Logger
+open Common.Logger
+open Code_gen.Native_gen
 
 let output_dir = "build/"
 let assembly_extension = ".s"
@@ -23,7 +24,7 @@ let get_file_name path =
 
 let process_file file =
   let tokens = Lexer.process_file file in
-  Token.display_tokens tokens;
+  Common.Token.display_tokens tokens;
   close_in file;
   let tree = Parser.create_tree tokens in
   tree
@@ -58,7 +59,7 @@ let () =
   let file_name = get_file_name !input_file_path in
   match file with
   | Some x ->
-      write_string file_name (Native_gen.generate_native_assembly (process_file x));
+      write_string file_name (generate_native_assembly (process_file x));
       produce_executable file_name
   | None ->
       fatal_err

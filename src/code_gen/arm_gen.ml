@@ -1,6 +1,6 @@
 open Parser
-open Logger
-open Token
+open Common.Logger
+open Common.Token
 module StringMap = Map.Make (String)
 
 let sys_exit = 93

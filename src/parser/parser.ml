@@ -1,5 +1,5 @@
-open Token
-open Logger
+open Common.Token
+open Common.Logger
 
 type expr =
   | ExprArithmetic of token * expr * expr

@@ -1,4 +1,4 @@
-open Token
+open Common.Token
 
 let parse_value x =
   if Str.string_match (Str.regexp "[0-9]+") x 0 then T_NUMBER

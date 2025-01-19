@@ -1,3 +1,5 @@
+open Common
+
 type expr =
   | ExprArithmetic of Token.token * expr * expr
   | ExprComparison of Token.token * expr * expr

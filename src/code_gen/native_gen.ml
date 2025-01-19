@@ -1,4 +1,4 @@
-open Logger
+open Common.Logger
 
 let is_os_type_supported os_type = os_type = "Unix"
 

@@ -1,0 +1,4 @@
+(library
+ (name lexer)
+ (modules lexer)
+ (libraries common str))

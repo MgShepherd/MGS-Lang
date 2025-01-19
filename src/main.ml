@@ -58,7 +58,7 @@ let () =
   let file_name = get_file_name !input_file_path in
   match file with
   | Some x ->
-      write_string file_name (Arm_gen.generate_assembly (process_file x));
+      write_string file_name (Native_gen.generate_native_assembly (process_file x));
       produce_executable file_name
   | None ->
       fatal_err

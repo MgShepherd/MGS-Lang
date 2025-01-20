@@ -1,4 +1,4 @@
 (library
  (name code_gen)
- (modules arm_gen native_gen x86_64_gen)
+ (modules arm_gen native_gen x86_64_gen program_state)
  (libraries unix parser common))

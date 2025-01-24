@@ -3,6 +3,8 @@ open Parser
 open Program_state
 open Common.Token
 
+let reg_order = [| "rax"; "rbx"; "rcx"; "rdx"; "r8"; "r9"; "r10"; "r11" |]
+
 let create_start_function = {|
 .global _start
 _start:
@@ -14,6 +16,26 @@ let create_exit_function status =
   MOV $%d, %%rdi
   syscall
 |} status
+
+let process_tok_expression reg_num tok =
+  match tok.t_type with
+  | T_NUMBER -> Printf.sprintf "\tMOV $%s, %%%s\n" tok.t_str reg_order.(reg_num)
+  | _x -> ""
+
+let rec process_arith_expression p_state reg_num _op left right =
+  let left_expr = process_expression p_state reg_num left in
+  let right_expr = process_expression p_state (reg_num + 1) right in
+  let add_inst =
+    Printf.sprintf "\tADD %%%s, %%%s\n" reg_order.(reg_num)
+      reg_order.(reg_num + 1)
+  in
+  Printf.sprintf "%s%s%s" left_expr right_expr add_inst
+
+and process_expression p_state reg_num = function
+  | ExprToken x -> process_tok_expression reg_num x
+  | ExprArithmetic (op, left, right) ->
+      process_arith_expression p_state reg_num op left right
+  | ExprComparison (_op, _left, _right) -> ""
 
 let process_print_statement p_state tok =
   let c_name = Printf.sprintf "V%d" (List.length p_state.constants) in
@@ -34,7 +56,8 @@ let process_print_statement p_state tok =
   (u_state, pr_string)
 
 let process_statement p_state = function
-  | DeclarationStatement (_, _v, _, _expr) -> (p_state, "\tDeclStatement\n")
+  | DeclarationStatement (_, _v, _, ex) ->
+      (p_state, process_expression p_state 0 ex)
   | AssignmentStatement (_v, _op, _expr) -> (p_state, "\tAssignmentStatement\n")
   | IfStatement _blocks -> (p_state, "\tIfStatement\n")
   | WhileStatement (_expr, _statements) -> (p_state, "\tWhileStatement\n")

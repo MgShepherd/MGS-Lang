@@ -8,6 +8,7 @@ let reg_order = [| "rax"; "rbx"; "rcx"; "rdx"; "r8"; "r9"; "r10"; "r11" |]
 let create_start_function = {|
 .global _start
 _start:
+  MOV %rsp, %rbp
 |}
 
 let create_exit_function status =
@@ -26,8 +27,9 @@ let rec process_arith_expression p_state reg_num _op left right =
   let left_expr = process_expression p_state reg_num left in
   let right_expr = process_expression p_state (reg_num + 1) right in
   let add_inst =
-    Printf.sprintf "\tADD %%%s, %%%s\n" reg_order.(reg_num)
+    Printf.sprintf "\tADD %%%s, %%%s\n"
       reg_order.(reg_num + 1)
+      reg_order.(reg_num)
   in
   Printf.sprintf "%s%s%s" left_expr right_expr add_inst
 
@@ -55,9 +57,14 @@ let process_print_statement p_state tok =
   in
   (u_state, pr_string)
 
+let process_dec_statement p_state tok ex =
+  let push_instr = Printf.sprintf "\tPUSH %%%s\n" reg_order.(0) in
+  let p_expr = process_expression p_state 0 ex in
+  let n_state = add_to_stack p_state tok.t_str in
+  (n_state, p_expr ^ push_instr)
+
 let process_statement p_state = function
-  | DeclarationStatement (_, _v, _, ex) ->
-      (p_state, process_expression p_state 0 ex)
+  | DeclarationStatement (_, v, _, ex) -> process_dec_statement p_state v ex
   | AssignmentStatement (_v, _op, _expr) -> (p_state, "\tAssignmentStatement\n")
   | IfStatement _blocks -> (p_state, "\tIfStatement\n")
   | WhileStatement (_expr, _statements) -> (p_state, "\tWhileStatement\n")

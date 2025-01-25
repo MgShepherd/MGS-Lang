@@ -3,7 +3,7 @@ open Parser
 open Program_state
 open Common.Token
 
-let reg_order = [| "rax"; "rbx"; "rcx"; "rdx"; "r8"; "r9"; "r10"; "r11" |]
+let reg_order = [| "ax"; "bx"; "cx"; "dx"; "r8w"; "r9w"; "r10w"; "r11w" |]
 
 let create_start_function = {|
 .global _start
@@ -18,9 +18,14 @@ let create_exit_function status =
   syscall
 |} status
 
-let process_tok_expression reg_num tok =
+let process_variable p_state reg_num tok =
+  let offset = get_stack_var p_state tok in
+  Printf.sprintf "\tMOVW -%d(%%rbp), %%%s\n" offset reg_order.(reg_num)
+
+let process_tok_expression p_state reg_num tok =
   match tok.t_type with
   | T_NUMBER -> Printf.sprintf "\tMOV $%s, %%%s\n" tok.t_str reg_order.(reg_num)
+  | T_VARIABLE -> process_variable p_state reg_num tok
   | _x -> ""
 
 let rec process_arith_expression p_state reg_num _op left right =
@@ -34,7 +39,7 @@ let rec process_arith_expression p_state reg_num _op left right =
   Printf.sprintf "%s%s%s" left_expr right_expr add_inst
 
 and process_expression p_state reg_num = function
-  | ExprToken x -> process_tok_expression reg_num x
+  | ExprToken x -> process_tok_expression p_state reg_num x
   | ExprArithmetic (op, left, right) ->
       process_arith_expression p_state reg_num op left right
   | ExprComparison (_op, _left, _right) -> ""
@@ -58,7 +63,7 @@ let process_print_statement p_state tok =
   (u_state, pr_string)
 
 let process_dec_statement p_state tok ex =
-  let push_instr = Printf.sprintf "\tPUSH %%%s\n" reg_order.(0) in
+  let push_instr = Printf.sprintf "\tPUSH %%r%s\n" reg_order.(0) in
   let p_expr = process_expression p_state 0 ex in
   let n_state = add_to_stack p_state tok.t_str in
   (n_state, p_expr ^ push_instr)

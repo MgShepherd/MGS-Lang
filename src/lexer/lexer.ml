@@ -1,4 +1,6 @@
 open Common.Token
+open Common.Logger
+open Common.Utils
 
 let parse_value x =
   if Str.string_match (Str.regexp "[0-9]+") x 0 then T_NUMBER
@@ -30,45 +32,43 @@ let parse_token t line_num =
   let t_type = get_t_type t_str in
   { t_type; t_str; line_num }
 
-let rec process_double_quotes acc_chars file =
-  let char = input_char file in
-  try
-    match char with
-    | '"' -> List.rev ('"' :: acc_chars)
-    | x -> process_double_quotes (x :: acc_chars) file
-  with _ -> raise (Failure "Unable to process quote string")
+let rec process_double_quotes acc_chars = function
+  | '"' :: xs -> (List.rev ('"' :: acc_chars), xs)
+  | x :: xs -> process_double_quotes (x :: acc_chars) xs
+  | [] -> fatal_err "Unclosed string quotes"
 
-let rec process_tokens acc_token tokens line_num file =
-  let char = input_char file in
-  try
-    match char with
-    | ' ' | '\t' ->
-        if List.length acc_token > 0 then
-          process_tokens []
-            (parse_token (List.rev acc_token) line_num :: tokens)
-            line_num file
-        else process_tokens [] tokens line_num file
-    | '\n' -> process_tokens acc_token tokens (line_num + 1) file
-    | ';' | '(' | ')' ->
-        if List.length acc_token > 0 then
-          process_tokens []
-            (parse_token [ char ] line_num
-            :: parse_token (List.rev acc_token) line_num
-            :: tokens)
-            line_num file
-        else
-          process_tokens []
-            (parse_token [ char ] line_num :: tokens)
-            line_num file
-    | '"' ->
-        let str_val = process_double_quotes [ '"' ] file in
-        process_tokens [] (parse_token str_val line_num :: tokens) line_num file
-    | x -> process_tokens (x :: acc_token) tokens line_num file
-  with
-  | End_of_file ->
+let rec process_tokens acc_token tokens line_num = function
+  | char :: xs -> (
+      match char with
+      | ' ' | '\t' ->
+          if List.length acc_token > 0 then
+            let n_tokens =
+              parse_token (List.rev acc_token) line_num :: tokens
+            in
+            process_tokens [] n_tokens line_num xs
+          else process_tokens [] tokens line_num xs
+      | '\n' -> process_tokens acc_token tokens (line_num + 1) xs
+      | ';' | '(' | ')' ->
+          if List.length acc_token > 0 then
+            let n_tokens =
+              parse_token [ char ] line_num
+              :: parse_token (List.rev acc_token) line_num
+              :: tokens
+            in
+            process_tokens [] n_tokens line_num xs
+          else
+            let n_tokens = parse_token [ char ] line_num :: tokens in
+            process_tokens [] n_tokens line_num xs
+      | '"' ->
+          let str_val, remaining = process_double_quotes [ '"' ] xs in
+          let n_tokens = parse_token str_val line_num :: tokens in
+          process_tokens [] n_tokens line_num remaining
+      | x -> process_tokens (x :: acc_token) tokens line_num xs)
+  | [] ->
       if List.length acc_token > 0 then
         parse_token (List.rev acc_token) line_num :: tokens
       else tokens
-  | e -> raise e
 
-let process_file file = List.rev (process_tokens [] [] 1 file)
+let process_file file =
+  let chars = read_file_to_chars file in
+  List.rev (process_tokens [] [] 1 chars)

@@ -29,13 +29,71 @@ let rec map_to_token_types acc_types = function
       map_to_token_types n_types xs
   | [] -> List.rev acc_types
 
-let test_assignment () =
-  Alcotest.(check (list string))
-    "same tokens"
-    [ "TYPE"; "VARIABLE"; "EQUALS"; "NUMBER"; "SEMI" ]
-    (map_to_token_types []
-       (Lexer.process_tokens (string_to_chars "i16 x = 10;")))
+let token_cases =
+  [
+    ("i16", [ "TYPE" ]);
+    ("+", [ "ARITHMETIC" ]);
+    ("-", [ "ARITHMETIC" ]);
+    ("*", [ "ARITHMETIC" ]);
+    ("/", [ "ARITHMETIC" ]);
+    ("+=", [ "COMPOUND_ASSIGNMENT" ]);
+    ("-=", [ "COMPOUND_ASSIGNMENT" ]);
+    (">=", [ "COMPARISON" ]);
+    (">", [ "COMPARISON" ]);
+    ("<", [ "COMPARISON" ]);
+    ("<=", [ "COMPARISON" ]);
+    ("==", [ "COMPARISON" ]);
+    ("i16", [ "TYPE" ]);
+    ("if", [ "IF" ]);
+    ("elif", [ "ELIF" ]);
+    ("else", [ "ELSE" ]);
+    (";", [ "SEMI" ]);
+    ("(", [ "OPEN_PAREN" ]);
+    (")", [ "CLOSE_PAREN" ]);
+    ("{", [ "OPEN_BLOCK" ]);
+    ("}", [ "CLOSE_BLOCK" ]);
+    ("=", [ "EQUALS" ]);
+    ("print", [ "PRINT" ]);
+    ("while", [ "WHILE" ]);
+  ]
+
+let statement_cases =
+  [
+    ( "\ti16 x = (10 + 2) - 3;",
+      [
+        "TYPE";
+        "VARIABLE";
+        "EQUALS";
+        "OPEN_PAREN";
+        "NUMBER";
+        "ARITHMETIC";
+        "NUMBER";
+        "CLOSE_PAREN";
+        "ARITHMETIC";
+        "NUMBER";
+        "SEMI";
+      ] );
+    ("print \"Hello World!\"", [ "PRINT"; "STRING" ]);
+  ]
+
+let perform_checks cases =
+  List.iter
+    (fun (input, expected) ->
+      Alcotest.(check (list string))
+        "Lists equal"
+        (map_to_token_types [] (Lexer.process_tokens (string_to_chars input)))
+        expected)
+    cases
+
+let test_token_types () = perform_checks token_cases
+let test_statements () = perform_checks statement_cases
 
 let () =
   run "Lexer Tests"
-    [ ("single_statements", [ test_case "" `Quick test_assignment ]) ]
+    [
+      ( "lexing",
+        [
+          test_case "Tokens" `Quick test_token_types;
+          test_case "Statements" `Quick test_statements;
+        ] );
+    ]

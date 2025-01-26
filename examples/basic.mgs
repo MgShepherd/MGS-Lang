@@ -1,5 +1,12 @@
 {
-	i16 x = 10 + 2;
-	i16 y = x + 3;
-	i16 x = x + y;
+	i16 x = 11;
+	i16 y = 4;
+
+	if x < 10 {
+		print "x is less than 10\n";
+	} elif x > 10 {
+		print "x is greater than 10\n";
+	} else {
+		print "x is equal to 10\n";
+	};
 }

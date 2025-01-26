@@ -9,7 +9,7 @@ type expr =
 type statement =
   | DeclarationStatement of token * token * token * expr
   | AssignmentStatement of token * token * expr
-  | IfStatement of (expr * statement list) list
+  | IfStatement of expr list * statement list list
   | WhileStatement of expr * statement list
   | PrintStatement of token
 
@@ -88,7 +88,7 @@ let rec parse_statement = function
       if List.length remaining > 0 then
         fatal_err_with_line "Unprocessed tokens in statement" x.line_num
       else AssignmentStatement (x, y, expression)
-  | x :: xs when is_statement_type T_IF x -> parse_if_block [] [] true xs
+  | x :: xs when is_statement_type T_IF x -> parse_if_block [] [] [] true xs
   | x :: xs when is_statement_type T_WHILE x -> parse_while_block [] xs
   | [ x; y ] when is_print_statement x y -> PrintStatement y
   | _ ->
@@ -107,7 +107,7 @@ and parse_while_block acc_condition = function
       | _ -> parse_while_block (x :: acc_condition) xs)
   | [] -> fatal_err "Unprocessable while loop"
 
-and parse_if_block acc_condition acc_segments has_valid_start = function
+and parse_if_block acc_condition acc_conds acc_blocks has_valid_start = function
   | x :: xs -> (
       match x.t_type with
       | T_OPEN_BLOCK ->
@@ -119,19 +119,19 @@ and parse_if_block acc_condition acc_segments has_valid_start = function
             if List.length expr_remaining > 0 then
               fatal_err_with_line "Invalid if statement condition" x.line_num
             else
-              parse_if_block []
-                ((condition, block) :: acc_segments)
+              parse_if_block [] (condition :: acc_conds) (block :: acc_blocks)
                 false remaining
           else unexpected_token x
       | T_ELIF ->
           if has_valid_start then unexpected_token x
-          else parse_if_block [] acc_segments true xs
+          else parse_if_block [] acc_conds acc_blocks true xs
       | T_ELSE ->
           if has_valid_start then unexpected_token x
-          else parse_if_block [ x ] acc_segments true xs
-      | _ -> parse_if_block (x :: acc_condition) acc_segments has_valid_start xs
-      )
-  | [] -> IfStatement (List.rev acc_segments)
+          else parse_if_block [ x ] acc_conds acc_blocks true xs
+      | _ ->
+          parse_if_block (x :: acc_condition) acc_conds acc_blocks
+            has_valid_start xs)
+  | [] -> IfStatement (List.rev acc_conds, List.rev acc_blocks)
 
 and parse_statements acc_statements current_statement nested_level = function
   | x :: xs -> (

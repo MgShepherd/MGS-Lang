@@ -123,16 +123,13 @@ let rec process_if_statements index constants stack_vars label_num num_blocks
         xs
   | [] -> (constants, processed_statements)
 
-and process_if_blocks constants stack_vars label_num blocks =
+and process_if_blocks constants stack_vars label_num conds blocks =
   let num_blocks = List.length blocks in
-  let comparisions = List.map (fun (comp, _) -> comp) blocks in
-  let statements = List.map (fun (_, statement) -> statement) blocks in
   let processed_comparisions =
-    process_if_comparisions 0 stack_vars label_num "" num_blocks comparisions
+    process_if_comparisions 0 stack_vars label_num "" num_blocks conds
   in
   let new_constants, processed_statements =
-    process_if_statements 0 constants stack_vars label_num num_blocks ""
-      statements
+    process_if_statements 0 constants stack_vars label_num num_blocks "" blocks
   in
   ( new_constants,
     stack_vars,
@@ -168,8 +165,8 @@ and process_statement constants stack_vars label_num = function
   | AssignmentStatement (v, op, expr) ->
       let statements = handle_assignment stack_vars v label_num expr op in
       (constants, stack_vars, label_num, statements)
-  | IfStatement blocks ->
-      process_if_blocks constants stack_vars label_num blocks
+  | IfStatement (conds, blocks) ->
+      process_if_blocks constants stack_vars label_num conds blocks
   | WhileStatement (expr, statements) ->
       process_while_block constants stack_vars label_num expr statements
   | PrintStatement x ->

@@ -37,7 +37,7 @@ let rec process_double_quotes acc_chars = function
   | x :: xs -> process_double_quotes (x :: acc_chars) xs
   | [] -> fatal_err "Unclosed string quotes"
 
-let rec process_tokens acc_token tokens line_num = function
+let rec process_tokens_impl acc_token tokens line_num = function
   | char :: xs -> (
       match char with
       | ' ' | '\t' ->
@@ -45,9 +45,9 @@ let rec process_tokens acc_token tokens line_num = function
             let n_tokens =
               parse_token (List.rev acc_token) line_num :: tokens
             in
-            process_tokens [] n_tokens line_num xs
-          else process_tokens [] tokens line_num xs
-      | '\n' -> process_tokens acc_token tokens (line_num + 1) xs
+            process_tokens_impl [] n_tokens line_num xs
+          else process_tokens_impl [] tokens line_num xs
+      | '\n' -> process_tokens_impl acc_token tokens (line_num + 1) xs
       | ';' | '(' | ')' ->
           if List.length acc_token > 0 then
             let n_tokens =
@@ -55,20 +55,22 @@ let rec process_tokens acc_token tokens line_num = function
               :: parse_token (List.rev acc_token) line_num
               :: tokens
             in
-            process_tokens [] n_tokens line_num xs
+            process_tokens_impl [] n_tokens line_num xs
           else
             let n_tokens = parse_token [ char ] line_num :: tokens in
-            process_tokens [] n_tokens line_num xs
+            process_tokens_impl [] n_tokens line_num xs
       | '"' ->
           let str_val, remaining = process_double_quotes [ '"' ] xs in
           let n_tokens = parse_token str_val line_num :: tokens in
-          process_tokens [] n_tokens line_num remaining
-      | x -> process_tokens (x :: acc_token) tokens line_num xs)
+          process_tokens_impl [] n_tokens line_num remaining
+      | x -> process_tokens_impl (x :: acc_token) tokens line_num xs)
   | [] ->
       if List.length acc_token > 0 then
         parse_token (List.rev acc_token) line_num :: tokens
       else tokens
 
+let process_tokens tokens = List.rev (process_tokens_impl [] [] 1 tokens)
+
 let process_file file =
   let chars = read_file_to_chars file in
-  List.rev (process_tokens [] [] 1 chars)
+  process_tokens chars

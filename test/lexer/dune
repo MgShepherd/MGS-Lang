@@ -1,0 +1,4 @@
+(test
+  (name lexer_test)
+  (modules lexer_test)
+  (libraries lexer common alcotest))

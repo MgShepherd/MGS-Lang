@@ -91,7 +91,7 @@ let test_statements () = perform_checks statement_cases
 let () =
   run "Lexer Tests"
     [
-      ( "lexing",
+      ( "Valid",
         [
           test_case "Tokens" `Quick test_token_types;
           test_case "Statements" `Quick test_statements;

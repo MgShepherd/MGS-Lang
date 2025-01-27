@@ -54,13 +54,15 @@ let produce_executable file_name =
   run_command (Printf.sprintf "rm %s" as_file)
 
 let () =
-  Arg.parse arglist anon_arg_func arg_usage_msg;
-  let file = try Some (open_in !input_file_path) with _ -> None in
-  let file_name = get_file_name !input_file_path in
-  match file with
-  | Some x ->
-      write_string file_name (generate_native_assembly (process_file x));
-      produce_executable file_name
-  | None ->
-      fatal_err
-        (Printf.sprintf "Unable to open file with name: \"%s\"" file_name)
+  try
+    Arg.parse arglist anon_arg_func arg_usage_msg;
+    let file = try Some (open_in !input_file_path) with _ -> None in
+    let file_name = get_file_name !input_file_path in
+    match file with
+    | Some x ->
+        write_string file_name (generate_native_assembly (process_file x));
+        produce_executable file_name
+    | None ->
+        fatal_err
+          (Printf.sprintf "Unable to open file with name: \"%s\"" file_name)
+  with CompilerError msg -> display_compiler_error msg

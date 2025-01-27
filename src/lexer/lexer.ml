@@ -24,7 +24,6 @@ let get_t_type t_str =
   | "=" -> T_EQUALS
   | "print" -> T_PRINT_FUNCTION
   | "while" -> T_WHILE
-  | "" -> raise (Failure "Empty Token\n")
   | x -> parse_value x
 
 let parse_token t line_num =

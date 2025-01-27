@@ -1,5 +1,6 @@
 open Alcotest
 open Common.Token
+open Common.Logger
 
 let token_type_to_str = function
   | T_ARITHMETIC -> "ARITHMETIC"
@@ -76,6 +77,8 @@ let statement_cases =
     ("print \"Hello World!\"", [ "PRINT"; "STRING" ]);
   ]
 
+let error_cases = [ ("print \"Hello World", "Unclosed string quotes") ]
+
 let perform_checks cases =
   List.iter
     (fun (input, expected) ->
@@ -85,8 +88,18 @@ let perform_checks cases =
         expected)
     cases
 
+let perform_error_checks cases =
+  List.iter
+    (fun (input, expected) ->
+      Alcotest.check_raises "Throws exception" (CompilerError expected)
+        (fun () ->
+          let _ = Lexer.process_tokens (string_to_chars input) in
+          ()))
+    cases
+
 let test_token_types () = perform_checks token_cases
 let test_statements () = perform_checks statement_cases
+let test_errors () = perform_error_checks error_cases
 
 let () =
   run "Lexer Tests"
@@ -96,4 +109,5 @@ let () =
           test_case "Tokens" `Quick test_token_types;
           test_case "Statements" `Quick test_statements;
         ] );
+      ("Invalid", [ test_case "Errors" `Quick test_errors ]);
     ]

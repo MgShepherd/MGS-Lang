@@ -2,26 +2,46 @@ open Alcotest
 open Parser
 open Common.Token
 
-let get_expr_string _ex = "EXPR:"
+let rec get_expr_string = function
+  | ExprArithmetic (t_op, left, right) ->
+      Printf.sprintf "%s %s %s" (get_expr_string left) (get_token_string t_op)
+        (get_expr_string right)
+  | ExprComparison (t_op, left, right) ->
+      Printf.sprintf "%s %s %s" (get_expr_string left) (get_token_string t_op)
+        (get_expr_string right)
+  | ExprToken tok -> get_token_string tok
 
-let get_statement_string = function
-  | DeclarationStatement (_t_type, _t_var, _t_op, ex) ->
-      Printf.sprintf "DECL: TOKEN VAR OP %s" (get_expr_string ex)
-  | AssignmentStatement (_t_var, _t_op, ex) ->
-      Printf.sprintf "ASSI: VAR OP %s" (get_expr_string ex)
-  | IfStatement (_exprs, _blocks) -> "IF"
-  | WhileStatement (_ex, _block) -> "WHILE"
-  | PrintStatement t_val -> Printf.sprintf "PRNT: %s" t_val.t_str
+let rec get_cond_block_string acc_str = function
+  | (cond, block) :: xs ->
+      get_cond_block_string
+        (acc_str ^ get_expr_string cond ^ "; "
+        ^ convert_statements_to_string "" block
+        ^ " ")
+        xs
+  | [] -> acc_str
 
-let rec convert_statements_to_string acc_statements = function
+and get_statement_string = function
+  | DeclarationStatement (t_type, t_var, t_op, ex) ->
+      Printf.sprintf "DECL: %s %s %s %s;" (get_token_string t_type)
+        (get_token_string t_var) (get_token_string t_op) (get_expr_string ex)
+  | AssignmentStatement (t_var, t_op, ex) ->
+      Printf.sprintf "ASSI: %s %s %s;" (get_token_string t_var)
+        (get_token_string t_op) (get_expr_string ex)
+  | IfStatement (exprs, blocks) ->
+      get_cond_block_string "IF: " (List.combine exprs blocks)
+  | WhileStatement (ex, block) ->
+      get_cond_block_string "WHILE: " [ (ex, block) ]
+  | PrintStatement t_val -> Printf.sprintf "PRNT: %s;" t_val.t_str
+
+and convert_statements_to_string acc_statements = function
   | x :: xs ->
       let statement = get_statement_string x in
-      convert_statements_to_string (statement :: acc_statements) xs
-  | [] -> List.rev acc_statements
+      convert_statements_to_string (acc_statements ^ statement) xs
+  | [] -> acc_statements
 
 let convert_program_to_string program =
   match program with
-  | Program statements -> convert_statements_to_string [] statements
+  | Program statements -> convert_statements_to_string "" statements
 
 let test_token tok_type tok_str =
   { t_type = tok_type; t_str = tok_str; line_num = 1 }
@@ -35,7 +55,7 @@ let print_cases =
         test_token T_SEMI "";
         test_token T_CLOSE_BLOCK "";
       ],
-      [ "PRNT: Hello World" ] );
+      "PRNT: Hello World;" );
   ]
 
 let decl_cases =
@@ -49,7 +69,20 @@ let decl_cases =
         test_token T_SEMI "";
         test_token T_CLOSE_BLOCK "";
       ],
-      [ "DECL: TOKEN VAR OP EXPR:" ] );
+      "DECL: (TYPE:i16) (VARIABLE:x) (EQUALS) (NUMBER:10);" );
+    ( [
+        test_token T_OPEN_BLOCK "";
+        test_token T_TYPE "i16";
+        test_token T_VARIABLE "x";
+        test_token T_EQUALS "";
+        test_token T_NUMBER "10";
+        test_token T_ARITHMETIC "+";
+        test_token T_NUMBER "20";
+        test_token T_SEMI "";
+        test_token T_CLOSE_BLOCK "";
+      ],
+      "DECL: (TYPE:i16) (VARIABLE:x) (EQUALS) (NUMBER:10) (ARITHMETIC:+) \
+       (NUMBER:20);" );
   ]
 
 let assi_cases =
@@ -62,7 +95,7 @@ let assi_cases =
         test_token T_SEMI "";
         test_token T_CLOSE_BLOCK "";
       ],
-      [ "ASSI: VAR OP EXPR:" ] );
+      "ASSI: (VARIABLE:x) (COMPOUND_ASSIGNMENT:+=) (NUMBER:10);" );
   ]
 
 let if_cases =
@@ -81,7 +114,60 @@ let if_cases =
         test_token T_SEMI "";
         test_token T_CLOSE_BLOCK "";
       ],
-      [ "IF" ] );
+      "IF: (VARIABLE:x) (COMPARISON:>) (NUMBER:10); PRNT: Hello; " );
+    ( [
+        test_token T_OPEN_BLOCK "";
+        test_token T_IF "";
+        test_token T_VARIABLE "x";
+        test_token T_COMPARISON ">";
+        test_token T_NUMBER "10";
+        test_token T_OPEN_BLOCK "";
+        test_token T_PRINT_FUNCTION "";
+        test_token T_STRING "Hello";
+        test_token T_SEMI "";
+        test_token T_CLOSE_BLOCK "";
+        test_token T_ELSE "";
+        test_token T_OPEN_BLOCK "";
+        test_token T_PRINT_FUNCTION "";
+        test_token T_STRING "World";
+        test_token T_SEMI "";
+        test_token T_CLOSE_BLOCK "";
+        test_token T_SEMI "";
+        test_token T_CLOSE_BLOCK "";
+      ],
+      "IF: (VARIABLE:x) (COMPARISON:>) (NUMBER:10); PRNT: Hello; (ELSE); PRNT: \
+       World; " );
+    ( [
+        test_token T_OPEN_BLOCK "";
+        test_token T_IF "";
+        test_token T_VARIABLE "x";
+        test_token T_COMPARISON ">";
+        test_token T_NUMBER "10";
+        test_token T_OPEN_BLOCK "";
+        test_token T_PRINT_FUNCTION "";
+        test_token T_STRING "Hello";
+        test_token T_SEMI "";
+        test_token T_CLOSE_BLOCK "";
+        test_token T_ELIF "";
+        test_token T_VARIABLE "y";
+        test_token T_COMPARISON "<=";
+        test_token T_NUMBER "20";
+        test_token T_OPEN_BLOCK "";
+        test_token T_PRINT_FUNCTION "";
+        test_token T_STRING "There";
+        test_token T_SEMI "";
+        test_token T_CLOSE_BLOCK "";
+        test_token T_ELSE "";
+        test_token T_OPEN_BLOCK "";
+        test_token T_PRINT_FUNCTION "";
+        test_token T_STRING "World";
+        test_token T_SEMI "";
+        test_token T_CLOSE_BLOCK "";
+        test_token T_SEMI "";
+        test_token T_CLOSE_BLOCK "";
+      ],
+      "IF: (VARIABLE:x) (COMPARISON:>) (NUMBER:10); PRNT: Hello; (VARIABLE:y) \
+       (COMPARISON:<=) (NUMBER:20); PRNT: There; (ELSE); PRNT: World; " );
   ]
 
 let while_cases =
@@ -100,13 +186,13 @@ let while_cases =
         test_token T_SEMI "";
         test_token T_CLOSE_BLOCK "";
       ],
-      [ "WHILE" ] );
+      "WHILE: (VARIABLE:x) (COMPARISON:>) (NUMBER:10); PRNT: Hello; " );
   ]
 
 let perform_checks cases =
   List.iter
     (fun (input, expected) ->
-      Alcotest.(check (list string))
+      Alcotest.(check string)
         "Lists equal"
         (convert_program_to_string (Parser.create_tree input))
         expected)

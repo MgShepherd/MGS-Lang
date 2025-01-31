@@ -27,7 +27,7 @@ let get_token_string t =
   | T_VARIABLE -> Printf.sprintf "(VARIABLE:%s)" t.t_str
   | T_ARITHMETIC -> Printf.sprintf "(ARITHMETIC:%s)" t.t_str
   | T_COMPOUND_ASSIGNMENT -> Printf.sprintf "(COMPOUND_ASSIGNMENT:%s)" t.t_str
-  | T_COMPARISON -> Printf.sprintf "(COMPARISION:%s)" t.t_str
+  | T_COMPARISON -> Printf.sprintf "(COMPARISON:%s)" t.t_str
   | T_TYPE -> Printf.sprintf "(TYPE:%s)" t.t_str
   | T_SEMI -> "(SEMI)"
   | T_OPEN_PAREN -> "(OPEN_PAREN)"

@@ -1,7 +1,7 @@
 OUT_DIR = build
 
 compiler: | $(OUT_DIR)
-	dune build
+	opam exec -- dune build
 
 all: compiler
 

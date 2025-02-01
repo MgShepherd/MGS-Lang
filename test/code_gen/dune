@@ -1,0 +1,4 @@
+(test
+  (name x86_64_gen_test)
+  (modules x86_64_gen_test)
+  (libraries code_gen parser common alcotest))

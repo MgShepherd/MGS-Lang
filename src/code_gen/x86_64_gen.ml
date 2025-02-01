@@ -32,7 +32,9 @@ let process_variable p_state reg_num tok =
 
 let process_tok_expression p_state reg_num tok block_num =
   match tok.t_type with
-  | T_NUMBER -> Printf.sprintf "\tMOV $%s, %%%s\n" tok.t_str reg_order.(reg_num)
+  | T_NUMBER ->
+      Printf.sprintf {|  MOV $%s, %%%s
+|} tok.t_str reg_order.(reg_num)
   | T_ELSE -> Printf.sprintf "\tJMP _%dblock%d\n" p_state.label_num block_num
   | T_VARIABLE -> process_variable p_state reg_num tok
   | _x -> ""
@@ -96,7 +98,8 @@ let process_print_statement p_state tok =
   (u_state, pr_string)
 
 let process_dec_statement p_state tok ex =
-  let push_instr = Printf.sprintf "\tPUSH %%r%s\n" reg_order.(0) in
+  let push_instr = Printf.sprintf {|  PUSH %%r%s
+|} reg_order.(0) in
   let p_expr = process_expression p_state 0 0 ex in
   let n_state = add_to_stack p_state tok.t_str in
   (n_state, p_expr ^ push_instr)

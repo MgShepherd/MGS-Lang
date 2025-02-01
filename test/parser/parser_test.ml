@@ -1,6 +1,7 @@
 open Alcotest
 open Parser
 open Common.Token
+open Common.Logger
 
 let rec get_expr_string = function
   | ExprArithmetic (t_op, left, right) ->
@@ -189,13 +190,62 @@ let while_cases =
       "WHILE: (VARIABLE:x) (COMPARISON:>) (NUMBER:10); PRNT: Hello; " );
   ]
 
+let error_cases =
+  [
+    ( [
+        test_token T_PRINT_FUNCTION "";
+        test_token T_STRING "Hello";
+        test_token T_SEMI "";
+      ],
+      "All programs must be inside a block" );
+    ( [
+        test_token T_OPEN_BLOCK "";
+        test_token T_PRINT_FUNCTION "";
+        test_token T_STRING "Hello";
+        test_token T_SEMI "";
+      ],
+      "Unclosed block" );
+    ( [
+        test_token T_OPEN_BLOCK "";
+        test_token T_PRINT_FUNCTION "";
+        test_token T_STRING "Hello";
+        test_token T_CLOSE_BLOCK "";
+      ],
+      "Unexpected end of statements" );
+    ( [
+        test_token T_OPEN_BLOCK "";
+        test_token T_IF "";
+        test_token T_VARIABLE "x";
+        test_token T_COMPARISON "<";
+        test_token T_VARIABLE "y";
+        test_token T_VARIABLE "z";
+        test_token T_OPEN_BLOCK "";
+        test_token T_PRINT_FUNCTION "";
+        test_token T_STRING "Test";
+        test_token T_SEMI "";
+        test_token T_CLOSE_BLOCK "";
+        test_token T_SEMI "";
+        test_token T_CLOSE_BLOCK "";
+      ],
+      "Syntax error on line 1\nUnexpected Token: \"z\"" );
+  ]
+
 let perform_checks cases =
   List.iter
     (fun (input, expected) ->
       Alcotest.(check string)
-        "Lists equal"
+        "Output equal"
         (convert_program_to_string (Parser.create_tree input))
         expected)
+    cases
+
+let perform_error_checks cases =
+  List.iter
+    (fun (input, expected) ->
+      Alcotest.check_raises "Throws exception" (CompilerError expected)
+        (fun () ->
+          let _ = Parser.create_tree input in
+          ()))
     cases
 
 let test_print_statement () = perform_checks print_cases
@@ -203,6 +253,7 @@ let test_decl_statement () = perform_checks decl_cases
 let test_assi_statement () = perform_checks assi_cases
 let test_if_statement () = perform_checks if_cases
 let test_while_statement () = perform_checks while_cases
+let test_error_cases () = perform_error_checks error_cases
 
 let () =
   run "Parser Tests"
@@ -215,4 +266,5 @@ let () =
           test_case "If Statements" `Quick test_if_statement;
           test_case "While Statements" `Quick test_while_statement;
         ] );
+      ("Invalid", [ test_case "Error cases" `Quick test_error_cases ]);
     ]

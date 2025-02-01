@@ -28,14 +28,16 @@ let process_comp_operator = function
 
 let process_variable p_state reg_num tok =
   let offset = get_stack_var p_state tok in
-  Printf.sprintf "\tMOVW -%d(%%rbp), %%%s\n" offset reg_order.(reg_num)
+  Printf.sprintf {|  MOVW -%d(%%rbp), %%%s
+|} offset reg_order.(reg_num)
 
 let process_tok_expression p_state reg_num tok block_num =
   match tok.t_type with
   | T_NUMBER ->
       Printf.sprintf {|  MOV $%s, %%%s
 |} tok.t_str reg_order.(reg_num)
-  | T_ELSE -> Printf.sprintf "\tJMP _%dblock%d\n" p_state.label_num block_num
+  | T_ELSE -> Printf.sprintf {|  JMP _%dblock%d
+|} p_state.label_num block_num
   | T_VARIABLE -> process_variable p_state reg_num tok
   | _x -> ""
 
@@ -76,7 +78,8 @@ let rec process_if_conds p_state acc_conds block_num = function
       process_if_conds p_state (acc_conds ^ cond) (block_num + 1) xs
   | [] ->
       let jump_always =
-        Printf.sprintf "\tJMP _%dblock%d\n" p_state.label_num block_num
+        Printf.sprintf {|  JMP _%dblock%d
+|} p_state.label_num block_num
       in
       acc_conds ^ jump_always
 
@@ -123,7 +126,8 @@ and process_if_blocks p_state acc_blocks block_num num_blocks = function
       let u_state = { p_state with label_num = p_state.label_num + 1 } in
       let block_state, statements = process_statements u_state "" x in
       let jump_state =
-        Printf.sprintf "\tJMP _%dblock%d\n" p_state.label_num num_blocks
+        Printf.sprintf {|  JMP _%dblock%d
+|} p_state.label_num num_blocks
       in
       let n_blocks = acc_blocks ^ label ^ statements ^ jump_state in
       let n_state = { p_state with constants = block_state.constants } in

@@ -1,0 +1,4 @@
+(library
+ (name semantic_analyzer)
+ (modules semantic_analyzer)
+ (libraries common parser))

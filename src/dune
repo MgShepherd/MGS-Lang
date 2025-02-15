@@ -3,4 +3,4 @@
  (name main)
  (modules main)
  (promote (into ../build))
- (libraries code_gen common lexer parser))
+ (libraries code_gen common lexer parser semantic_analyzer))

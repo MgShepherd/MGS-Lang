@@ -123,14 +123,26 @@ and process_statements p_state acc = function
 and process_if_blocks p_state acc_blocks block_num num_blocks = function
   | x :: xs ->
       let label = Printf.sprintf "_%dblock%d:\n" p_state.label_num block_num in
-      let u_state = { p_state with label_num = p_state.label_num + 1 } in
+      let u_state =
+        {
+          p_state with
+          label_num = p_state.next_label;
+          next_label = p_state.next_label + 1;
+        }
+      in
       let block_state, statements = process_statements u_state "" x in
       let jump_state =
         Printf.sprintf {|  JMP _%dblock%d
 |} p_state.label_num num_blocks
       in
       let n_blocks = acc_blocks ^ label ^ statements ^ jump_state in
-      let n_state = { p_state with constants = block_state.constants } in
+      let n_state =
+        {
+          p_state with
+          constants = block_state.constants;
+          next_label = block_state.next_label;
+        }
+      in
       process_if_blocks n_state n_blocks (block_num + 1) num_blocks xs
   | [] ->
       let end_label =
@@ -145,7 +157,8 @@ and process_if_statement p_state conds blocks =
   let n_state =
     {
       p_state with
-      label_num = p_state.label_num + 1;
+      label_num = if_state.next_label;
+      next_label = if_state.next_label + 1;
       constants = if_state.constants;
     }
   in
@@ -166,7 +179,12 @@ let create_data_sec constants = ".data\n" ^ define_constants "" constants
 let generate_assembly = function
   | Program statements ->
       let start_state =
-        { stack = StringMap.empty; label_num = 0; constants = [] }
+        {
+          stack = StringMap.empty;
+          label_num = 0;
+          next_label = 1;
+          constants = [];
+        }
       in
       let p_state, str_statements =
         process_statements start_state "" statements

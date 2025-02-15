@@ -8,6 +8,7 @@ type program_state = {
   stack : int StringMap.t;
   constants : (string * string) list;
   label_num : int;
+  next_label : int;
 }
 
 let add_to_stack p_state var_name =

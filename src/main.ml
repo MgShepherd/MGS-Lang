@@ -27,6 +27,7 @@ let process_file file =
   Common.Token.display_tokens tokens;
   close_in file;
   let tree = Parser.create_tree tokens in
+  Semantic_analyzer.run_analyzer tree;
   tree
 
 let write_string file_name contents =

@@ -200,7 +200,7 @@ let rec create_data_elements acc = function
 let create_data_section constants =
   Printf.sprintf ".data\n%s" (create_data_elements "" constants)
 
-let generate_assembly = function
+let generate_assembly _v_table = function
   | Program statements ->
       let constants, _, statements =
         process_statements [] StringMap.empty 0 "" statements

@@ -19,6 +19,7 @@ type token_type =
   | T_WHILE
 
 type token = { t_type : token_type; t_str : string; line_num : int }
+type data_type = I_8 | I_16
 
 let get_token_string t =
   match t.t_type with

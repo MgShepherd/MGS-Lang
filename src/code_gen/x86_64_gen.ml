@@ -176,7 +176,7 @@ let rec define_constants acc = function
 
 let create_data_sec constants = ".data\n" ^ define_constants "" constants
 
-let generate_assembly = function
+let generate_assembly _v_table = function
   | Program statements ->
       let start_state =
         {

@@ -27,8 +27,8 @@ let process_file file =
   Common.Token.display_tokens tokens;
   close_in file;
   let tree = Parser.create_tree tokens in
-  Semantic_analyzer.run_analyzer tree;
-  tree
+  let v_table = Semantic_analyzer.run_analyzer tree in
+  (tree, v_table)
 
 let write_string file_name contents =
   if not (Sys.file_exists output_dir) then Sys.mkdir output_dir 0o755;
@@ -61,7 +61,8 @@ let () =
     let file_name = get_file_name !input_file_path in
     match file with
     | Some x ->
-        write_string file_name (generate_native_assembly (process_file x));
+        let program, v_table = process_file x in
+        write_string file_name (generate_native_assembly program v_table);
         produce_executable file_name
     | None ->
         fatal_err

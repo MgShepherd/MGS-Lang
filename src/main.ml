@@ -49,7 +49,7 @@ let produce_executable file_name =
   let obj_file = output_dir ^ file_name ^ object_extension in
   let as_file = output_dir ^ file_name ^ assembly_extension in
   let exe_file = output_dir ^ file_name in
-  run_command (Printf.sprintf "as -o %s %s" obj_file as_file);
+  run_command (Printf.sprintf "as -o %s %s -g" obj_file as_file);
   run_command (Printf.sprintf "ld -o %s %s" exe_file obj_file);
   run_command (Printf.sprintf "rm %s" obj_file);
   run_command (Printf.sprintf "rm %s" as_file)

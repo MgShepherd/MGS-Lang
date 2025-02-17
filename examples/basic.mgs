@@ -1,10 +1,4 @@
 {
-	i16 x = 11;
-	i16 y = x + 10;
-
-	if x > 10 {
-		i16 z = x + 2;
-		i16 w = z + 3;
-		print "Hello World\n";
-	};
+	i8 x = 11;
+	i8 y = x;
 }

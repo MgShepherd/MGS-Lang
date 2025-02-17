@@ -3,7 +3,8 @@ open Parser
 open Program_state
 open Common.Token
 
-let reg_order = [| "ax"; "bx"; "cx"; "dx"; "r8w"; "r9w"; "r10w"; "r11w" |]
+let reg_order_8 = [| "al"; "bl"; "cl"; "dl"; "r8b"; "r9b"; "r10b"; "r11b" |]
+let reg_order_16 = [| "ax"; "bx"; "cx"; "dx"; "r8w"; "r9w"; "r10w"; "r11w" |]
 let mem_align = 16
 
 let create_start_function = {|
@@ -26,16 +27,25 @@ let process_comp_operator = function
   | "<=" -> "LE"
   | _ -> ""
 
+let get_reg reg_num = function
+  | I_8 -> reg_order_8.(reg_num)
+  | I_16 -> reg_order_16.(reg_num)
+
+let get_instr_suffix = function I_8 -> "B" | I_16 -> "W"
+
 let process_variable p_state reg_num tok =
   let offset = get_stack_var p_state tok in
-  Printf.sprintf {|  MOVW -%d(%%rbp), %%%s
-|} offset reg_order.(reg_num)
+  let v_type = StringMap.find tok.t_str p_state.v_table in
+  let reg = get_reg reg_num v_type in
+  let suffix = get_instr_suffix v_type in
+  Printf.sprintf {|  MOV%s -%d(%%rbp), %%%s
+|} suffix offset reg
 
 let process_tok_expression p_state reg_num tok block_num =
   match tok.t_type with
   | T_NUMBER ->
       Printf.sprintf {|  MOV $%s, %%%s
-|} tok.t_str reg_order.(reg_num)
+|} tok.t_str reg_order_16.(reg_num)
   | T_ELSE -> Printf.sprintf {|  JMP _%dblock%d
 |} p_state.label_num block_num
   | T_VARIABLE -> process_variable p_state reg_num tok
@@ -46,8 +56,8 @@ let rec process_arith_expression p_state reg_num _op left right block_num =
   let right_expr = process_expression p_state (reg_num + 1) block_num right in
   let add_inst =
     Printf.sprintf "\tADD %%%s, %%%s\n"
-      reg_order.(reg_num + 1)
-      reg_order.(reg_num)
+      reg_order_16.(reg_num + 1)
+      reg_order_16.(reg_num)
   in
   Printf.sprintf "%s%s%s" left_expr right_expr add_inst
 
@@ -58,8 +68,8 @@ and process_comp_expression p_state reg_num op left right block_num =
     Printf.sprintf {|  CMP %%%s, %%%s
   J%s _%dblock%d
 |}
-      reg_order.(reg_num + 1)
-      reg_order.(reg_num)
+      reg_order_16.(reg_num + 1)
+      reg_order_16.(reg_num)
       (process_comp_operator op.t_str)
       p_state.label_num block_num
   in
@@ -102,7 +112,7 @@ let process_print_statement p_state tok =
 
 let process_dec_statement p_state tok ex =
   let push_instr = Printf.sprintf {|  PUSH %%r%s
-|} reg_order.(0) in
+|} reg_order_16.(0) in
   let p_expr = process_expression p_state 0 0 ex in
   let n_state = add_to_stack p_state tok.t_str in
   (n_state, p_expr ^ push_instr)
@@ -176,7 +186,7 @@ let rec define_constants acc = function
 
 let create_data_sec constants = ".data\n" ^ define_constants "" constants
 
-let generate_assembly _v_table = function
+let generate_assembly v_table = function
   | Program statements ->
       let start_state =
         {
@@ -184,6 +194,7 @@ let generate_assembly _v_table = function
           label_num = 0;
           next_label = 1;
           constants = [];
+          v_table;
         }
       in
       let p_state, str_statements =

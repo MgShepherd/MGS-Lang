@@ -12,7 +12,7 @@ let get_t_type t_str =
   | "+" | "-" | "*" | "/" -> T_ARITHMETIC
   | "+=" | "-=" -> T_COMPOUND_ASSIGNMENT
   | ">" | ">=" | "<=" | "<" | "==" -> T_COMPARISON
-  | "i16" -> T_TYPE
+  | "i16" | "i8" -> T_TYPE
   | "if" -> T_IF
   | "elif" -> T_ELIF
   | "else" -> T_ELSE

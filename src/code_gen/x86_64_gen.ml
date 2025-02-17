@@ -19,7 +19,7 @@ let create_exit_function status =
   syscall
 |} status
 
-let process_comp_operator = function
+let process_comparison_op = function
   | "<" -> "L"
   | ">" -> "G"
   | "==" -> "E"
@@ -30,6 +30,15 @@ let process_comp_operator = function
 let get_reg reg_num = function
   | I_8 -> reg_order_8.(reg_num)
   | I_16 -> reg_order_16.(reg_num)
+
+let process_compound_op r_1 r_2 d_t = function
+  | "+=" ->
+      Printf.sprintf {|  ADD %%%s, %%%s
+|} (get_reg r_2 d_t) (get_reg r_1 d_t)
+  | "-=" ->
+      Printf.sprintf {|  SUB %%%s, %%%s
+|} (get_reg r_2 d_t) (get_reg r_1 d_t)
+  | _ -> ""
 
 let get_instr_suffix = function I_8 -> "B" | I_16 -> "W"
 
@@ -70,7 +79,7 @@ and process_comp_expression p_state reg_num op left right block_num =
 |}
       reg_order_16.(reg_num + 1)
       reg_order_16.(reg_num)
-      (process_comp_operator op.t_str)
+      (process_comparison_op op.t_str)
       p_state.label_num block_num
   in
   Printf.sprintf "%s%s%s" left_expr right_expr cmp_block
@@ -110,16 +119,36 @@ let process_print_statement p_state tok =
   in
   (u_state, pr_string)
 
-let process_dec_statement p_state tok ex =
+let assign_variable p_state tok ex =
   let push_instr = Printf.sprintf {|  PUSH %%r%s
 |} reg_order_16.(0) in
   let p_expr = process_expression p_state 0 0 ex in
   let n_state = add_to_stack p_state tok.t_str in
   (n_state, p_expr ^ push_instr)
 
+let process_dec_statement p_state tok ex = assign_variable p_state tok ex
+
+let store_existing_var p_state tok reg_num d_t =
+  let offset = get_stack_var p_state tok in
+  Printf.sprintf {|  MOV %%%s, -%d(%%rbp)
+|} (get_reg reg_num d_t) offset
+
+let process_compound_ass p_state tok ex op =
+  let load_stmnt = process_variable p_state 0 tok in
+  let expr_stmnt = process_expression p_state 1 0 ex in
+  let d_type = StringMap.find tok.t_str p_state.v_table in
+  let ass_stmnt = process_compound_op 0 1 d_type op.t_str in
+  let store_stmnt = store_existing_var p_state tok 0 d_type in
+  (p_state, load_stmnt ^ expr_stmnt ^ ass_stmnt ^ store_stmnt)
+
+let process_assignment p_state tok ex op =
+  match op.t_type with
+  | T_COMPOUND_ASSIGNMENT -> process_compound_ass p_state tok ex op
+  | _ -> assign_variable p_state tok ex
+
 let rec process_statement p_state = function
   | DeclarationStatement (_, v, _, ex) -> process_dec_statement p_state v ex
-  | AssignmentStatement (_v, _op, _expr) -> (p_state, "\tAssignmentStatement\n")
+  | AssignmentStatement (v, op, ex) -> process_assignment p_state v ex op
   | IfStatement (conds, blocks) -> process_if_statement p_state conds blocks
   | WhileStatement (_expr, _statements) -> (p_state, "\tWhileStatement\n")
   | PrintStatement x -> process_print_statement p_state x

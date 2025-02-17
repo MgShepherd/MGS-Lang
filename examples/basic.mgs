@@ -1,4 +1,7 @@
 {
 	i8 x = 11;
-	i8 y = x;
+	x += 10;
+	if x == 21 {
+		print "Hello World\n";
+	};
 }

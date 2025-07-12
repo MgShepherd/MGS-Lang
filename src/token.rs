@@ -2,13 +2,19 @@ use std::fmt;
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum TokenType {
-    Variable(String),
+    Value(String),
+    Int,
+    Eq,
+    Semi,
 }
 
 impl fmt::Display for TokenType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            TokenType::Variable(x) => write!(f, "Var: {}", x),
+            TokenType::Value(x) => write!(f, "Val: {}", x),
+            TokenType::Int => write!(f, "Integer"),
+            TokenType::Eq => write!(f, "Equals"),
+            TokenType::Semi => write!(f, "Semicolon"),
         }
     }
 }
@@ -50,7 +56,12 @@ mod tests {
 
     #[test]
     fn test_display_token_types() {
-        let test_cases = [(TokenType::Variable(String::from("myVar")), "Var: myVar")];
+        let test_cases = [
+            (TokenType::Value(String::from("myVal")), "Val: myVal"),
+            (TokenType::Int, "Integer"),
+            (TokenType::Eq, "Equals"),
+            (TokenType::Semi, "Semicolon"),
+        ];
 
         for (t_type, output) in test_cases {
             assert_eq!(format!("{}", t_type), output);
@@ -74,9 +85,9 @@ mod tests {
                 line_num: 10,
                 col_num: 5,
             },
-            t_type: TokenType::Variable(String::from("testVar")),
+            t_type: TokenType::Value(String::from("testVal")),
         };
 
-        assert_eq!(format!("{}", token), "[(Var: testVar), Line: 10, Col: 5]");
+        assert_eq!(format!("{}", token), "[(Val: testVal), Line: 10, Col: 5]");
     }
 }

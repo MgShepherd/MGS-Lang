@@ -25,16 +25,23 @@ pub fn parse_text(contents: &str) -> Vec<Token> {
         state.location.col_num += 1;
         match c {
             '\n' => {
-                process_whitespace(&mut state, contents, Some(i));
+                process_token(&mut state, contents, Some(i));
                 state.location.line_num += 1;
                 state.location.col_num = 0;
             }
-            _ if c.is_ascii_whitespace() => process_whitespace(&mut state, contents, Some(i)),
+            ';' => {
+                process_token(&mut state, contents, None);
+                state.location.col_num += 1;
+                state.t_start_idx = i;
+                state.t_end_idx = i + 1;
+                process_token(&mut state, contents, Some(i));
+            }
+            _ if c.is_ascii_whitespace() => process_token(&mut state, contents, Some(i)),
             _ => state.t_end_idx += 1,
         }
     }
     state.location.col_num += 1;
-    process_whitespace(&mut state, contents, None);
+    process_token(&mut state, contents, None);
 
     state.tokens
 }
@@ -45,7 +52,7 @@ pub fn display_tokens(tokens: &Vec<Token>) {
     }
 }
 
-fn process_whitespace(state: &mut LexState, in_str: &str, current_idx: Option<usize>) {
+fn process_token(state: &mut LexState, in_str: &str, current_idx: Option<usize>) {
     if state.t_end_idx != state.t_start_idx {
         let t_str = &in_str[state.t_start_idx..state.t_end_idx];
         state.tokens.push(get_token(t_str, state));
@@ -57,8 +64,15 @@ fn process_whitespace(state: &mut LexState, in_str: &str, current_idx: Option<us
 }
 
 fn get_token(t_str: &str, state: &LexState) -> Token {
+    let t_type = match t_str {
+        "int" => TokenType::Int,
+        "=" => TokenType::Eq,
+        ";" => TokenType::Semi,
+        _ => TokenType::Value(String::from(t_str)),
+    };
+
     Token {
-        t_type: TokenType::Variable(String::from(t_str)),
+        t_type: t_type,
         location: TextLocation {
             line_num: state.location.line_num,
             col_num: state.location.col_num - (state.t_end_idx - state.t_start_idx),
@@ -81,19 +95,20 @@ mod tests {
 
     #[test]
     fn test_lex_variable_line() {
-        let input = "int x = 10";
+        let input = "int x = 10;";
         let tokens = parse_text(input);
 
         let token_cols: Vec<usize> = tokens.iter().map(|x| x.location.col_num).collect();
         let expected_types: Vec<TokenType> = vec![
-            TokenType::Variable(String::from("int")),
-            TokenType::Variable(String::from("x")),
-            TokenType::Variable(String::from("=")),
-            TokenType::Variable(String::from("10")),
+            TokenType::Int,
+            TokenType::Value(String::from("x")),
+            TokenType::Eq,
+            TokenType::Value(String::from("10")),
+            TokenType::Semi,
         ];
 
-        assert_eq!(tokens.len(), 4);
-        assert_eq!(token_cols, vec![1, 5, 7, 9]);
+        assert_eq!(tokens.len(), 5);
+        assert_eq!(token_cols, vec![1, 5, 7, 9, 11]);
 
         for (i, t) in tokens.iter().enumerate() {
             assert_eq!(t.t_type, expected_types[i]);

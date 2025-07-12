@@ -1,4 +1,5 @@
 mod lexer;
+mod token;
 
 fn main() {
     let tokens = lexer::parse_text("Hello  World This is my new\nprogramming language");

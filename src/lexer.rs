@@ -1,38 +1,4 @@
-use core::fmt;
-
-enum TokenType {
-    Variable(String),
-}
-
-impl fmt::Display for TokenType {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            TokenType::Variable(x) => write!(f, "Var: {}", x),
-        }
-    }
-}
-
-struct TextLocation {
-    line_num: usize,
-    col_num: usize,
-}
-
-impl fmt::Display for TextLocation {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Line: {}, Col: {}", self.line_num, self.col_num)
-    }
-}
-
-pub struct Token {
-    t_type: TokenType,
-    location: TextLocation,
-}
-
-impl fmt::Display for Token {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "[({}), {}]", self.t_type, self.location)
-    }
-}
+use crate::token::{TextLocation, Token, TokenType};
 
 struct LexState {
     location: TextLocation,
@@ -44,10 +10,7 @@ struct LexState {
 impl LexState {
     fn new() -> Self {
         LexState {
-            location: TextLocation {
-                line_num: 1,
-                col_num: 0,
-            },
+            location: TextLocation::new(),
             t_start_idx: 0,
             t_end_idx: 0,
             tokens: Vec::new(),
@@ -70,7 +33,9 @@ pub fn parse_text(contents: &str) -> Vec<Token> {
             _ => state.t_end_idx += 1,
         }
     }
+    state.location.col_num += 1;
     process_whitespace(&mut state, contents, None);
+
     state.tokens
 }
 
@@ -98,5 +63,53 @@ fn get_token(t_str: &str, state: &LexState) -> Token {
             line_num: state.location.line_num,
             col_num: state.location.col_num - (state.t_end_idx - state.t_start_idx),
         },
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_lex_empty_tokens() {
+        let test_cases = ["", "\n\n", "   "];
+        for t in test_cases {
+            let tokens = parse_text(t);
+            assert_eq!(tokens.len(), 0);
+        }
+    }
+
+    #[test]
+    fn test_lex_variable_line() {
+        let input = "int x = 10";
+        let tokens = parse_text(input);
+
+        let token_cols: Vec<usize> = tokens.iter().map(|x| x.location.col_num).collect();
+        let expected_types: Vec<TokenType> = vec![
+            TokenType::Variable(String::from("int")),
+            TokenType::Variable(String::from("x")),
+            TokenType::Variable(String::from("=")),
+            TokenType::Variable(String::from("10")),
+        ];
+
+        assert_eq!(tokens.len(), 4);
+        assert_eq!(token_cols, vec![1, 5, 7, 9]);
+
+        for (i, t) in tokens.iter().enumerate() {
+            assert_eq!(t.t_type, expected_types[i]);
+        }
+    }
+
+    #[test]
+    fn test_lex_multi_lines() {
+        let input = "int x = 10\nint x = 10";
+        let tokens = parse_text(input);
+
+        let token_cols: Vec<usize> = tokens.iter().map(|x| x.location.col_num).collect();
+        let token_lines: Vec<usize> = tokens.iter().map(|x| x.location.line_num).collect();
+
+        assert_eq!(tokens.len(), 8);
+        assert_eq!(token_cols, vec![1, 5, 7, 9, 1, 5, 7, 9]);
+        assert_eq!(token_lines, vec![1, 1, 1, 1, 2, 2, 2, 2]);
     }
 }

@@ -46,12 +46,6 @@ pub fn parse_text(contents: &str) -> Vec<Token> {
     state.tokens
 }
 
-pub fn display_tokens(tokens: &Vec<Token>) {
-    for token in tokens {
-        println!("{}", token);
-    }
-}
-
 fn process_token(state: &mut LexState, in_str: &str, current_idx: Option<usize>) {
     if state.t_end_idx != state.t_start_idx {
         let t_str = &in_str[state.t_start_idx..state.t_end_idx];
@@ -68,11 +62,12 @@ fn get_token(t_str: &str, state: &LexState) -> Token {
         "int" => TokenType::Int,
         "=" => TokenType::Eq,
         ";" => TokenType::Semi,
-        _ => TokenType::Value(String::from(t_str)),
+        _ => TokenType::Value,
     };
 
     Token {
         t_type: t_type,
+        value: String::from(t_str),
         location: TextLocation {
             line_num: state.location.line_num,
             col_num: state.location.col_num - (state.t_end_idx - state.t_start_idx),
@@ -101,9 +96,9 @@ mod tests {
         let token_cols: Vec<usize> = tokens.iter().map(|x| x.location.col_num).collect();
         let expected_types: Vec<TokenType> = vec![
             TokenType::Int,
-            TokenType::Value(String::from("x")),
+            TokenType::Value,
             TokenType::Eq,
-            TokenType::Value(String::from("10")),
+            TokenType::Value,
             TokenType::Semi,
         ];
 

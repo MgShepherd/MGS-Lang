@@ -1,8 +1,8 @@
 use std::fmt;
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum TokenType {
-    Value(String),
+    Value,
     Int,
     Eq,
     Semi,
@@ -11,7 +11,7 @@ pub enum TokenType {
 impl fmt::Display for TokenType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            TokenType::Value(x) => write!(f, "Val: {}", x),
+            TokenType::Value => write!(f, "Value"),
             TokenType::Int => write!(f, "Integer"),
             TokenType::Eq => write!(f, "Equals"),
             TokenType::Semi => write!(f, "Semicolon"),
@@ -19,6 +19,7 @@ impl fmt::Display for TokenType {
     }
 }
 
+#[derive(Clone, Debug)]
 pub struct TextLocation {
     pub line_num: usize,
     pub col_num: usize,
@@ -39,14 +40,16 @@ impl fmt::Display for TextLocation {
     }
 }
 
+#[derive(Clone, Debug)]
 pub struct Token {
     pub t_type: TokenType,
+    pub value: String,
     pub location: TextLocation,
 }
 
 impl fmt::Display for Token {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "[({}), {}]", self.t_type, self.location)
+        write!(f, "[({}: {}), {}]", self.t_type, self.value, self.location)
     }
 }
 
@@ -57,7 +60,7 @@ mod tests {
     #[test]
     fn test_display_token_types() {
         let test_cases = [
-            (TokenType::Value(String::from("myVal")), "Val: myVal"),
+            (TokenType::Value, "Value"),
             (TokenType::Int, "Integer"),
             (TokenType::Eq, "Equals"),
             (TokenType::Semi, "Semicolon"),
@@ -85,9 +88,10 @@ mod tests {
                 line_num: 10,
                 col_num: 5,
             },
-            t_type: TokenType::Value(String::from("testVal")),
+            value: String::from("test"),
+            t_type: TokenType::Value,
         };
 
-        assert_eq!(format!("{}", token), "[(Val: testVal), Line: 10, Col: 5]");
+        assert_eq!(format!("{}", token), "[(Value: test), Line: 10, Col: 5]");
     }
 }

@@ -2,12 +2,16 @@ use core::fmt;
 use std::{env, fs};
 
 mod lexer;
+mod parser;
 mod token;
 
+#[derive(Debug)]
 enum InputError {
     NotEnoughArgs,
     FileNotFound(String),
 }
+
+impl std::error::Error for InputError {}
 
 impl fmt::Display for InputError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -26,20 +30,23 @@ struct CmdArgs {
 }
 
 fn main() {
-    let cmd_args = match process_cmd_args() {
-        Ok(cmd_args) => match cmd_args {
-            Some(args) => args,
-            None => return,
-        },
-        Err(error) => panic!("Problem processing arguments: {error}"),
+    if let Err(e) = run() {
+        println!("{}", e);
+        std::process::exit(1)
+    }
+}
+
+fn run() -> Result<(), Box<dyn std::error::Error>> {
+    let cmd_args = match process_cmd_args()? {
+        Some(args) => args,
+        None => return Ok(()),
     };
-    let contents = match read_file(&cmd_args.file_name) {
-        Ok(contents) => contents,
-        Err(error) => panic!("Problem reading input file: {error}"),
-    };
+    let contents = read_file(&cmd_args.file_name)?;
 
     let tokens = lexer::parse_text(&contents);
-    lexer::display_tokens(&tokens);
+    let program = parser::parse_program(tokens)?;
+    println!("{}", program);
+    Ok(())
 }
 
 fn process_cmd_args() -> Result<Option<CmdArgs>, InputError> {

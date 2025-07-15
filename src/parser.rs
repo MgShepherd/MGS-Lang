@@ -59,13 +59,13 @@ impl std::fmt::Display for ParseError {
 
 #[derive(Debug)]
 pub struct Program {
-    statments: Vec<Statement>,
+    statements: Vec<Statement>,
 }
 
 impl std::fmt::Display for Program {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "Program: ")?;
-        for statement in &self.statments {
+        for statement in &self.statements {
             writeln!(f, "{}", statement)?;
         }
         Ok(())
@@ -90,7 +90,7 @@ impl std::fmt::Display for Statement {
 pub fn parse_program(tokens: Vec<Token>) -> Result<Program, ParseError> {
     let statements = parse_statements(tokens)?;
     Ok(Program {
-        statments: statements,
+        statements: statements,
     })
 }
 
@@ -151,5 +151,115 @@ fn expect_token_type(actual: &Token, expected: TokenType) -> Result<(), ParseErr
         Err(ParseError::UnexpectedToken(actual.clone(), expected))
     } else {
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::lexer;
+
+    #[test]
+    fn test_valid_assignment_statement() {
+        let statement = "int x = 10;";
+        let tokens = lexer::parse_text(&statement);
+        let program = parse_program(tokens).unwrap();
+
+        assert!(program.statements.len() == 1);
+        match &program.statements[0] {
+            Statement::AssignmentStatement { v_name, value } => {
+                assert_eq!(*v_name, String::from("x"));
+                assert_eq!(*value, String::from("10"));
+            }
+        }
+    }
+
+    #[test]
+    fn test_multiple_valid_statements() {
+        let statement = "int x = 10; int y = 20;";
+        let tokens = lexer::parse_text(&statement);
+        let program = parse_program(tokens).unwrap();
+
+        assert!(program.statements.len() == 2);
+        match &program.statements[0] {
+            Statement::AssignmentStatement { v_name, value } => {
+                assert_eq!(*v_name, String::from("x"));
+                assert_eq!(*value, String::from("10"));
+            }
+        }
+        match &program.statements[1] {
+            Statement::AssignmentStatement { v_name, value } => {
+                assert_eq!(*v_name, String::from("y"));
+                assert_eq!(*value, String::from("20"));
+            }
+        }
+    }
+
+    #[test]
+    fn test_should_error_for_empty_statement() {
+        let statement = "int x = 10;;";
+        let tokens = lexer::parse_text(&statement);
+        let e = parse_program(tokens).unwrap_err();
+
+        assert_eq!(
+            e.to_string(),
+            String::from("Found empty statement after token [(Semicolon: ;), Line: 1, Col: 13]")
+        );
+    }
+
+    #[test]
+    fn test_should_error_for_unrecognised_statement() {
+        let statement = "This is not a statement;";
+        let tokens = lexer::parse_text(&statement);
+        let e = parse_program(tokens).unwrap_err();
+
+        assert_eq!(
+            e.to_string(),
+            String::from(
+                "Unable to parse statement starting from token [(Value: This), Line: 1, Col: 1]"
+            )
+        );
+    }
+
+    #[test]
+    fn test_should_error_for_too_many_tokens_in_assignment() {
+        let statement = "int x = 10 20;";
+        let tokens = lexer::parse_text(&statement);
+        let e = parse_program(tokens).unwrap_err();
+
+        assert_eq!(
+            e.to_string(),
+            String::from(
+                "Unexpected token found at end of statement [(Value: 20), Line: 1, Col: 12]"
+            )
+        );
+    }
+
+    #[test]
+    fn test_should_error_for_unexpected_token_in_assigment() {
+        let statement = "int = 10;";
+        let tokens = lexer::parse_text(&statement);
+        let e = parse_program(tokens).unwrap_err();
+
+        assert_eq!(
+            e.to_string(),
+            String::from(
+                "Encountered unexpected token: [(Equals: =), Line: 1, Col: 5], expected token with type: Value"
+            )
+        );
+    }
+
+    #[test]
+    fn test_should_error_for_missing_semicolon() {
+        let statement = "int x = 10 int y = 20;";
+        let tokens = lexer::parse_text(&statement);
+        let e = parse_program(tokens).unwrap_err();
+
+        assert_eq!(
+            e.to_string(),
+            String::from(
+                "Unexpected token found at end of statement [(Integer: int), Line: 1, Col: 12]"
+            )
+        );
     }
 }

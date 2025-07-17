@@ -63,7 +63,8 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
 
     let tokens = lexer::parse_text(&contents);
     let program = parser::parse_program(tokens)?;
-    generator::generate(cmd_args.target, program);
+    let out_assembly = generator::generate(cmd_args.target, program);
+    println!("Output Assembly:\n{}", out_assembly);
     Ok(())
 }
 

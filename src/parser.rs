@@ -59,7 +59,7 @@ impl std::fmt::Display for ParseError {
 
 #[derive(Debug)]
 pub struct Program {
-    statements: Vec<Statement>,
+    pub statements: Vec<Statement>,
 }
 
 impl std::fmt::Display for Program {

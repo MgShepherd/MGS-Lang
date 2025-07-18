@@ -6,7 +6,7 @@ use crate::{
 const PROG_PRELUDE: &str = "section .text\nglobal .start\n_start:\n";
 const PROG_POSTLUDE: &str = "  mov x0, #0\n  mov x8, #93\n  svc #0\n";
 
-pub fn generate(target: Target, program: Program) -> String {
+pub fn generate(target: &Target, program: Program) -> String {
     match target {
         Target::ARM64 => generate_arm(program),
     }
@@ -50,7 +50,7 @@ mod tests {
 
     #[test]
     fn should_generate_empty_assembly_program() {
-        let output = generate(Target::ARM64, Program { statements: vec![] });
+        let output = generate(&Target::ARM64, Program { statements: vec![] });
         starts_with_prelude(&output);
         ends_with_postlude(&output)
     }
@@ -58,7 +58,7 @@ mod tests {
     #[test]
     fn should_generate_assignment_statement() {
         let output = generate(
-            Target::ARM64,
+            &Target::ARM64,
             Program {
                 statements: vec![Statement::AssignmentStatement {
                     v_name: String::from("x"),
@@ -75,7 +75,7 @@ mod tests {
     #[test]
     fn should_generate_multiple_statements() {
         let output = generate(
-            Target::ARM64,
+            &Target::ARM64,
             Program {
                 statements: vec![
                     Statement::AssignmentStatement {

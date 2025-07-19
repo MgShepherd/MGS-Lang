@@ -22,7 +22,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     let tokens = lexer::parse_text(&contents);
     let program = parser::parse_program(tokens)?;
     let out_assembly = generator::generate(&cmd_args.target, program);
-    let output_file = &cmd_args.get_output_file()?;
-    io_handler::write_file(&output_file, &out_assembly)?;
+    let out_file = &cmd_args.get_file_name()?;
+    io_handler::write_program(&out_file, &out_assembly)?;
     Ok(())
 }

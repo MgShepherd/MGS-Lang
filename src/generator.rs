@@ -3,7 +3,7 @@ use crate::{
     target::Target,
 };
 
-const PROG_PRELUDE: &str = "section .text\nglobal .start\n_start:\n";
+const PROG_PRELUDE: &str = ".section .text\n.global _start\n_start:\n";
 const PROG_POSTLUDE: &str = "  mov x0, #0\n  mov x8, #93\n  svc #0\n";
 
 pub fn generate(target: &Target, program: Program) -> String {
@@ -45,7 +45,7 @@ fn process_assignment_statement(_v_name: String, value: String) -> String {
 mod tests {
     use super::*;
 
-    const PRELUDE: &str = "section .text\nglobal .start\n_start:\n";
+    const PRELUDE: &str = ".section .text\n.global _start\n_start:\n";
     const POSTLUDE: &str = "  mov x0, #0\n  mov x8, #93\n  svc #0\n";
 
     #[test]

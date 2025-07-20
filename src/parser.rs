@@ -130,7 +130,7 @@ fn parse_statement(tokens: &[Token]) -> Result<Statement, ParseError> {
 
 fn parse_assignment_statement(tokens: &[Token]) -> Result<Statement, ParseError> {
     expect_token_type(&tokens[0], TokenType::Int)?;
-    expect_token_type(&tokens[1], TokenType::Value)?;
+    expect_token_type(&tokens[1], TokenType::Variable)?;
     expect_token_type(&tokens[2], TokenType::Eq)?;
     expect_token_type(&tokens[3], TokenType::Value)?;
 
@@ -162,7 +162,7 @@ mod tests {
     #[test]
     fn test_valid_assignment_statement() {
         let statement = "int x = 10;";
-        let tokens = lexer::parse_text(&statement);
+        let tokens = lexer::parse_text(&statement).unwrap();
         let program = parse_program(tokens).unwrap();
 
         assert!(program.statements.len() == 1);
@@ -177,7 +177,7 @@ mod tests {
     #[test]
     fn test_multiple_valid_statements() {
         let statement = "int x = 10; int y = 20;";
-        let tokens = lexer::parse_text(&statement);
+        let tokens = lexer::parse_text(&statement).unwrap();
         let program = parse_program(tokens).unwrap();
 
         assert!(program.statements.len() == 2);
@@ -198,7 +198,7 @@ mod tests {
     #[test]
     fn test_should_error_for_empty_statement() {
         let statement = "int x = 10;;";
-        let tokens = lexer::parse_text(&statement);
+        let tokens = lexer::parse_text(&statement).unwrap();
         let e = parse_program(tokens).unwrap_err();
 
         assert_eq!(
@@ -210,13 +210,13 @@ mod tests {
     #[test]
     fn test_should_error_for_unrecognised_statement() {
         let statement = "This is not a statement;";
-        let tokens = lexer::parse_text(&statement);
+        let tokens = lexer::parse_text(&statement).unwrap();
         let e = parse_program(tokens).unwrap_err();
 
         assert_eq!(
             e.to_string(),
             String::from(
-                "Unable to parse statement starting from token [(Value: This), Line: 1, Col: 1]"
+                "Unable to parse statement starting from token [(Variable: This), Line: 1, Col: 1]"
             )
         );
     }
@@ -224,7 +224,7 @@ mod tests {
     #[test]
     fn test_should_error_for_too_many_tokens_in_assignment() {
         let statement = "int x = 10 20;";
-        let tokens = lexer::parse_text(&statement);
+        let tokens = lexer::parse_text(&statement).unwrap();
         let e = parse_program(tokens).unwrap_err();
 
         assert_eq!(
@@ -236,15 +236,15 @@ mod tests {
     }
 
     #[test]
-    fn test_should_error_for_unexpected_token_in_assigment() {
+    fn test_should_error_for_unexpected_token_in_assignment() {
         let statement = "int = 10;";
-        let tokens = lexer::parse_text(&statement);
+        let tokens = lexer::parse_text(&statement).unwrap();
         let e = parse_program(tokens).unwrap_err();
 
         assert_eq!(
             e.to_string(),
             String::from(
-                "Encountered unexpected token: [(Equals: =), Line: 1, Col: 5], expected token with type: Value"
+                "Encountered unexpected token: [(Equals: =), Line: 1, Col: 5], expected token with type: Variable"
             )
         );
     }
@@ -252,7 +252,7 @@ mod tests {
     #[test]
     fn test_should_error_for_missing_semicolon() {
         let statement = "int x = 10 int y = 20;";
-        let tokens = lexer::parse_text(&statement);
+        let tokens = lexer::parse_text(&statement).unwrap();
         let e = parse_program(tokens).unwrap_err();
 
         assert_eq!(

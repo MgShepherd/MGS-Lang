@@ -19,7 +19,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     };
     let contents = io_handler::read_file(&cmd_args.file_name)?;
 
-    let tokens = lexer::parse_text(&contents);
+    let tokens = lexer::parse_text(&contents)?;
     let program = parser::parse_program(tokens)?;
     let out_assembly = generator::generate(&cmd_args.target, program);
     let out_file = &cmd_args.get_file_name()?;

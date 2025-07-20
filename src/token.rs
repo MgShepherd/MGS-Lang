@@ -3,18 +3,22 @@ use std::fmt;
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum TokenType {
     Value,
+    Variable,
     Int,
     Eq,
     Semi,
+    Unknown,
 }
 
 impl fmt::Display for TokenType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             TokenType::Value => write!(f, "Value"),
+            TokenType::Variable => write!(f, "Variable"),
             TokenType::Int => write!(f, "Integer"),
             TokenType::Eq => write!(f, "Equals"),
             TokenType::Semi => write!(f, "Semicolon"),
+            TokenType::Unknown => write!(f, "Unknown"),
         }
     }
 }
@@ -61,9 +65,11 @@ mod tests {
     fn test_display_token_types() {
         let test_cases = [
             (TokenType::Value, "Value"),
+            (TokenType::Variable, "Variable"),
             (TokenType::Int, "Integer"),
             (TokenType::Eq, "Equals"),
             (TokenType::Semi, "Semicolon"),
+            (TokenType::Unknown, "Unknown"),
         ];
 
         for (t_type, output) in test_cases {

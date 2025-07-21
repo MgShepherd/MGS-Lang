@@ -5,9 +5,8 @@
 *
 * Terminal symbols (tokens) are provided in all upper case, anything else is a non-terminal
 *
-* Program = { Statement, SEMI }
-* Statement = AssignmentStatement
-* AssignmentStatement = INT, VALUE, EQ, VALUE
+* Program = { Statement, SEMI } Statement = DeclarationStatement
+* DeclarationStatement = INT, VALUE, EQ, VALUE
 *
 */
 
@@ -74,13 +73,13 @@ impl std::fmt::Display for Program {
 
 #[derive(Debug)]
 pub enum Statement {
-    AssignmentStatement { v_name: String, value: String },
+    DeclarationStatement { v_name: String, value: String },
 }
 
 impl std::fmt::Display for Statement {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Statement::AssignmentStatement { v_name, value } => {
+            Statement::DeclarationStatement { v_name, value } => {
                 write!(f, "Assigning {} to value {}", v_name, value)
             }
         }
@@ -139,7 +138,7 @@ fn parse_assignment_statement(tokens: &[Token]) -> Result<Statement, ParseError>
             tokens[NUM_TOKENS_IN_ASSIGNMENT].clone(),
         ))
     } else {
-        Ok(Statement::AssignmentStatement {
+        Ok(Statement::DeclarationStatement {
             v_name: tokens[1].value.clone(),
             value: tokens[3].value.clone(),
         })
@@ -167,7 +166,7 @@ mod tests {
 
         assert!(program.statements.len() == 1);
         match &program.statements[0] {
-            Statement::AssignmentStatement { v_name, value } => {
+            Statement::DeclarationStatement { v_name, value } => {
                 assert_eq!(*v_name, String::from("x"));
                 assert_eq!(*value, String::from("10"));
             }
@@ -182,13 +181,13 @@ mod tests {
 
         assert!(program.statements.len() == 2);
         match &program.statements[0] {
-            Statement::AssignmentStatement { v_name, value } => {
+            Statement::DeclarationStatement { v_name, value } => {
                 assert_eq!(*v_name, String::from("x"));
                 assert_eq!(*value, String::from("10"));
             }
         }
         match &program.statements[1] {
-            Statement::AssignmentStatement { v_name, value } => {
+            Statement::DeclarationStatement { v_name, value } => {
                 assert_eq!(*v_name, String::from("y"));
                 assert_eq!(*value, String::from("20"));
             }

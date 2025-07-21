@@ -27,7 +27,7 @@ fn process_statements(statements: Vec<Statement>) -> String {
 
     for statement in statements {
         let processed = match statement {
-            Statement::AssignmentStatement { v_name, value } => {
+            Statement::DeclarationStatement { v_name, value } => {
                 process_assignment_statement(v_name, value)
             }
         };
@@ -60,7 +60,7 @@ mod tests {
         let output = generate(
             &Target::ARM64,
             Program {
-                statements: vec![Statement::AssignmentStatement {
+                statements: vec![Statement::DeclarationStatement {
                     v_name: String::from("x"),
                     value: String::from("10"),
                 }],
@@ -78,11 +78,11 @@ mod tests {
             &Target::ARM64,
             Program {
                 statements: vec![
-                    Statement::AssignmentStatement {
+                    Statement::DeclarationStatement {
                         v_name: String::from("x"),
                         value: String::from("10"),
                     },
-                    Statement::AssignmentStatement {
+                    Statement::DeclarationStatement {
                         v_name: String::from("y"),
                         value: String::from("32"),
                     },

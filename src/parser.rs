@@ -5,8 +5,10 @@
 *
 * Terminal symbols (tokens) are provided in all upper case, anything else is a non-terminal
 *
-* Program = { Statement, SEMI } Statement = DeclarationStatement
-* DeclarationStatement = INT, VALUE, EQ, VALUE
+* Program = { Statement, SEMI }
+* Statement = DeclarationStatement | AssignmentStatement
+* DeclarationStatement = INT, VARIABLE, EQ, VALUE
+* AssignmentStatement = VARIABLE, EQ, VALUE
 *
 */
 
@@ -15,9 +17,12 @@
 * representation of the program
 */
 
+use std::collections::HashMap;
+
 use crate::token::{Token, TokenType};
 
-const NUM_TOKENS_IN_ASSIGNMENT: usize = 4;
+const NUM_TOKENS_IN_DECLARATION: usize = 4;
+const NUM_TOKENS_IN_ASSIGNMENT: usize = 3;
 
 #[derive(Debug)]
 pub enum ParseError {
@@ -26,6 +31,8 @@ pub enum ParseError {
     EmptyStatement(Token),
     UnexpectedToken(Token, TokenType),
     ExtraToken(Token),
+    RedeclaringVariable(Token),
+    UndefinedVariable(Token),
 }
 
 impl std::error::Error for ParseError {}
@@ -52,6 +59,12 @@ impl std::fmt::Display for ParseError {
             ParseError::ExtraToken(x) => {
                 write!(f, "Unexpected token found at end of statement {}", x)
             }
+            ParseError::RedeclaringVariable(x) => {
+                write!(f, "Attempted to redeclare variable: {}", x)
+            }
+            ParseError::UndefinedVariable(x) => {
+                write!(f, "Undefined variable: {}", x)
+            }
         }
     }
 }
@@ -74,12 +87,16 @@ impl std::fmt::Display for Program {
 #[derive(Debug)]
 pub enum Statement {
     DeclarationStatement { v_name: String, value: String },
+    AssignmentStatement { v_name: String, value: String },
 }
 
 impl std::fmt::Display for Statement {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Statement::DeclarationStatement { v_name, value } => {
+                write!(f, "Declaring {} with value {}", v_name, value)
+            }
+            Statement::AssignmentStatement { v_name, value } => {
                 write!(f, "Assigning {} to value {}", v_name, value)
             }
         }
@@ -97,6 +114,7 @@ fn parse_statements(tokens: Vec<Token>) -> Result<Vec<Statement>, ParseError> {
     let mut start_idx: usize = 0;
     let mut end_idx: usize = 0;
     let mut statements: Vec<Statement> = Vec::new();
+    let mut v_table: HashMap<String, i32> = HashMap::new();
 
     while end_idx < tokens.len() {
         match tokens[end_idx].t_type {
@@ -104,7 +122,7 @@ fn parse_statements(tokens: Vec<Token>) -> Result<Vec<Statement>, ParseError> {
                 if start_idx == end_idx {
                     return Err(ParseError::EmptyStatement(tokens[end_idx].clone()));
                 }
-                let statement = parse_statement(&tokens[start_idx..end_idx])?;
+                let statement = parse_statement(&tokens[start_idx..end_idx], &mut v_table)?;
                 statements.push(statement);
                 end_idx += 1;
                 start_idx = end_idx;
@@ -120,27 +138,63 @@ fn parse_statements(tokens: Vec<Token>) -> Result<Vec<Statement>, ParseError> {
     }
 }
 
-fn parse_statement(tokens: &[Token]) -> Result<Statement, ParseError> {
+fn parse_statement(
+    tokens: &[Token],
+    v_table: &mut HashMap<String, i32>,
+) -> Result<Statement, ParseError> {
     match tokens[0].t_type {
-        TokenType::Int => parse_assignment_statement(tokens),
+        TokenType::Int => parse_declaration_statement(tokens, v_table),
+        TokenType::Variable => parse_assignment_statement(tokens, v_table),
         _ => Err(ParseError::InvalidStatement(tokens[0].clone())),
     }
 }
 
-fn parse_assignment_statement(tokens: &[Token]) -> Result<Statement, ParseError> {
+fn parse_declaration_statement(
+    tokens: &[Token],
+    v_table: &mut HashMap<String, i32>,
+) -> Result<Statement, ParseError> {
     expect_token_type(&tokens[0], TokenType::Int)?;
     expect_token_type(&tokens[1], TokenType::Variable)?;
     expect_token_type(&tokens[2], TokenType::Eq)?;
     expect_token_type(&tokens[3], TokenType::Value)?;
+
+    if v_table.contains_key(&tokens[1].value) {
+        return Err(ParseError::RedeclaringVariable(tokens[1].clone()));
+    }
+
+    if tokens.len() > NUM_TOKENS_IN_DECLARATION {
+        Err(ParseError::ExtraToken(
+            tokens[NUM_TOKENS_IN_DECLARATION].clone(),
+        ))
+    } else {
+        v_table.insert(tokens[1].value.clone(), 1);
+        Ok(Statement::DeclarationStatement {
+            v_name: tokens[1].value.clone(),
+            value: tokens[3].value.clone(),
+        })
+    }
+}
+
+fn parse_assignment_statement(
+    tokens: &[Token],
+    v_table: &mut HashMap<String, i32>,
+) -> Result<Statement, ParseError> {
+    expect_token_type(&tokens[0], TokenType::Variable)?;
+    expect_token_type(&tokens[1], TokenType::Eq)?;
+    expect_token_type(&tokens[2], TokenType::Value)?;
+
+    if !v_table.contains_key(&tokens[0].value) {
+        return Err(ParseError::UndefinedVariable(tokens[0].clone()));
+    }
 
     if tokens.len() > NUM_TOKENS_IN_ASSIGNMENT {
         Err(ParseError::ExtraToken(
             tokens[NUM_TOKENS_IN_ASSIGNMENT].clone(),
         ))
     } else {
-        Ok(Statement::DeclarationStatement {
-            v_name: tokens[1].value.clone(),
-            value: tokens[3].value.clone(),
+        Ok(Statement::AssignmentStatement {
+            v_name: tokens[0].value.clone(),
+            value: tokens[2].value.clone(),
         })
     }
 }
@@ -159,7 +213,7 @@ mod tests {
     use crate::lexer;
 
     #[test]
-    fn test_valid_assignment_statement() {
+    fn test_valid_declaration_statement() {
         let statement = "int x = 10;";
         let tokens = lexer::parse_text(&statement).unwrap();
         let program = parse_program(tokens).unwrap();
@@ -170,12 +224,13 @@ mod tests {
                 assert_eq!(*v_name, String::from("x"));
                 assert_eq!(*value, String::from("10"));
             }
+            x => panic!("Unexpected statement: {}", x),
         }
     }
 
     #[test]
-    fn test_multiple_valid_statements() {
-        let statement = "int x = 10; int y = 20;";
+    fn test_valid_assignment_statement() {
+        let statement = "int x = 10;\nx = 20;";
         let tokens = lexer::parse_text(&statement).unwrap();
         let program = parse_program(tokens).unwrap();
 
@@ -185,13 +240,37 @@ mod tests {
                 assert_eq!(*v_name, String::from("x"));
                 assert_eq!(*value, String::from("10"));
             }
+            x => panic!("Unexpected statement: {}", x),
         }
         match &program.statements[1] {
-            Statement::DeclarationStatement { v_name, value } => {
-                assert_eq!(*v_name, String::from("y"));
+            Statement::AssignmentStatement { v_name, value } => {
+                assert_eq!(*v_name, String::from("x"));
                 assert_eq!(*value, String::from("20"));
             }
+            x => panic!("Unexpected statement: {}", x),
         }
+    }
+
+    #[test]
+    fn test_declaration_should_error_for_redefined_var() {
+        let statements = "int x = 20;int x = 100;";
+        let tokens = lexer::parse_text(&statements).unwrap();
+        let e = parse_program(tokens).unwrap_err();
+        assert_eq!(
+            e.to_string(),
+            String::from("Attempted to redeclare variable: [(Variable: x), Line: 1, Col: 17]")
+        );
+    }
+
+    #[test]
+    fn test_assignment_should_error_for_undefined_var() {
+        let statement = "x = 20;";
+        let tokens = lexer::parse_text(&statement).unwrap();
+        let e = parse_program(tokens).unwrap_err();
+        assert_eq!(
+            e.to_string(),
+            String::from("Undefined variable: [(Variable: x), Line: 1, Col: 1]")
+        );
     }
 
     #[test]
@@ -208,20 +287,20 @@ mod tests {
 
     #[test]
     fn test_should_error_for_unrecognised_statement() {
-        let statement = "This is not a statement;";
+        let statement = "= is not a statement;";
         let tokens = lexer::parse_text(&statement).unwrap();
         let e = parse_program(tokens).unwrap_err();
 
         assert_eq!(
             e.to_string(),
             String::from(
-                "Unable to parse statement starting from token [(Variable: This), Line: 1, Col: 1]"
+                "Unable to parse statement starting from token [(Equals: =), Line: 1, Col: 1]"
             )
         );
     }
 
     #[test]
-    fn test_should_error_for_too_many_tokens_in_assignment() {
+    fn test_should_error_for_too_many_tokens_in_declaration() {
         let statement = "int x = 10 20;";
         let tokens = lexer::parse_text(&statement).unwrap();
         let e = parse_program(tokens).unwrap_err();
@@ -235,7 +314,21 @@ mod tests {
     }
 
     #[test]
-    fn test_should_error_for_unexpected_token_in_assignment() {
+    fn test_should_error_for_too_many_tokens_in_assignment() {
+        let statement = "int x = 5;x = 10 int;";
+        let tokens = lexer::parse_text(&statement).unwrap();
+        let e = parse_program(tokens).unwrap_err();
+
+        assert_eq!(
+            e.to_string(),
+            String::from(
+                "Unexpected token found at end of statement [(Integer: int), Line: 1, Col: 19]"
+            )
+        );
+    }
+
+    #[test]
+    fn test_should_error_for_unexpected_token() {
         let statement = "int = 10;";
         let tokens = lexer::parse_text(&statement).unwrap();
         let e = parse_program(tokens).unwrap_err();

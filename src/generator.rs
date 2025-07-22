@@ -28,6 +28,9 @@ fn process_statements(statements: Vec<Statement>) -> String {
     for statement in statements {
         let processed = match statement {
             Statement::DeclarationStatement { v_name, value } => {
+                process_declaration_statement(v_name, value)
+            }
+            Statement::AssignmentStatement { v_name, value } => {
                 process_assignment_statement(v_name, value)
             }
         };
@@ -37,8 +40,12 @@ fn process_statements(statements: Vec<Statement>) -> String {
     output
 }
 
-fn process_assignment_statement(_v_name: String, value: String) -> String {
+fn process_declaration_statement(_v_name: String, value: String) -> String {
     format!("  mov x0, #{}\n", value)
+}
+
+fn process_assignment_statement(_v_name: String, _value: String) -> String {
+    format!("ASSIGNMENT STATEMENT NOT IMPLEMENTED\n")
 }
 
 #[cfg(test)]

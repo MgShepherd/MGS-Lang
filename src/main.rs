@@ -1,3 +1,4 @@
+mod constants;
 mod generator;
 mod io_handler;
 mod lexer;

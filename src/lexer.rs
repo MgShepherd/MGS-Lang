@@ -1,9 +1,7 @@
-use regex::Regex;
-
-use crate::token::{TextLocation, Token, TokenType};
-
-const VARIABLE_PATTERN: &'static str = r"^[_a-zA-Z](?:[\w\-]*[a-zA-Z0-9])?$";
-const VALUE_PATTERN: &'static str = r#"^(?:\d+(?:\.\d+)?|".*")$"#;
+use crate::{
+    constants,
+    token::{TextLocation, Token, TokenType},
+};
 
 #[derive(Debug)]
 pub enum LexError {
@@ -25,24 +23,15 @@ struct LexState {
     t_start_idx: usize,
     t_end_idx: usize,
     tokens: Vec<Token>,
-    variable_regex: Regex,
-    value_regex: Regex,
 }
 
 impl LexState {
     fn new() -> Self {
-        let variable_regex = Regex::new(VARIABLE_PATTERN)
-            .expect("Regex should be able to be created from variable pattern");
-        let value_regex = Regex::new(VALUE_PATTERN)
-            .expect("Regex should be able to be created from value pattern");
-
         LexState {
             location: TextLocation::new(),
             t_start_idx: 0,
             t_end_idx: 0,
             tokens: Vec::new(),
-            variable_regex: variable_regex,
-            value_regex: value_regex,
         }
     }
 }
@@ -98,8 +87,8 @@ fn get_token(t_str: &str, state: &LexState) -> Result<Token, LexError> {
         "int" => TokenType::Int,
         "=" => TokenType::Eq,
         ";" => TokenType::Semi,
-        x if state.variable_regex.is_match(x) => TokenType::Variable,
-        x if state.value_regex.is_match(x) => TokenType::Value,
+        x if constants::VARIABLE_REGEX.is_match(x) => TokenType::Variable,
+        x if constants::VALUE_REGEX.is_match(x) => TokenType::Value,
         _ => {
             is_unknown_token = true;
             TokenType::Unknown

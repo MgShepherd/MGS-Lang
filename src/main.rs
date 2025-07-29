@@ -21,7 +21,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
 
     let tokens = lexer::parse_text(&contents)?;
     let program = parser::parse_program(tokens)?;
-    let out_assembly = generator::generate(&cmd_args.target, program);
+    let out_assembly = generator::generate(&cmd_args.target, program)?;
     let out_file = &cmd_args.get_file_name()?;
     io_handler::write_program(&out_file, &out_assembly)?;
     Ok(())

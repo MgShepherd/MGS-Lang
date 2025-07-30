@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::{
-    parser::{Program, Statement},
+    parser::{Expression, Program, Statement},
     target::Target,
 };
 
@@ -86,11 +86,11 @@ fn process_statements(statements: Vec<Statement>) -> Result<String, GenError> {
 
     for statement in statements {
         let processed = match statement {
-            Statement::DeclarationStatement { v_name, value } => {
-                process_declaration_statement(&mut state, v_name, value)?
+            Statement::DeclarationStatement { v_name, expr } => {
+                process_declaration_statement(&mut state, v_name, expr)?
             }
-            Statement::AssignmentStatement { v_name, value } => {
-                process_assignment_statement(&state, v_name, value)?
+            Statement::AssignmentStatement { v_name, expr } => {
+                process_assignment_statement(&state, v_name, expr)?
             }
         };
         output.push_str(&processed);
@@ -102,12 +102,12 @@ fn process_statements(statements: Vec<Statement>) -> Result<String, GenError> {
 fn process_declaration_statement(
     state: &mut GenState,
     v_name: String,
-    value: String,
+    expr: Expression,
 ) -> Result<String, GenError> {
     state.var_locs.insert(v_name, state.var_locs.len() + 1);
     Ok(format!(
         "  mov x0, #{}\n  str x0, [sp, #-{}]!\n",
-        value,
+        expr,
         state.var_locs.len() * STACK_VAR_OFFSET
     ))
 }
@@ -115,7 +115,7 @@ fn process_declaration_statement(
 fn process_assignment_statement(
     state: &GenState,
     v_name: String,
-    value: String,
+    expr: Expression,
 ) -> Result<String, GenError> {
     let location = state
         .var_locs
@@ -124,7 +124,7 @@ fn process_assignment_statement(
     let offset = location * STACK_VAR_OFFSET;
     Ok(format!(
         "  mov x0, #{}\n  str x0, [x29, #-{}]\n",
-        value, offset
+        expr, offset
     ))
 }
 
@@ -149,7 +149,7 @@ mod tests {
             Program {
                 statements: vec![Statement::DeclarationStatement {
                     v_name: String::from("x"),
-                    value: String::from("10"),
+                    expr: Expression::ValExpr(String::from("10")),
                 }],
             },
         )
@@ -168,11 +168,11 @@ mod tests {
                 statements: vec![
                     Statement::DeclarationStatement {
                         v_name: String::from("x"),
-                        value: String::from("10"),
+                        expr: Expression::ValExpr(String::from("10")),
                     },
                     Statement::DeclarationStatement {
                         v_name: String::from("y"),
-                        value: String::from("32"),
+                        expr: Expression::ValExpr(String::from("32")),
                     },
                 ],
             },
@@ -195,11 +195,11 @@ mod tests {
                 statements: vec![
                     Statement::DeclarationStatement {
                         v_name: String::from("x"),
-                        value: String::from("10"),
+                        expr: Expression::ValExpr(String::from("10")),
                     },
                     Statement::AssignmentStatement {
                         v_name: String::from("x"),
-                        value: String::from("32"),
+                        expr: Expression::ValExpr(String::from("32")),
                     },
                 ],
             },
@@ -221,7 +221,7 @@ mod tests {
             Program {
                 statements: vec![Statement::AssignmentStatement {
                     v_name: String::from("x"),
-                    value: String::from("32"),
+                    expr: Expression::ValExpr(String::from("32")),
                 }],
             },
         )

@@ -19,7 +19,10 @@
 
 use std::collections::HashMap;
 
-use crate::token::{Token, TokenType};
+use crate::{
+    constants,
+    token::{Token, TokenType},
+};
 
 const NUM_TOKENS_IN_DECLARATION: usize = 4;
 const NUM_TOKENS_IN_ASSIGNMENT: usize = 3;
@@ -33,6 +36,7 @@ pub enum ParseError {
     ExtraToken(Token),
     RedeclaringVariable(Token),
     UndefinedVariable(Token),
+    InvalidExpression(Token),
 }
 
 impl std::error::Error for ParseError {}
@@ -65,6 +69,9 @@ impl std::fmt::Display for ParseError {
             ParseError::UndefinedVariable(x) => {
                 write!(f, "Undefined variable: {}", x)
             }
+            ParseError::InvalidExpression(x) => {
+                write!(f, "Unable to parse expression starting from token {}", x)
+            }
         }
     }
 }
@@ -85,19 +92,32 @@ impl std::fmt::Display for Program {
 }
 
 #[derive(Debug)]
+pub enum Expression {
+    ValExpr(String),
+}
+
+impl std::fmt::Display for Expression {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Expression::ValExpr(x) => write!(f, "{}", x),
+        }
+    }
+}
+
+#[derive(Debug)]
 pub enum Statement {
-    DeclarationStatement { v_name: String, value: String },
-    AssignmentStatement { v_name: String, value: String },
+    DeclarationStatement { v_name: String, expr: Expression },
+    AssignmentStatement { v_name: String, expr: Expression },
 }
 
 impl std::fmt::Display for Statement {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Statement::DeclarationStatement { v_name, value } => {
-                write!(f, "Declaring {} with value {}", v_name, value)
+            Statement::DeclarationStatement { v_name, expr } => {
+                write!(f, "Declaring {} with value {}", v_name, expr)
             }
-            Statement::AssignmentStatement { v_name, value } => {
-                write!(f, "Assigning {} to value {}", v_name, value)
+            Statement::AssignmentStatement { v_name, expr } => {
+                write!(f, "Assigning {} to value {}", v_name, expr)
             }
         }
     }
@@ -156,7 +176,7 @@ fn parse_declaration_statement(
     expect_token_type(&tokens[0], TokenType::Int)?;
     expect_token_type(&tokens[1], TokenType::Variable)?;
     expect_token_type(&tokens[2], TokenType::Eq)?;
-    expect_token_type(&tokens[3], TokenType::Value)?;
+    let expr = expect_expression(&tokens[3..])?;
 
     if v_table.contains_key(&tokens[1].value) {
         return Err(ParseError::RedeclaringVariable(tokens[1].clone()));
@@ -170,7 +190,7 @@ fn parse_declaration_statement(
         v_table.insert(tokens[1].value.clone(), 1);
         Ok(Statement::DeclarationStatement {
             v_name: tokens[1].value.clone(),
-            value: tokens[3].value.clone(),
+            expr,
         })
     }
 }
@@ -181,7 +201,7 @@ fn parse_assignment_statement(
 ) -> Result<Statement, ParseError> {
     expect_token_type(&tokens[0], TokenType::Variable)?;
     expect_token_type(&tokens[1], TokenType::Eq)?;
-    expect_token_type(&tokens[2], TokenType::Value)?;
+    let expr = expect_expression(&tokens[2..])?;
 
     if !v_table.contains_key(&tokens[0].value) {
         return Err(ParseError::UndefinedVariable(tokens[0].clone()));
@@ -194,7 +214,7 @@ fn parse_assignment_statement(
     } else {
         Ok(Statement::AssignmentStatement {
             v_name: tokens[0].value.clone(),
-            value: tokens[2].value.clone(),
+            expr,
         })
     }
 }
@@ -204,6 +224,13 @@ fn expect_token_type(actual: &Token, expected: TokenType) -> Result<(), ParseErr
         Err(ParseError::UnexpectedToken(actual.clone(), expected))
     } else {
         Ok(())
+    }
+}
+
+fn expect_expression(tokens: &[Token]) -> Result<Expression, ParseError> {
+    match &tokens[0] {
+        x if constants::VALUE_REGEX.is_match(&x.value) => Ok(Expression::ValExpr(x.value.clone())),
+        x => Err(ParseError::InvalidExpression(x.clone())),
     }
 }
 
@@ -220,9 +247,11 @@ mod tests {
 
         assert!(program.statements.len() == 1);
         match &program.statements[0] {
-            Statement::DeclarationStatement { v_name, value } => {
+            Statement::DeclarationStatement { v_name, expr } => {
                 assert_eq!(*v_name, String::from("x"));
-                assert_eq!(*value, String::from("10"));
+                match expr {
+                    Expression::ValExpr(x) => assert_eq!(*x, String::from("10")),
+                }
             }
             x => panic!("Unexpected statement: {}", x),
         }
@@ -236,16 +265,22 @@ mod tests {
 
         assert!(program.statements.len() == 2);
         match &program.statements[0] {
-            Statement::DeclarationStatement { v_name, value } => {
+            Statement::DeclarationStatement {
+                v_name,
+                expr: Expression::ValExpr(x),
+            } => {
                 assert_eq!(*v_name, String::from("x"));
-                assert_eq!(*value, String::from("10"));
+                assert_eq!(*x, String::from("10"));
             }
             x => panic!("Unexpected statement: {}", x),
         }
         match &program.statements[1] {
-            Statement::AssignmentStatement { v_name, value } => {
+            Statement::AssignmentStatement {
+                v_name,
+                expr: Expression::ValExpr(x),
+            } => {
                 assert_eq!(*v_name, String::from("x"));
-                assert_eq!(*value, String::from("20"));
+                assert_eq!(*x, String::from("20"));
             }
             x => panic!("Unexpected statement: {}", x),
         }

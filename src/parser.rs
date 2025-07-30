@@ -94,12 +94,14 @@ impl std::fmt::Display for Program {
 #[derive(Debug)]
 pub enum Expression {
     ValExpr(String),
+    VarExpr(String),
 }
 
 impl std::fmt::Display for Expression {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Expression::ValExpr(x) => write!(f, "{}", x),
+            Expression::VarExpr(x) => write!(f, "{}", x),
         }
     }
 }
@@ -176,7 +178,7 @@ fn parse_declaration_statement(
     expect_token_type(&tokens[0], TokenType::Int)?;
     expect_token_type(&tokens[1], TokenType::Variable)?;
     expect_token_type(&tokens[2], TokenType::Eq)?;
-    let expr = expect_expression(&tokens[3..])?;
+    let expr = expect_expression(&tokens[3..], v_table)?;
 
     if v_table.contains_key(&tokens[1].value) {
         return Err(ParseError::RedeclaringVariable(tokens[1].clone()));
@@ -201,7 +203,7 @@ fn parse_assignment_statement(
 ) -> Result<Statement, ParseError> {
     expect_token_type(&tokens[0], TokenType::Variable)?;
     expect_token_type(&tokens[1], TokenType::Eq)?;
-    let expr = expect_expression(&tokens[2..])?;
+    let expr = expect_expression(&tokens[2..], v_table)?;
 
     if !v_table.contains_key(&tokens[0].value) {
         return Err(ParseError::UndefinedVariable(tokens[0].clone()));
@@ -227,9 +229,19 @@ fn expect_token_type(actual: &Token, expected: TokenType) -> Result<(), ParseErr
     }
 }
 
-fn expect_expression(tokens: &[Token]) -> Result<Expression, ParseError> {
+fn expect_expression(
+    tokens: &[Token],
+    v_table: &HashMap<String, i32>,
+) -> Result<Expression, ParseError> {
     match &tokens[0] {
         x if constants::VALUE_REGEX.is_match(&x.value) => Ok(Expression::ValExpr(x.value.clone())),
+        x if constants::VARIABLE_REGEX.is_match(&x.value) => {
+            if v_table.contains_key(&x.value) {
+                Ok(Expression::VarExpr(x.value.clone()))
+            } else {
+                Err(ParseError::UndefinedVariable(x.clone()))
+            }
+        }
         x => Err(ParseError::InvalidExpression(x.clone())),
     }
 }
@@ -251,6 +263,7 @@ mod tests {
                 assert_eq!(*v_name, String::from("x"));
                 match expr {
                     Expression::ValExpr(x) => assert_eq!(*x, String::from("10")),
+                    x => panic!("Unexpected expression: {}", x),
                 }
             }
             x => panic!("Unexpected statement: {}", x),
@@ -287,6 +300,25 @@ mod tests {
     }
 
     #[test]
+    fn test_valid_variable_expression() {
+        let statement = "int x = 10;int y = x;";
+        let tokens = lexer::parse_text(&statement).unwrap();
+        let program = parse_program(tokens).unwrap();
+
+        assert!(program.statements.len() == 2);
+        match &program.statements[1] {
+            Statement::DeclarationStatement { v_name, expr } => {
+                assert_eq!(*v_name, String::from("y"));
+                match expr {
+                    Expression::VarExpr(x) => assert_eq!(*x, String::from("x")),
+                    x => panic!("Unexpected expression: {}", x),
+                }
+            }
+            x => panic!("Unexpected statement: {}", x),
+        }
+    }
+
+    #[test]
     fn test_declaration_should_error_for_redefined_var() {
         let statements = "int x = 20;int x = 100;";
         let tokens = lexer::parse_text(&statements).unwrap();
@@ -305,6 +337,17 @@ mod tests {
         assert_eq!(
             e.to_string(),
             String::from("Undefined variable: [(Variable: x), Line: 1, Col: 1]")
+        );
+    }
+
+    #[test]
+    fn test_should_error_for_undefined_var_in_expr() {
+        let statement = "int x = y;";
+        let tokens = lexer::parse_text(&statement).unwrap();
+        let e = parse_program(tokens).unwrap_err();
+        assert_eq!(
+            e.to_string(),
+            String::from("Undefined variable: [(Variable: y), Line: 1, Col: 9]")
         );
     }
 

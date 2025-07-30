@@ -106,9 +106,9 @@ fn process_declaration_statement(
 ) -> Result<String, GenError> {
     state.var_locs.insert(v_name, state.var_locs.len() + 1);
     Ok(format!(
-        "  mov x0, #{}\n  str x0, [sp, #-{}]!\n",
-        expr,
-        state.var_locs.len() * STACK_VAR_OFFSET
+        "{}\n  str x0, [sp, #-{}]!\n",
+        generate_expression(state, &expr)?,
+        STACK_VAR_OFFSET
     ))
 }
 
@@ -123,9 +123,24 @@ fn process_assignment_statement(
         .ok_or(GenError::from_undefined_var(v_name.clone()))?;
     let offset = location * STACK_VAR_OFFSET;
     Ok(format!(
-        "  mov x0, #{}\n  str x0, [x29, #-{}]\n",
-        expr, offset
+        "{}\n  str x0, [x29, #-{}]\n",
+        generate_expression(state, &expr)?,
+        offset
     ))
+}
+
+fn generate_expression(state: &GenState, expr: &Expression) -> Result<String, GenError> {
+    match expr {
+        Expression::ValExpr(x) => Ok(format!("  mov x0, #{}", x)),
+        Expression::VarExpr(x) => {
+            let location = state
+                .var_locs
+                .get(x)
+                .ok_or(GenError::from_undefined_var(x.clone()))?;
+            let offset = location * STACK_VAR_OFFSET;
+            Ok(format!("  ldr x0, [x29, #-{}]", offset))
+        }
+    }
 }
 
 #[cfg(test)]
@@ -182,7 +197,7 @@ mod tests {
         starts_with_prelude(&output);
         contains_body(
             &output,
-            "  mov x0, #10\n  str x0, [sp, #-16]!\n  mov x0, #32\n  str x0, [sp, #-32]!\n",
+            "  mov x0, #10\n  str x0, [sp, #-16]!\n  mov x0, #32\n  str x0, [sp, #-16]!\n",
         );
         ends_with_postlude(&output)
     }
@@ -210,6 +225,33 @@ mod tests {
         contains_body(
             &output,
             "  mov x0, #10\n  str x0, [sp, #-16]!\n  mov x0, #32\n  str x0, [x29, #-16]\n",
+        );
+        ends_with_postlude(&output)
+    }
+
+    #[test]
+    fn should_support_variable_expressions() {
+        let output = generate(
+            &Target::ARM64,
+            Program {
+                statements: vec![
+                    Statement::DeclarationStatement {
+                        v_name: String::from("x"),
+                        expr: Expression::ValExpr(String::from("10")),
+                    },
+                    Statement::DeclarationStatement {
+                        v_name: String::from("y"),
+                        expr: Expression::VarExpr(String::from("x")),
+                    },
+                ],
+            },
+        )
+        .unwrap();
+
+        starts_with_prelude(&output);
+        contains_body(
+            &output,
+            "  mov x0, #10\n  str x0, [sp, #-16]!\n  ldr x0, [x29, #-16]\n  str x0, [sp, #-16]!\n",
         );
         ends_with_postlude(&output)
     }

@@ -87,7 +87,7 @@ fn get_token(t_str: &str, state: &LexState) -> Result<Token, LexError> {
         "int" => TokenType::Int,
         "=" => TokenType::Eq,
         ";" => TokenType::Semi,
-        "+" => TokenType::ArithmeticOp,
+        "+" | "-" => TokenType::ArithmeticOp,
         x if constants::VARIABLE_REGEX.is_match(x) => TokenType::Variable,
         x if constants::VALUE_REGEX.is_match(x) => TokenType::Value,
         _ => {
@@ -127,7 +127,7 @@ mod tests {
 
     #[test]
     fn test_lex_variable_line() {
-        let input = "int x = 10;";
+        let input = "int x = 10 + -;";
         let tokens = parse_text(input).unwrap();
 
         let token_cols: Vec<usize> = tokens.iter().map(|x| x.location.col_num).collect();
@@ -136,11 +136,13 @@ mod tests {
             TokenType::Variable,
             TokenType::Eq,
             TokenType::Value,
+            TokenType::ArithmeticOp,
+            TokenType::ArithmeticOp,
             TokenType::Semi,
         ];
 
-        assert_eq!(tokens.len(), 5);
-        assert_eq!(token_cols, vec![1, 5, 7, 9, 11]);
+        assert_eq!(tokens.len(), 7);
+        assert_eq!(token_cols, vec![1, 5, 7, 9, 12, 14, 15]);
 
         for (i, t) in tokens.iter().enumerate() {
             assert_eq!(t.t_type, expected_types[i]);

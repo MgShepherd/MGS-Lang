@@ -144,13 +144,14 @@ fn generate_expression(
             let offset = location * STACK_VAR_OFFSET;
             Ok(format!("  ldr x{}, [x29, #-{}]", target_reg, offset))
         }
-        Expression::ArithmeticExpr(x, y) => {
+        Expression::ArithmeticExpr(x, op, y) => {
             let x_expr = generate_expression(state, &x, target_reg + 1)?;
             let y_expr = generate_expression(state, &y, target_reg + 2)?;
             Ok(format!(
-                "{}\n{}\n  add x{}, x{}, x{}",
+                "{}\n{}\n  {} x{}, x{}, x{}",
                 x_expr,
                 y_expr,
+                op.to_arm_command(),
                 target_reg,
                 target_reg + 1,
                 target_reg + 2
@@ -161,6 +162,8 @@ fn generate_expression(
 
 #[cfg(test)]
 mod tests {
+    use crate::parser::Operator;
+
     use super::*;
 
     const PRELUDE: &str = ".section .text\n.global _start\n_start:\n  mov x29, sp\n";
@@ -281,6 +284,7 @@ mod tests {
                     v_name: String::from("x"),
                     expr: Expression::ArithmeticExpr(
                         Box::from(Expression::ValExpr(String::from("10"))),
+                        Operator::Add,
                         Box::from(Expression::ValExpr(String::from("7"))),
                     ),
                 }],
@@ -305,8 +309,10 @@ mod tests {
                     v_name: String::from("x"),
                     expr: Expression::ArithmeticExpr(
                         Box::from(Expression::ValExpr(String::from("10"))),
+                        Operator::Add,
                         Box::from(Expression::ArithmeticExpr(
                             Box::from(Expression::ValExpr(String::from("20"))),
+                            Operator::Sub,
                             Box::from(Expression::ValExpr(String::from("12"))),
                         )),
                     ),
@@ -318,7 +324,7 @@ mod tests {
         starts_with_prelude(&output);
         contains_body(
             &output,
-            "  mov x1, #10\n  mov x3, #20\n  mov x4, #12\n  add x2, x3, x4\n  add x0, x1, x2\n  str x0, [sp, #-16]!\n",
+            "  mov x1, #10\n  mov x3, #20\n  mov x4, #12\n  sub x2, x3, x4\n  add x0, x1, x2\n  str x0, [sp, #-16]!\n",
         );
         ends_with_postlude(&output)
     }

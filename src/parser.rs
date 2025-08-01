@@ -12,7 +12,8 @@
 * Expression = ValExpr | VarExpr | ArithmeticExpr
 * ValExpr = VALUE
 * VarExpr = VARIABLE
-* ArithmeticExpr = Expression "+" Expression
+* ArithmeticExpr = Expression ArithmeticOperator Expression
+* ArithmeticOperator = + | -
 *
 */
 
@@ -40,6 +41,7 @@ pub enum ParseError {
     RedeclaringVariable(Token),
     UndefinedVariable(Token),
     InvalidExpression(Token),
+    InvalidOperator(Token),
 }
 
 impl std::error::Error for ParseError {}
@@ -72,6 +74,9 @@ impl std::fmt::Display for ParseError {
             ParseError::InvalidExpression(x) => {
                 write!(f, "Unable to parse expression starting from token {}", x)
             }
+            ParseError::InvalidOperator(x) => {
+                write!(f, "Invalid Operator: {}", x)
+            }
         }
     }
 }
@@ -91,11 +96,43 @@ impl std::fmt::Display for Program {
     }
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub enum Operator {
+    Add,
+    Sub,
+}
+
+impl Operator {
+    fn from_token(t: &Token) -> Result<Self, ParseError> {
+        match t.value.as_str() {
+            "+" => Ok(Operator::Add),
+            "-" => Ok(Operator::Sub),
+            _ => Err(ParseError::InvalidOperator(t.clone())),
+        }
+    }
+
+    pub fn to_arm_command(&self) -> String {
+        match self {
+            Operator::Add => String::from("add"),
+            Operator::Sub => String::from("sub"),
+        }
+    }
+}
+
+impl std::fmt::Display for Operator {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Operator::Add => write!(f, "+"),
+            Operator::Sub => write!(f, "-"),
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub enum Expression {
     ValExpr(String),
     VarExpr(String),
-    ArithmeticExpr(Box<Expression>, Box<Expression>),
+    ArithmeticExpr(Box<Expression>, Operator, Box<Expression>),
 }
 
 impl std::fmt::Display for Expression {
@@ -103,7 +140,7 @@ impl std::fmt::Display for Expression {
         match self {
             Expression::ValExpr(x) => write!(f, "{}", x),
             Expression::VarExpr(x) => write!(f, "{}", x),
-            Expression::ArithmeticExpr(x, y) => write!(f, "{} + {}", x, y),
+            Expression::ArithmeticExpr(x, op, y) => write!(f, "{} {} {}", x, op, y),
         }
     }
 }
@@ -231,10 +268,15 @@ fn expect_expression(
 ) -> Result<Expression, ParseError> {
     if tokens.len() == 1 {
         handle_single_element_expr(&tokens[0], v_table)
-    } else if tokens.len() > 1 && tokens[1].value == "+" {
+    } else if tokens.len() > 1 && is_arithmeic_operator(&tokens[1].value) {
         let lhs = handle_single_element_expr(&tokens[0], v_table)?;
+        expect_token_type(&tokens[1], TokenType::ArithmeticOp)?;
         let rhs = expect_expression(&tokens[2..], v_table)?;
-        Ok(Expression::ArithmeticExpr(Box::new(lhs), Box::new(rhs)))
+        Ok(Expression::ArithmeticExpr(
+            Box::new(lhs),
+            Operator::from_token(&tokens[1])?,
+            Box::new(rhs),
+        ))
     } else {
         Err(ParseError::InvalidExpression(tokens[0].clone()))
     }
@@ -255,6 +297,10 @@ fn handle_single_element_expr(
         }
         x => Err(ParseError::InvalidExpression(x.clone())),
     }
+}
+
+fn is_arithmeic_operator(token_str: &str) -> bool {
+    token_str == "+" || token_str == "-"
 }
 
 #[cfg(test)]
@@ -331,7 +377,7 @@ mod tests {
 
     #[test]
     fn test_valid_arithmetic_expression() {
-        let statement = "int x = 10 + 8 + 4;";
+        let statement = "int x = 10 + 8 - 4;";
         let tokens = lexer::parse_text(&statement).unwrap();
         let program = parse_program(tokens).unwrap();
 
@@ -339,12 +385,14 @@ mod tests {
         match &program.statements[0] {
             Statement::DeclarationStatement { v_name, expr } => {
                 assert_eq!(*v_name, String::from("x"));
-                if let Expression::ArithmeticExpr(x, y) = expr.clone() {
+                if let Expression::ArithmeticExpr(x, op, y) = expr.clone() {
                     if let Expression::ValExpr(v) = *x {
                         assert_eq!(v, String::from("10"));
-                        if let Expression::ArithmeticExpr(a, b) = *y {
+                        assert_eq!(op, Operator::Add);
+                        if let Expression::ArithmeticExpr(a, op2, b) = *y {
                             if let Expression::ValExpr(c) = *a {
                                 assert_eq!(c, String::from("8"));
+                                assert_eq!(op2, Operator::Sub);
                             } else {
                                 panic!("Expected Value expression, but got {}", a);
                             }

@@ -107,7 +107,7 @@ fn process_declaration_statement(
     state.var_locs.insert(v_name, state.var_locs.len() + 1);
     Ok(format!(
         "{}\n  str x0, [sp, #-{}]!\n",
-        generate_expression(state, &expr)?,
+        generate_expression(state, &expr, 0)?,
         STACK_VAR_OFFSET
     ))
 }
@@ -124,21 +124,37 @@ fn process_assignment_statement(
     let offset = location * STACK_VAR_OFFSET;
     Ok(format!(
         "{}\n  str x0, [x29, #-{}]\n",
-        generate_expression(state, &expr)?,
+        generate_expression(state, &expr, 0)?,
         offset
     ))
 }
 
-fn generate_expression(state: &GenState, expr: &Expression) -> Result<String, GenError> {
+fn generate_expression(
+    state: &GenState,
+    expr: &Expression,
+    target_reg: usize,
+) -> Result<String, GenError> {
     match expr {
-        Expression::ValExpr(x) => Ok(format!("  mov x0, #{}", x)),
+        Expression::ValExpr(x) => Ok(format!("  mov x{}, #{}", target_reg, x)),
         Expression::VarExpr(x) => {
             let location = state
                 .var_locs
                 .get(x)
                 .ok_or(GenError::from_undefined_var(x.clone()))?;
             let offset = location * STACK_VAR_OFFSET;
-            Ok(format!("  ldr x0, [x29, #-{}]", offset))
+            Ok(format!("  ldr x{}, [x29, #-{}]", target_reg, offset))
+        }
+        Expression::ArithmeticExpr(x, y) => {
+            let x_expr = generate_expression(state, &x, target_reg + 1)?;
+            let y_expr = generate_expression(state, &y, target_reg + 2)?;
+            Ok(format!(
+                "{}\n{}\n  add x{}, x{}, x{}",
+                x_expr,
+                y_expr,
+                target_reg,
+                target_reg + 1,
+                target_reg + 2
+            ))
         }
     }
 }
@@ -252,6 +268,57 @@ mod tests {
         contains_body(
             &output,
             "  mov x0, #10\n  str x0, [sp, #-16]!\n  ldr x0, [x29, #-16]\n  str x0, [sp, #-16]!\n",
+        );
+        ends_with_postlude(&output)
+    }
+
+    #[test]
+    fn should_support_simple_arithmetic_expressions() {
+        let output = generate(
+            &Target::ARM64,
+            Program {
+                statements: vec![Statement::DeclarationStatement {
+                    v_name: String::from("x"),
+                    expr: Expression::ArithmeticExpr(
+                        Box::from(Expression::ValExpr(String::from("10"))),
+                        Box::from(Expression::ValExpr(String::from("7"))),
+                    ),
+                }],
+            },
+        )
+        .unwrap();
+
+        starts_with_prelude(&output);
+        contains_body(
+            &output,
+            "  mov x1, #10\n  mov x2, #7\n  add x0, x1, x2\n  str x0, [sp, #-16]!\n",
+        );
+        ends_with_postlude(&output)
+    }
+
+    #[test]
+    fn should_support_chained_arithmetic_expressions() {
+        let output = generate(
+            &Target::ARM64,
+            Program {
+                statements: vec![Statement::DeclarationStatement {
+                    v_name: String::from("x"),
+                    expr: Expression::ArithmeticExpr(
+                        Box::from(Expression::ValExpr(String::from("10"))),
+                        Box::from(Expression::ArithmeticExpr(
+                            Box::from(Expression::ValExpr(String::from("20"))),
+                            Box::from(Expression::ValExpr(String::from("12"))),
+                        )),
+                    ),
+                }],
+            },
+        )
+        .unwrap();
+
+        starts_with_prelude(&output);
+        contains_body(
+            &output,
+            "  mov x1, #10\n  mov x3, #20\n  mov x4, #12\n  add x2, x3, x4\n  add x0, x1, x2\n  str x0, [sp, #-16]!\n",
         );
         ends_with_postlude(&output)
     }

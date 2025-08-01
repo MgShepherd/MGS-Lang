@@ -7,8 +7,12 @@
 *
 * Program = { Statement, SEMI }
 * Statement = DeclarationStatement | AssignmentStatement
-* DeclarationStatement = INT, VARIABLE, EQ, VALUE
-* AssignmentStatement = VARIABLE, EQ, VALUE
+* DeclarationStatement = INT, VARIABLE, EQ, Expression
+* AssignmentStatement = VARIABLE, EQ, Expression
+* Expression = ValExpr | VarExpr | ArithmeticExpr
+* ValExpr = VALUE
+* VarExpr = VARIABLE
+* ArithmeticExpr = Expression "+" Expression
 *
 */
 
@@ -24,8 +28,8 @@ use crate::{
     token::{Token, TokenType},
 };
 
-const NUM_TOKENS_IN_DECLARATION: usize = 4;
-const NUM_TOKENS_IN_ASSIGNMENT: usize = 3;
+const MIN_DECLARATION_LENGTH: usize = 4;
+const MIN_ASSIGNMENT_LENGTH: usize = 3;
 
 #[derive(Debug)]
 pub enum ParseError {
@@ -33,7 +37,6 @@ pub enum ParseError {
     MissingSemicolon(Token),
     EmptyStatement(Token),
     UnexpectedToken(Token, TokenType),
-    ExtraToken(Token),
     RedeclaringVariable(Token),
     UndefinedVariable(Token),
     InvalidExpression(Token),
@@ -59,9 +62,6 @@ impl std::fmt::Display for ParseError {
             }
             ParseError::MissingSemicolon(x) => {
                 write!(f, "No semicolon found after statement starting with: {}", x)
-            }
-            ParseError::ExtraToken(x) => {
-                write!(f, "Unexpected token found at end of statement {}", x)
             }
             ParseError::RedeclaringVariable(x) => {
                 write!(f, "Attempted to redeclare variable: {}", x)
@@ -91,10 +91,11 @@ impl std::fmt::Display for Program {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Expression {
     ValExpr(String),
     VarExpr(String),
+    ArithmeticExpr(Box<Expression>, Box<Expression>),
 }
 
 impl std::fmt::Display for Expression {
@@ -102,6 +103,7 @@ impl std::fmt::Display for Expression {
         match self {
             Expression::ValExpr(x) => write!(f, "{}", x),
             Expression::VarExpr(x) => write!(f, "{}", x),
+            Expression::ArithmeticExpr(x, y) => write!(f, "{} + {}", x, y),
         }
     }
 }
@@ -175,6 +177,9 @@ fn parse_declaration_statement(
     tokens: &[Token],
     v_table: &mut HashMap<String, i32>,
 ) -> Result<Statement, ParseError> {
+    if tokens.len() < MIN_DECLARATION_LENGTH {
+        return Err(ParseError::InvalidStatement(tokens[0].clone()));
+    }
     expect_token_type(&tokens[0], TokenType::Int)?;
     expect_token_type(&tokens[1], TokenType::Variable)?;
     expect_token_type(&tokens[2], TokenType::Eq)?;
@@ -184,23 +189,20 @@ fn parse_declaration_statement(
         return Err(ParseError::RedeclaringVariable(tokens[1].clone()));
     }
 
-    if tokens.len() > NUM_TOKENS_IN_DECLARATION {
-        Err(ParseError::ExtraToken(
-            tokens[NUM_TOKENS_IN_DECLARATION].clone(),
-        ))
-    } else {
-        v_table.insert(tokens[1].value.clone(), 1);
-        Ok(Statement::DeclarationStatement {
-            v_name: tokens[1].value.clone(),
-            expr,
-        })
-    }
+    v_table.insert(tokens[1].value.clone(), 1);
+    Ok(Statement::DeclarationStatement {
+        v_name: tokens[1].value.clone(),
+        expr,
+    })
 }
 
 fn parse_assignment_statement(
     tokens: &[Token],
     v_table: &mut HashMap<String, i32>,
 ) -> Result<Statement, ParseError> {
+    if tokens.len() < MIN_ASSIGNMENT_LENGTH {
+        return Err(ParseError::InvalidStatement(tokens[0].clone()));
+    }
     expect_token_type(&tokens[0], TokenType::Variable)?;
     expect_token_type(&tokens[1], TokenType::Eq)?;
     let expr = expect_expression(&tokens[2..], v_table)?;
@@ -209,16 +211,10 @@ fn parse_assignment_statement(
         return Err(ParseError::UndefinedVariable(tokens[0].clone()));
     }
 
-    if tokens.len() > NUM_TOKENS_IN_ASSIGNMENT {
-        Err(ParseError::ExtraToken(
-            tokens[NUM_TOKENS_IN_ASSIGNMENT].clone(),
-        ))
-    } else {
-        Ok(Statement::AssignmentStatement {
-            v_name: tokens[0].value.clone(),
-            expr,
-        })
-    }
+    Ok(Statement::AssignmentStatement {
+        v_name: tokens[0].value.clone(),
+        expr,
+    })
 }
 
 fn expect_token_type(actual: &Token, expected: TokenType) -> Result<(), ParseError> {
@@ -233,7 +229,22 @@ fn expect_expression(
     tokens: &[Token],
     v_table: &HashMap<String, i32>,
 ) -> Result<Expression, ParseError> {
-    match &tokens[0] {
+    if tokens.len() == 1 {
+        handle_single_element_expr(&tokens[0], v_table)
+    } else if tokens.len() > 1 && tokens[1].value == "+" {
+        let lhs = handle_single_element_expr(&tokens[0], v_table)?;
+        let rhs = expect_expression(&tokens[2..], v_table)?;
+        Ok(Expression::ArithmeticExpr(Box::new(lhs), Box::new(rhs)))
+    } else {
+        Err(ParseError::InvalidExpression(tokens[0].clone()))
+    }
+}
+
+fn handle_single_element_expr(
+    token: &Token,
+    v_table: &HashMap<String, i32>,
+) -> Result<Expression, ParseError> {
+    match token {
         x if constants::VALUE_REGEX.is_match(&x.value) => Ok(Expression::ValExpr(x.value.clone())),
         x if constants::VARIABLE_REGEX.is_match(&x.value) => {
             if v_table.contains_key(&x.value) {
@@ -319,6 +330,42 @@ mod tests {
     }
 
     #[test]
+    fn test_valid_arithmetic_expression() {
+        let statement = "int x = 10 + 8 + 4;";
+        let tokens = lexer::parse_text(&statement).unwrap();
+        let program = parse_program(tokens).unwrap();
+
+        assert!(program.statements.len() == 1);
+        match &program.statements[0] {
+            Statement::DeclarationStatement { v_name, expr } => {
+                assert_eq!(*v_name, String::from("x"));
+                if let Expression::ArithmeticExpr(x, y) = expr.clone() {
+                    if let Expression::ValExpr(v) = *x {
+                        assert_eq!(v, String::from("10"));
+                        if let Expression::ArithmeticExpr(a, b) = *y {
+                            if let Expression::ValExpr(c) = *a {
+                                assert_eq!(c, String::from("8"));
+                            } else {
+                                panic!("Expected Value expression, but got {}", a);
+                            }
+                            if let Expression::ValExpr(d) = *b {
+                                assert_eq!(d, String::from("4"));
+                            } else {
+                                panic!("Expected Value expression, but got {}", b);
+                            }
+                        }
+                    } else {
+                        panic!("Expected Value expression, but got {}", x);
+                    }
+                } else {
+                    panic!("Expected Arithmetic expression, but got {}", expr);
+                }
+            }
+            x => panic!("Unexpected statement: {}", x),
+        }
+    }
+
+    #[test]
     fn test_declaration_should_error_for_redefined_var() {
         let statements = "int x = 20;int x = 100;";
         let tokens = lexer::parse_text(&statements).unwrap();
@@ -378,34 +425,6 @@ mod tests {
     }
 
     #[test]
-    fn test_should_error_for_too_many_tokens_in_declaration() {
-        let statement = "int x = 10 20;";
-        let tokens = lexer::parse_text(&statement).unwrap();
-        let e = parse_program(tokens).unwrap_err();
-
-        assert_eq!(
-            e.to_string(),
-            String::from(
-                "Unexpected token found at end of statement [(Value: 20), Line: 1, Col: 12]"
-            )
-        );
-    }
-
-    #[test]
-    fn test_should_error_for_too_many_tokens_in_assignment() {
-        let statement = "int x = 5;x = 10 int;";
-        let tokens = lexer::parse_text(&statement).unwrap();
-        let e = parse_program(tokens).unwrap_err();
-
-        assert_eq!(
-            e.to_string(),
-            String::from(
-                "Unexpected token found at end of statement [(Integer: int), Line: 1, Col: 19]"
-            )
-        );
-    }
-
-    #[test]
     fn test_should_error_for_unexpected_token() {
         let statement = "int = 10;";
         let tokens = lexer::parse_text(&statement).unwrap();
@@ -414,7 +433,7 @@ mod tests {
         assert_eq!(
             e.to_string(),
             String::from(
-                "Encountered unexpected token: [(Equals: =), Line: 1, Col: 5], expected token with type: Variable"
+                "Unable to parse statement starting from token [(Integer: int), Line: 1, Col: 1]"
             )
         );
     }
@@ -428,7 +447,7 @@ mod tests {
         assert_eq!(
             e.to_string(),
             String::from(
-                "Unexpected token found at end of statement [(Integer: int), Line: 1, Col: 12]"
+                "Unable to parse expression starting from token [(Value: 10), Line: 1, Col: 9]"
             )
         );
     }

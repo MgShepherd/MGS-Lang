@@ -87,6 +87,7 @@ fn get_token(t_str: &str, state: &LexState) -> Result<Token, LexError> {
         "int" => TokenType::Int,
         "=" => TokenType::Eq,
         ";" => TokenType::Semi,
+        "+" => TokenType::ArithmeticOp,
         x if constants::VARIABLE_REGEX.is_match(x) => TokenType::Variable,
         x if constants::VALUE_REGEX.is_match(x) => TokenType::Value,
         _ => {

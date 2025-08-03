@@ -7,8 +7,8 @@
 *
 * Program = { Statement, SEMI }
 * Statement = DeclarationStatement | AssignmentStatement
-* DeclarationStatement = INT, VARIABLE, EQ, Expression
-* AssignmentStatement = VARIABLE, EQ, Expression
+* DeclarationStatement = INT, VARIABLE, EQ, ArithmeticExpression
+* AssignmentStatement = VARIABLE, EQ, ArithmeticExpression
 * Expression = ValExpr | VarExpr | ArithmeticExpr | BooleanExpr
 * ValExpr = VALUE
 * VarExpr = VARIABLE
@@ -231,7 +231,7 @@ fn parse_declaration_statement(
     expect_token_type(&tokens[0], TokenType::Int)?;
     expect_token_type(&tokens[1], TokenType::Variable)?;
     expect_token_type(&tokens[2], TokenType::Eq)?;
-    let expr = expect_expression(&tokens[3..], v_table)?;
+    let expr = expect_arithmetic_expression(&tokens[3..], v_table)?;
 
     if v_table.contains_key(&tokens[1].value) {
         return Err(ParseError::RedeclaringVariable(tokens[1].clone()));
@@ -253,7 +253,7 @@ fn parse_assignment_statement(
     }
     expect_token_type(&tokens[0], TokenType::Variable)?;
     expect_token_type(&tokens[1], TokenType::Eq)?;
-    let expr = expect_expression(&tokens[2..], v_table)?;
+    let expr = expect_arithmetic_expression(&tokens[2..], v_table)?;
 
     if !v_table.contains_key(&tokens[0].value) {
         return Err(ParseError::UndefinedVariable(tokens[0].clone()));
@@ -273,7 +273,7 @@ fn expect_token_type(actual: &Token, expected: TokenType) -> Result<(), ParseErr
     }
 }
 
-fn expect_expression(
+fn expect_arithmetic_expression(
     tokens: &[Token],
     v_table: &HashMap<String, i32>,
 ) -> Result<Expression, ParseError> {
@@ -281,14 +281,9 @@ fn expect_expression(
         handle_single_element_expr(&tokens[0], v_table)
     } else if tokens.len() > 2 && Operator::from_token(&tokens[1]).is_ok() {
         let lhs = handle_single_element_expr(&tokens[0], v_table)?;
-        let rhs = expect_expression(&tokens[2..], v_table)?;
+        let rhs = expect_arithmetic_expression(&tokens[2..], v_table)?;
         match tokens[1].t_type {
             TokenType::ArithmeticOp => Ok(Expression::ArithmeticExpr(
-                Box::new(lhs),
-                Operator::from_token(&tokens[1])?,
-                Box::new(rhs),
-            )),
-            TokenType::BooleanOp => Ok(Expression::BooleanExpr(
                 Box::new(lhs),
                 Operator::from_token(&tokens[1])?,
                 Box::new(rhs),
@@ -424,23 +419,6 @@ mod tests {
                 }
             }
             x => panic!("Unexpected statement: {}", x),
-        }
-    }
-
-    #[test]
-    fn test_valid_boolean_expression() {
-        let statement = "int x = 10 > 3;";
-        let tokens = lexer::parse_text(&statement).unwrap();
-        let program = parse_program(tokens).unwrap();
-
-        assert!(program.statements.len() == 1);
-        if let Statement::DeclarationStatement { v_name, expr } = &program.statements[0] {
-            assert_eq!(*v_name, String::from("x"));
-            if let Expression::BooleanExpr(x, op, y) = expr.clone() {
-                assert_eq!(*x, Expression::ValExpr(String::from("10")));
-                assert_eq!(*y, Expression::ValExpr(String::from("3")));
-                assert_eq!(op, Operator::GreaterThan);
-            }
         }
     }
 

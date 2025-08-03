@@ -40,28 +40,38 @@ pub fn parse_text(contents: &str) -> Result<Vec<Token>, LexError> {
     let mut state = LexState::new();
 
     for (i, c) in contents.chars().enumerate() {
-        state.location.col_num += 1;
-        match c {
-            '\n' => {
-                process_token(&mut state, contents, Some(i))?;
-                state.location.line_num += 1;
-                state.location.col_num = 0;
-            }
-            ';' => {
-                process_token(&mut state, contents, None)?;
-                state.location.col_num += 1;
-                state.t_start_idx = i;
-                state.t_end_idx = i + 1;
-                process_token(&mut state, contents, Some(i))?;
-            }
-            _ if c.is_ascii_whitespace() => process_token(&mut state, contents, Some(i))?,
-            _ => state.t_end_idx += 1,
-        }
+        handle_next_char(&mut state, contents, c, i)?;
     }
-    state.location.col_num += 1;
-    process_token(&mut state, contents, None)?;
+    handle_next_char(&mut state, contents, ' ', contents.len())?;
 
     Ok(state.tokens)
+}
+
+fn handle_next_char(
+    state: &mut LexState,
+    contents: &str,
+    curr: char,
+    idx: usize,
+) -> Result<(), LexError> {
+    state.location.col_num += 1;
+    match curr {
+        '\n' => {
+            process_token(state, contents, Some(idx))?;
+            state.location.line_num += 1;
+            state.location.col_num = 0;
+        }
+        ';' => {
+            process_token(state, contents, None)?;
+            state.location.col_num += 1;
+            state.t_start_idx = idx;
+            state.t_end_idx = idx + 1;
+            process_token(state, contents, Some(idx))?;
+            state.location.col_num -= 1;
+        }
+        _ if curr.is_ascii_whitespace() => process_token(state, contents, Some(idx))?,
+        _ => state.t_end_idx += 1,
+    }
+    Ok(())
 }
 
 fn process_token(
@@ -127,7 +137,7 @@ mod tests {
 
     #[test]
     fn test_lex_variable_line() {
-        let input = "int x = 10 + -;";
+        let input = "int x = 10 + -; -";
         let tokens = parse_text(input).unwrap();
 
         let token_cols: Vec<usize> = tokens.iter().map(|x| x.location.col_num).collect();
@@ -139,10 +149,11 @@ mod tests {
             TokenType::ArithmeticOp,
             TokenType::ArithmeticOp,
             TokenType::Semi,
+            TokenType::ArithmeticOp,
         ];
 
-        assert_eq!(tokens.len(), 7);
-        assert_eq!(token_cols, vec![1, 5, 7, 9, 12, 14, 15]);
+        assert_eq!(tokens.len(), 8);
+        assert_eq!(token_cols, vec![1, 5, 7, 9, 12, 14, 15, 17]);
 
         for (i, t) in tokens.iter().enumerate() {
             assert_eq!(t.t_type, expected_types[i]);

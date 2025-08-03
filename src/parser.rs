@@ -420,7 +420,7 @@ mod tests {
         let e = parse_program(tokens).unwrap_err();
         assert_eq!(
             e.to_string(),
-            String::from("Attempted to redeclare variable: [(Variable: x), Line: 1, Col: 17]")
+            String::from("Attempted to redeclare variable: [(Variable: x), Line: 1, Col: 16]")
         );
     }
 
@@ -454,7 +454,7 @@ mod tests {
 
         assert_eq!(
             e.to_string(),
-            String::from("Found empty statement after token [(Semicolon: ;), Line: 1, Col: 13]")
+            String::from("Found empty statement after token [(Semicolon: ;), Line: 1, Col: 12]")
         );
     }
 

@@ -157,6 +157,7 @@ fn generate_expression(
                 target_reg + 2
             ))
         }
+        Expression::BooleanExpr(_x, _op, _y) => Ok(format!("Boolean expression not implemented")),
     }
 }
 

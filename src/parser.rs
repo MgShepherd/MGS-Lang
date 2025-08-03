@@ -9,10 +9,11 @@
 * Statement = DeclarationStatement | AssignmentStatement
 * DeclarationStatement = INT, VARIABLE, EQ, Expression
 * AssignmentStatement = VARIABLE, EQ, Expression
-* Expression = ValExpr | VarExpr | ArithmeticExpr
+* Expression = ValExpr | VarExpr | ArithmeticExpr | BooleanExpr
 * ValExpr = VALUE
 * VarExpr = VARIABLE
 * ArithmeticExpr = Expression ArithmeticOperator Expression
+* BooleanExpr = Expression BooleanExpr Expression
 * ArithmeticOperator = + | -
 *
 */
@@ -100,6 +101,8 @@ impl std::fmt::Display for Program {
 pub enum Operator {
     Add,
     Sub,
+    LessThan,
+    GreaterThan,
 }
 
 impl Operator {
@@ -107,6 +110,8 @@ impl Operator {
         match t.value.as_str() {
             "+" => Ok(Operator::Add),
             "-" => Ok(Operator::Sub),
+            "<" => Ok(Operator::LessThan),
+            ">" => Ok(Operator::GreaterThan),
             _ => Err(ParseError::InvalidOperator(t.clone())),
         }
     }
@@ -115,6 +120,8 @@ impl Operator {
         match self {
             Operator::Add => String::from("add"),
             Operator::Sub => String::from("sub"),
+            Operator::LessThan => String::from("LESSTHAN"),
+            Operator::GreaterThan => String::from("GREATERTHAN"),
         }
     }
 }
@@ -124,23 +131,27 @@ impl std::fmt::Display for Operator {
         match self {
             Operator::Add => write!(f, "+"),
             Operator::Sub => write!(f, "-"),
+            Operator::LessThan => write!(f, "<"),
+            Operator::GreaterThan => write!(f, ">"),
         }
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Expression {
     ValExpr(String),
     VarExpr(String),
     ArithmeticExpr(Box<Expression>, Operator, Box<Expression>),
+    BooleanExpr(Box<Expression>, Operator, Box<Expression>),
 }
 
 impl std::fmt::Display for Expression {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Expression::ValExpr(x) => write!(f, "{}", x),
-            Expression::VarExpr(x) => write!(f, "{}", x),
-            Expression::ArithmeticExpr(x, op, y) => write!(f, "{} {} {}", x, op, y),
+            Expression::ValExpr(x) | Expression::VarExpr(x) => write!(f, "{}", x),
+            Expression::ArithmeticExpr(x, op, y) | Expression::BooleanExpr(x, op, y) => {
+                write!(f, "{} {} {}", x, op, y)
+            }
         }
     }
 }
@@ -268,15 +279,22 @@ fn expect_expression(
 ) -> Result<Expression, ParseError> {
     if tokens.len() == 1 {
         handle_single_element_expr(&tokens[0], v_table)
-    } else if tokens.len() > 1 && is_arithmeic_operator(&tokens[1].value) {
+    } else if tokens.len() > 2 && Operator::from_token(&tokens[1]).is_ok() {
         let lhs = handle_single_element_expr(&tokens[0], v_table)?;
-        expect_token_type(&tokens[1], TokenType::ArithmeticOp)?;
         let rhs = expect_expression(&tokens[2..], v_table)?;
-        Ok(Expression::ArithmeticExpr(
-            Box::new(lhs),
-            Operator::from_token(&tokens[1])?,
-            Box::new(rhs),
-        ))
+        match tokens[1].t_type {
+            TokenType::ArithmeticOp => Ok(Expression::ArithmeticExpr(
+                Box::new(lhs),
+                Operator::from_token(&tokens[1])?,
+                Box::new(rhs),
+            )),
+            TokenType::BooleanOp => Ok(Expression::BooleanExpr(
+                Box::new(lhs),
+                Operator::from_token(&tokens[1])?,
+                Box::new(rhs),
+            )),
+            _ => Err(ParseError::InvalidExpression(tokens[0].clone())),
+        }
     } else {
         Err(ParseError::InvalidExpression(tokens[0].clone()))
     }
@@ -297,10 +315,6 @@ fn handle_single_element_expr(
         }
         x => Err(ParseError::InvalidExpression(x.clone())),
     }
-}
-
-fn is_arithmeic_operator(token_str: &str) -> bool {
-    token_str == "+" || token_str == "-"
 }
 
 #[cfg(test)]
@@ -410,6 +424,23 @@ mod tests {
                 }
             }
             x => panic!("Unexpected statement: {}", x),
+        }
+    }
+
+    #[test]
+    fn test_valid_boolean_expression() {
+        let statement = "int x = 10 > 3;";
+        let tokens = lexer::parse_text(&statement).unwrap();
+        let program = parse_program(tokens).unwrap();
+
+        assert!(program.statements.len() == 1);
+        if let Statement::DeclarationStatement { v_name, expr } = &program.statements[0] {
+            assert_eq!(*v_name, String::from("x"));
+            if let Expression::BooleanExpr(x, op, y) = expr.clone() {
+                assert_eq!(*x, Expression::ValExpr(String::from("10")));
+                assert_eq!(*y, Expression::ValExpr(String::from("3")));
+                assert_eq!(op, Operator::GreaterThan);
+            }
         }
     }
 

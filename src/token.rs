@@ -9,6 +9,7 @@ pub enum TokenType {
     Semi,
     Unknown,
     ArithmeticOp,
+    BooleanOp,
 }
 
 impl fmt::Display for TokenType {
@@ -20,6 +21,7 @@ impl fmt::Display for TokenType {
             TokenType::Eq => write!(f, "Equals"),
             TokenType::Semi => write!(f, "Semicolon"),
             TokenType::ArithmeticOp => write!(f, "Arithmetic Operator"),
+            TokenType::BooleanOp => write!(f, "Boolean Operator"),
             TokenType::Unknown => write!(f, "Unknown"),
         }
     }
@@ -72,6 +74,7 @@ mod tests {
             (TokenType::Eq, "Equals"),
             (TokenType::Semi, "Semicolon"),
             (TokenType::ArithmeticOp, "Arithmetic Operator"),
+            (TokenType::BooleanOp, "Boolean Operator"),
             (TokenType::Unknown, "Unknown"),
         ];
 

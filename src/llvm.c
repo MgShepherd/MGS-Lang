@@ -4,7 +4,6 @@
 #include "llvm-c/Types.h"
 
 #include <assert.h>
-#include <limits.h>
 #include <llvm-c/Analysis.h>
 #include <llvm-c/Core.h>
 #include <llvm-c/Target.h>
@@ -15,7 +14,6 @@
 #include <string.h>
 
 #define MODULE_NAME "main"
-#define INT_BASE 10
 #define VARIBLE_LEN_ESTIMATE 20
 #define ARRAY_REALLOC_FACTOR 2
 
@@ -58,6 +56,9 @@ void build_return_statement(const IRState *state, const ReturnStatement *ret);
 LLVMValueRef build_expression(const IRState *state, const Expression *expr, const LLVMTypeRef d_type);
 LLVMValueRef build_terminal_expr(const IRState *state, const TerminalExpr *term, const LLVMTypeRef d_type);
 LLVMValueRef build_compound_expr(const IRState *state, const CompoundExpr *comp, const LLVMTypeRef d_type);
+
+LLVMValueRef build_identifier(const IRState *state, const char *name, const LLVMTypeRef d_type);
+LLVMValueRef build_literal(const Literal *literal, const LLVMTypeRef d_type);
 
 unsigned char generate_object_file(const IRState *state, const char *file_name);
 
@@ -221,36 +222,32 @@ LLVMValueRef build_expression(const IRState *state, const Expression *expr, cons
 }
 
 // TODO: Re-add support for boolean terminals - add back once we have semantic analysis step
-LLVMValueRef build_terminal_expr(const IRState *state, const TerminalExpr *num, const LLVMTypeRef d_type) {
-  // TODO: Currently we only support integers as numeric literals, we should support floats etc in future
+LLVMValueRef build_terminal_expr(const IRState *state, const TerminalExpr *term, const LLVMTypeRef d_type) {
   LLVMValueRef processed;
-  switch (num->tok->t_type) {
-  case T_NUMERIC_LIT:
-    // TODO: Need to handle the case of 0 being returned from strtoll with errno set - this happens for invalid
-    // conversion - This check should be moved to parser as part of type checking
-    long long int_val = strtoll(num->tok->item, NULL, INT_BASE);
-    if (int_val == LLONG_MIN || int_val == LLONG_MAX) {
-      fprintf(stderr, "Failed to convert return value into integer: %s\n", num->tok->item);
-      return NULL;
-    }
 
-    processed = LLVMConstInt(d_type, int_val, false);
-    break;
-  case T_IDENTIFIER:
-    const LLVMValueRef value_ref = load_identifier(&state->values, num->tok->item);
-    assert(value_ref != NULL);
-
-    processed = LLVMBuildLoad2(state->builder, d_type, value_ref, num->tok->item);
-    break;
-  default:
-    abort();
+  if (term->tok->t_type == T_IDENTIFIER) {
+    processed = build_identifier(state, term->tok->item, d_type);
+  } else {
+    processed = build_literal(&term->literal, d_type);
   }
 
-  if (num->sign != NULL && num->sign->t_type == T_MINUS) {
-    return LLVMBuildNeg(state->builder, processed, num->tok->item);
+  if (term->sign != NULL && term->sign->t_type == T_MINUS) {
+    return LLVMBuildNeg(state->builder, processed, term->tok->item);
   }
 
   return processed;
+}
+
+LLVMValueRef build_identifier(const IRState *state, const char *name, const LLVMTypeRef d_type) {
+  const LLVMValueRef value_ref = load_identifier(&state->values, name);
+  assert(value_ref != NULL);
+
+  return LLVMBuildLoad2(state->builder, d_type, value_ref, name);
+}
+
+LLVMValueRef build_literal(const Literal *literal, const LLVMTypeRef d_type) {
+  assert(literal->l_type != L_NONE);
+  return LLVMConstInt(d_type, literal->l_union.num, false);
 }
 
 LLVMValueRef build_compound_expr(const IRState *state, const CompoundExpr *comp, const LLVMTypeRef d_type) {

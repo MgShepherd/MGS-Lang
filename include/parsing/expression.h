@@ -6,9 +6,20 @@
 
 typedef struct Expression Expression;
 
+typedef union {
+  long long num;
+} LiteralUnion;
+
+typedef struct {
+  LiteralType l_type;
+  LiteralUnion l_union;
+} Literal;
+
 typedef struct {
   const Token *tok;
   const Token *sign;
+  // Will be populated by sema if the token is a literal, for identifier tokens this field should not be used
+  Literal literal;
 } TerminalExpr;
 
 typedef struct {

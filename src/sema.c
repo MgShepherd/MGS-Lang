@@ -3,22 +3,24 @@
 #include "lexer.h"
 #include "parsing/type.h"
 
+#include <limits.h>
 #include <stdio.h>
 #include <string.h>
 
 #define INVALID_PROGRAM_CODE 2
 #define NUM_VARIABLES_ESTIMATE 10
+#define INT_BASE 10
 
 unsigned char analyse_func(Identifiers *identifiers, const Function *func);
 
 unsigned char analyse_statement(Identifiers *identifiers, Statement *statement, DataType func_type);
-unsigned char analyse_dec_statement(Identifiers *identifiers, const DeclarationStatement *dec);
+unsigned char analyse_dec_statement(Identifiers *identifiers, DeclarationStatement *dec);
 unsigned char analyse_assign_statement(Identifiers *identifiers, AssignmentStatement *assign);
 unsigned char analyse_ret_statement(Identifiers *identifiers, ReturnStatement *ret, DataType func_type);
 
-unsigned char analyse_expression(Identifiers *identifiers, const Expression *expr, DataType expr_type);
-unsigned char analyse_term_expression(Identifiers *identifiers, const TerminalExpr *term, DataType expr_type);
-unsigned char analyse_comp_expression(Identifiers *identifiers, const CompoundExpr *comp, DataType expr_type);
+unsigned char analyse_expression(Identifiers *identifiers, Expression *expr, DataType expr_type);
+unsigned char analyse_term_expression(Identifiers *identifiers, TerminalExpr *term, DataType expr_type);
+unsigned char analyse_comp_expression(Identifiers *identifiers, CompoundExpr *comp, DataType expr_type);
 
 const Identifier *get_identifier(const Identifiers *identifiers, const char *name);
 
@@ -63,7 +65,7 @@ unsigned char analyse_statement(Identifiers *identifiers, Statement *statement, 
   return 0;
 }
 
-unsigned char analyse_dec_statement(Identifiers *identifiers, const DeclarationStatement *dec) {
+unsigned char analyse_dec_statement(Identifiers *identifiers, DeclarationStatement *dec) {
   Identifier new_ident = {
       .d_type = dec->d_type,
       .variable = dec->variable,
@@ -95,7 +97,7 @@ unsigned char analyse_ret_statement(Identifiers *identifiers, ReturnStatement *r
   return analyse_expression(identifiers, &ret->expr, ret->d_type);
 }
 
-unsigned char analyse_expression(Identifiers *identifiers, const Expression *expr, DataType expr_type) {
+unsigned char analyse_expression(Identifiers *identifiers, Expression *expr, DataType expr_type) {
   switch (expr->e_type) {
   case E_TERMINAL:
     return analyse_term_expression(identifiers, &expr->e_union.term, expr_type);
@@ -107,14 +109,16 @@ unsigned char analyse_expression(Identifiers *identifiers, const Expression *exp
   }
 }
 
-unsigned char analyse_term_expression(Identifiers *identifiers, const TerminalExpr *term, DataType expr_type) {
+unsigned char analyse_term_expression(Identifiers *identifiers, TerminalExpr *term, DataType expr_type) {
+  term->literal.l_type = L_NONE;
   if (term->sign != NULL && expr_type != D_I32) {
     fprintf(stderr, "Invalid use of sign: %s, must only be used with integer values\n",
             t_type_to_string(term->sign->t_type));
     return INVALID_PROGRAM_CODE;
   }
 
-  if (term->tok->t_type == T_IDENTIFIER) {
+  switch (term->tok->t_type) {
+  case T_IDENTIFIER:
     const Identifier *ident = get_identifier(identifiers, term->tok->item);
     if (ident == NULL) {
       fprintf(stderr, "Undefined variable: %s\n", term->tok->item);
@@ -125,18 +129,34 @@ unsigned char analyse_term_expression(Identifiers *identifiers, const TerminalEx
       fprintf(stderr, "Variable %s does not have expected type %s\n", ident->name, d_type_to_string(ident->d_type));
       return INVALID_PROGRAM_CODE;
     }
+    break;
+  case T_NUMERIC_LIT:
+    if (expr_type != D_I32) {
+      fprintf(stderr, "Numeric literal %s used in non-numerical expression type: %s\n", term->tok->item,
+              d_type_to_string(expr_type));
+      return INVALID_PROGRAM_CODE;
+    }
 
-    return 0;
+    const long long int_val = strtoll(term->tok->item, NULL, INT_BASE);
+    if (int_val == LLONG_MIN || int_val == LLONG_MAX || (int_val == 0 && strcmp(term->tok->item, "0") != 0)) {
+      fprintf(stderr, "Failed to convert value into numeric literal: %s\n", term->tok->item);
+      return INVALID_PROGRAM_CODE;
+    }
+
+    term->literal.l_type = L_NUM;
+    term->literal.l_union.num = int_val;
+    break;
+  default:
+    fprintf(stderr, "Unexpected token type for terminal expression: %s\n", t_type_to_string(term->tok->t_type));
+    return INVALID_PROGRAM_CODE;
   }
-
-  assert(term->tok->t_type == T_NUMERIC_LIT);
 
   return 0;
 }
 
 // TODO: Do some checks here that the operator used is compatible with the datatype
 // TODO: With all these recursive functions, need to define some recursion limits in order to stop stack overflows
-unsigned char analyse_comp_expression(Identifiers *identifiers, const CompoundExpr *comp, DataType expr_type) {
+unsigned char analyse_comp_expression(Identifiers *identifiers, CompoundExpr *comp, DataType expr_type) {
   unsigned char result = analyse_term_expression(identifiers, &comp->lhs, expr_type);
   if (result != 0) {
     return result;

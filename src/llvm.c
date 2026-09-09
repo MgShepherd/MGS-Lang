@@ -55,9 +55,9 @@ void build_return_statement(const IRState *state, const ReturnStatement *ret);
  * Will produce output value as return value
  * Functions should never error assuming that all parser checks worked successfully
  */
-LLVMValueRef build_expression(const IRState *state, const Expression *expr);
-LLVMValueRef build_terminal_expr(const IRState *state, const TerminalExpr *term);
-LLVMValueRef build_compound_expr(const IRState *state, const CompoundExpr *comp);
+LLVMValueRef build_expression(const IRState *state, const Expression *expr, const LLVMTypeRef d_type);
+LLVMValueRef build_terminal_expr(const IRState *state, const TerminalExpr *term, const LLVMTypeRef d_type);
+LLVMValueRef build_compound_expr(const IRState *state, const CompoundExpr *comp, const LLVMTypeRef d_type);
 
 unsigned char generate_object_file(const IRState *state, const char *file_name);
 
@@ -133,11 +133,8 @@ unsigned char build_function(IRState *state, const Function *func) {
   return 0;
 }
 
-// TODO: Question: We are calling get_type a lot comp->op->item[0]which may be inefficient, can we maybe use some kind
-// of type map
-// TODO: This function is not getting used everywhere it should be - revist
 LLVMTypeRef get_type(const IRState *state, DataType d_type) {
-  assert(state != NULL);
+  assert(state != NULL && d_type != D_NONE);
 
   if (d_type == D_I32) {
     return LLVMInt32TypeInContext(state->context);
@@ -172,20 +169,19 @@ unsigned char build_statement(IRState *state, const Statement *statement) {
 void build_return_statement(const IRState *state, const ReturnStatement *ret) {
   assert(ret != NULL);
 
-  LLVMValueRef expr_output = build_expression(state, &ret->expr);
+  const LLVMTypeRef statement_type = get_type(state, ret->d_type);
+  const LLVMValueRef expr_output = build_expression(state, &ret->expr, statement_type);
   assert(expr_output != NULL);
   LLVMBuildRet(state->builder, expr_output);
 }
 
 unsigned char build_declaration_statement(IRState *state, const DeclarationStatement *dec) {
-  assert(dec != NULL);
+  assert(dec != NULL && dec->d_type != D_NONE);
 
-  // TODO: Type is currently hardcoded to int32 - should be worked out based on the declaration statement
-  // TODO: Fix return error when trying to use boolean value due to type mismatch
-  LLVMTypeRef var_type = LLVMInt32TypeInContext(state->context);
-  LLVMValueRef var_ptr = LLVMBuildAlloca(state->builder, var_type, dec->lhs);
+  const LLVMTypeRef statement_type = get_type(state, dec->d_type);
+  const LLVMValueRef var_ptr = LLVMBuildAlloca(state->builder, statement_type, dec->lhs);
 
-  LLVMValueRef expr_output = build_expression(state, &dec->expr);
+  const LLVMValueRef expr_output = build_expression(state, &dec->expr, statement_type);
   assert(expr_output != NULL);
   LLVMBuildStore(state->builder, expr_output, var_ptr);
 
@@ -200,37 +196,36 @@ unsigned char build_declaration_statement(IRState *state, const DeclarationState
 }
 
 void build_assignment_statement(IRState *state, const AssignmentStatement *assign) {
-  assert(assign != NULL);
+  assert(assign != NULL && assign->d_type != D_NONE);
 
-  LLVMValueRef expr_output = build_expression(state, &assign->expr);
+  const LLVMTypeRef statement_type = get_type(state, assign->d_type);
+  const LLVMValueRef expr_output = build_expression(state, &assign->expr, statement_type);
   assert(expr_output != NULL);
-  LLVMValueRef assign_var = load_identifier(&state->values, assign->lhs);
+  const LLVMValueRef assign_var = load_identifier(&state->values, assign->lhs);
   assert(assign_var != NULL);
 
   LLVMBuildStore(state->builder, expr_output, assign_var);
 }
 
-LLVMValueRef build_expression(const IRState *state, const Expression *expr) {
+LLVMValueRef build_expression(const IRState *state, const Expression *expr, const LLVMTypeRef d_type) {
+  assert(expr->e_type != E_NONE);
+
   switch (expr->e_type) {
   case E_TERMINAL:
-    return build_terminal_expr(state, &expr->e_union.term);
+    return build_terminal_expr(state, &expr->e_union.term, d_type);
   case E_COMPOUND:
-    return build_compound_expr(state, &expr->e_union.comp);
+    return build_compound_expr(state, &expr->e_union.comp, d_type);
   default:
     abort();
-    unreachable();
   }
 }
 
 // TODO: Re-add support for boolean terminals - add back once we have semantic analysis step
-LLVMValueRef build_terminal_expr(const IRState *state, const TerminalExpr *num) {
+LLVMValueRef build_terminal_expr(const IRState *state, const TerminalExpr *num, const LLVMTypeRef d_type) {
   // TODO: Currently we only support integers as numeric literals, we should support floats etc in future
   LLVMValueRef processed;
   switch (num->tok->t_type) {
   case T_NUMERIC_LIT:
-    // TODO: Need to work out the literal type dynamically, rather than hardcoding to int
-    LLVMTypeRef lit_type = LLVMInt32TypeInContext(state->context);
-
     // TODO: Need to handle the case of 0 being returned from strtoll with errno set - this happens for invalid
     // conversion - This check should be moved to parser as part of type checking
     long long int_val = strtoll(num->tok->item, NULL, INT_BASE);
@@ -239,14 +234,13 @@ LLVMValueRef build_terminal_expr(const IRState *state, const TerminalExpr *num) 
       return NULL;
     }
 
-    processed = LLVMConstInt(lit_type, int_val, false);
+    processed = LLVMConstInt(d_type, int_val, false);
     break;
   case T_IDENTIFIER:
-    const LLVMTypeRef var_type = LLVMInt32TypeInContext(state->context);
     const LLVMValueRef value_ref = load_identifier(&state->values, num->tok->item);
     assert(value_ref != NULL);
 
-    processed = LLVMBuildLoad2(state->builder, var_type, value_ref, num->tok->item);
+    processed = LLVMBuildLoad2(state->builder, d_type, value_ref, num->tok->item);
     break;
   default:
     abort();
@@ -259,18 +253,18 @@ LLVMValueRef build_terminal_expr(const IRState *state, const TerminalExpr *num) 
   return processed;
 }
 
-LLVMValueRef build_compound_expr(const IRState *state, const CompoundExpr *comp) {
-  assert(comp != NULL);
+LLVMValueRef build_compound_expr(const IRState *state, const CompoundExpr *comp, const LLVMTypeRef d_type) {
+  assert(comp != NULL && comp->op != O_NONE);
 
-  LLVMValueRef lhs = build_terminal_expr(state, &comp->lhs);
+  LLVMValueRef lhs = build_terminal_expr(state, &comp->lhs, d_type);
   assert(lhs != NULL);
-  LLVMValueRef rhs = build_expression(state, comp->rhs);
+  LLVMValueRef rhs = build_expression(state, comp->rhs, d_type);
   assert(rhs != NULL);
 
   switch (comp->op) {
-  case T_PLUS:
+  case O_PLUS:
     return LLVMBuildAdd(state->builder, lhs, rhs, "ADD");
-  case T_MINUS:
+  case O_MINUS:
     return LLVMBuildSub(state->builder, lhs, rhs, "SUB");
   default:
     abort();

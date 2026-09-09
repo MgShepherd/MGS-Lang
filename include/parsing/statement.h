@@ -23,10 +23,14 @@ typedef struct {
 typedef struct {
   const char *lhs;
   Expression expr;
+  // d_type will be populated as part of semantic analysis
+  DataType d_type;
 } AssignmentStatement;
 
 typedef struct {
   Expression expr;
+  // d_type will be populated as part of semantic analysis
+  DataType d_type;
 } ReturnStatement;
 
 typedef union {

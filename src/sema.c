@@ -11,10 +11,10 @@
 
 unsigned char analyse_func(Identifiers *identifiers, const Function *func);
 
-unsigned char analyse_statement(Identifiers *identifiers, const Statement *statement, DataType func_type);
+unsigned char analyse_statement(Identifiers *identifiers, Statement *statement, DataType func_type);
 unsigned char analyse_dec_statement(Identifiers *identifiers, const DeclarationStatement *dec);
-unsigned char analyse_assign_statement(Identifiers *identifiers, const AssignmentStatement *assign);
-unsigned char analyse_ret_statement(Identifiers *identifiers, const ReturnStatement *ret, DataType func_type);
+unsigned char analyse_assign_statement(Identifiers *identifiers, AssignmentStatement *assign);
+unsigned char analyse_ret_statement(Identifiers *identifiers, ReturnStatement *ret, DataType func_type);
 
 unsigned char analyse_expression(Identifiers *identifiers, const Expression *expr, DataType expr_type);
 unsigned char analyse_term_expression(Identifiers *identifiers, const TerminalExpr *term, DataType expr_type);
@@ -48,7 +48,7 @@ unsigned char analyse_func(Identifiers *identifiers, const Function *func) {
   return 0;
 }
 
-unsigned char analyse_statement(Identifiers *identifiers, const Statement *statement, DataType func_type) {
+unsigned char analyse_statement(Identifiers *identifiers, Statement *statement, DataType func_type) {
   switch (statement->s_type) {
   case S_DECLARATION:
     return analyse_dec_statement(identifiers, &statement->s_union.dec);
@@ -75,7 +75,7 @@ unsigned char analyse_dec_statement(Identifiers *identifiers, const DeclarationS
   return analyse_expression(identifiers, &dec->expr, dec->d_type);
 }
 
-unsigned char analyse_assign_statement(Identifiers *identifiers, const AssignmentStatement *assign) {
+unsigned char analyse_assign_statement(Identifiers *identifiers, AssignmentStatement *assign) {
   const Identifier *ident = get_identifier(identifiers, assign->lhs);
   if (ident == NULL) {
     fprintf(stderr, "Undefined variable: %s\n", assign->lhs);
@@ -87,10 +87,12 @@ unsigned char analyse_assign_statement(Identifiers *identifiers, const Assignmen
     return INVALID_PROGRAM_CODE;
   }
 
-  return analyse_expression(identifiers, &assign->expr, ident->d_type);
+  assign->d_type = ident->d_type;
+  return analyse_expression(identifiers, &assign->expr, assign->d_type);
 }
-unsigned char analyse_ret_statement(Identifiers *identifiers, const ReturnStatement *ret, DataType func_type) {
-  return analyse_expression(identifiers, &ret->expr, func_type);
+unsigned char analyse_ret_statement(Identifiers *identifiers, ReturnStatement *ret, DataType func_type) {
+  ret->d_type = func_type;
+  return analyse_expression(identifiers, &ret->expr, ret->d_type);
 }
 
 unsigned char analyse_expression(Identifiers *identifiers, const Expression *expr, DataType expr_type) {

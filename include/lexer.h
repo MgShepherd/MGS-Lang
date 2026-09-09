@@ -26,6 +26,7 @@
   X(T_MINUS)                                                                                                           \
   X(T_SEMI)
 
+// TODO: Should work out where we want type definitions to live in future
 #define X(N) N,
 typedef enum { TOKEN_TYPES } TokenType;
 #undef X

@@ -8,8 +8,6 @@
 
 unsigned char parse_terminal_expr(TerminalExpr *term, const Tokens *tokens, size_t *idx);
 
-bool is_arithmetic_tok(TokenType t_type);
-
 unsigned char parse_expression(Expression *expression, const Tokens *tokens, size_t *idx) {
   if (*idx >= tokens->count) {
     fprintf(stderr, "Attempted to get value token but reached end of input\n");
@@ -21,14 +19,13 @@ unsigned char parse_expression(Expression *expression, const Tokens *tokens, siz
     return 1;
   }
 
-  if (*idx >= tokens->count || !is_arithmetic_tok(tokens->elements[*idx].t_type)) {
+  const OperatorType op = *idx >= tokens->count ? O_NONE : tok_to_op_type(tokens->elements[*idx].t_type);
+  if (op == O_NONE) {
     expression->e_type = E_TERMINAL;
     expression->e_union.term = term;
     return 0;
   }
-
-  const Token *op = &tokens->elements[(*idx)++];
-  assert(is_arithmetic_tok(op->t_type));
+  *idx += 1;
 
   Expression rhs;
   if (parse_expression(&rhs, tokens, idx) != 0) {
@@ -44,7 +41,7 @@ unsigned char parse_expression(Expression *expression, const Tokens *tokens, siz
 
   CompoundExpr comp = {
       .lhs = term,
-      .op = op->t_type,
+      .op = op,
       .rhs = rhs_ptr,
   };
 
@@ -81,5 +78,3 @@ unsigned char parse_terminal_expr(TerminalExpr *term, const Tokens *tokens, size
 
   return 0;
 }
-
-bool is_arithmetic_tok(TokenType t_type) { return t_type == T_PLUS || t_type == T_MINUS; }

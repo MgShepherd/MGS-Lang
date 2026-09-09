@@ -13,7 +13,7 @@ typedef struct {
 
 typedef struct {
   TerminalExpr lhs;
-  TokenType op;
+  OperatorType op;
   Expression *rhs;
 } CompoundExpr;
 

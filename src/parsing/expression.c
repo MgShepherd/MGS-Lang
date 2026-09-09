@@ -61,6 +61,9 @@ void expression_free(Expression *expression) {
 }
 
 unsigned char parse_terminal_expr(TerminalExpr *term, const Tokens *tokens, size_t *idx) {
+  static const TokenType TERMINAL_TOKEN_TYPES[] = {T_NUMERIC_LIT, T_IDENTIFIER, T_TRUE, T_FALSE};
+  static const size_t TERMINAL_TOKEN_LEN = sizeof(TERMINAL_TOKEN_TYPES) / sizeof(TokenType);
+
   const Token *next = &tokens->elements[(*idx)++];
 
   if (next->t_type == T_PLUS || next->t_type == T_MINUS) {
@@ -70,11 +73,13 @@ unsigned char parse_terminal_expr(TerminalExpr *term, const Tokens *tokens, size
     term->sign = NULL;
   }
 
-  if (next->t_type != T_NUMERIC_LIT && next->t_type != T_IDENTIFIER) {
-    fprintf(stderr, "Invalid token type for expression: %s\n", t_type_to_string(next->t_type));
-    return 1;
+  for (size_t i = 0; i < TERMINAL_TOKEN_LEN; i++) {
+    if (next->t_type == TERMINAL_TOKEN_TYPES[i]) {
+      term->tok = next;
+      return 0;
+    }
   }
-  term->tok = next;
 
-  return 0;
+  fprintf(stderr, "Invalid token type for expression: %s\n", t_type_to_string(next->t_type));
+  return 1;
 }

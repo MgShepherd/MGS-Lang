@@ -8,6 +8,7 @@ typedef struct Expression Expression;
 
 typedef union {
   long long num;
+  bool b;
 } LiteralUnion;
 
 typedef struct {

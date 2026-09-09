@@ -26,7 +26,8 @@
 
 #define LITERAL_TYPES                                                                                                  \
   X(L_NONE)                                                                                                            \
-  X(L_NUM)
+  X(L_NUM)                                                                                                             \
+  X(L_BOOL)
 
 #define X(N) N,
 typedef enum { STATEMENT_TYPES } StatementType;

@@ -1,6 +1,7 @@
 #include "llvm.h"
 #include "dynamic_array.h"
 #include "lexer.h"
+#include "parsing/type.h"
 #include "llvm-c/Types.h"
 
 #include <assert.h>
@@ -137,12 +138,14 @@ unsigned char build_function(IRState *state, const Function *func) {
 LLVMTypeRef get_type(const IRState *state, DataType d_type) {
   assert(state != NULL && d_type != D_NONE);
 
-  if (d_type == D_I32) {
+  switch (d_type) {
+  case D_I32:
     return LLVMInt32TypeInContext(state->context);
+  case D_BOOL:
+    return LLVMInt1TypeInContext(state->context);
+  default:
+    abort();
   }
-
-  abort();
-  unreachable();
 }
 
 unsigned char build_statement(IRState *state, const Statement *statement) {
@@ -247,7 +250,15 @@ LLVMValueRef build_identifier(const IRState *state, const char *name, const LLVM
 
 LLVMValueRef build_literal(const Literal *literal, const LLVMTypeRef d_type) {
   assert(literal->l_type != L_NONE);
-  return LLVMConstInt(d_type, literal->l_union.num, false);
+
+  switch (literal->l_type) {
+  case L_NUM:
+    return LLVMConstInt(d_type, literal->l_union.num, false);
+  case L_BOOL:
+    return LLVMConstInt(d_type, literal->l_union.b, false);
+  default:
+    abort();
+  }
 }
 
 LLVMValueRef build_compound_expr(const IRState *state, const CompoundExpr *comp, const LLVMTypeRef d_type) {

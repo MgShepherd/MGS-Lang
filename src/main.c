@@ -62,7 +62,6 @@ int main(int argc, char **argv) {
     response_code = 1;
     goto cleanup;
   }
-  printf("Completed program analysis\n");
 
   file_name = file_name_from_path(args.filepath);
   if (file_name == NULL) {

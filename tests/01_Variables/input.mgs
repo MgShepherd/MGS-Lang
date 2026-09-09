@@ -2,6 +2,7 @@ func main() -> i32 {
 	x: i32 = +20+100+-9;
 	y: var i32 = x + 10;
 
+	my_bool: bool = false;
 	y = y + 100;
 	return y;
 }

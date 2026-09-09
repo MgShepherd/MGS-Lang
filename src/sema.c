@@ -111,6 +111,7 @@ unsigned char analyse_expression(Identifiers *identifiers, Expression *expr, Dat
 
 unsigned char analyse_term_expression(Identifiers *identifiers, TerminalExpr *term, DataType expr_type) {
   term->literal.l_type = L_NONE;
+
   if (term->sign != NULL && expr_type != D_I32) {
     fprintf(stderr, "Invalid use of sign: %s, must only be used with integer values\n",
             t_type_to_string(term->sign->t_type));
@@ -126,7 +127,7 @@ unsigned char analyse_term_expression(Identifiers *identifiers, TerminalExpr *te
     }
 
     if (ident->d_type != expr_type) {
-      fprintf(stderr, "Variable %s does not have expected type %s\n", ident->name, d_type_to_string(ident->d_type));
+      fprintf(stderr, "Variable %s does not have expected type %s\n", ident->name, d_type_to_string(expr_type));
       return INVALID_PROGRAM_CODE;
     }
     break;
@@ -146,6 +147,11 @@ unsigned char analyse_term_expression(Identifiers *identifiers, TerminalExpr *te
     term->literal.l_type = L_NUM;
     term->literal.l_union.num = int_val;
     break;
+  case T_TRUE:
+  case T_FALSE:
+    term->literal.l_type = L_BOOL;
+    term->literal.l_union.b = term->tok->t_type == T_TRUE;
+    break;
   default:
     fprintf(stderr, "Unexpected token type for terminal expression: %s\n", t_type_to_string(term->tok->t_type));
     return INVALID_PROGRAM_CODE;
@@ -154,9 +160,13 @@ unsigned char analyse_term_expression(Identifiers *identifiers, TerminalExpr *te
   return 0;
 }
 
-// TODO: Do some checks here that the operator used is compatible with the datatype
 // TODO: With all these recursive functions, need to define some recursion limits in order to stop stack overflows
 unsigned char analyse_comp_expression(Identifiers *identifiers, CompoundExpr *comp, DataType expr_type) {
+  if (expr_type != D_I32) {
+    fprintf(stderr, "Data type %s cannot be used as part of compound expression\n", d_type_to_string(expr_type));
+    return INVALID_PROGRAM_CODE;
+  }
+
   unsigned char result = analyse_term_expression(identifiers, &comp->lhs, expr_type);
   if (result != 0) {
     return result;

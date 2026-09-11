@@ -61,7 +61,7 @@ unsigned char analyse_statement(Identifiers *identifiers, Statement *statement, 
     return analyse_ret_statement(identifiers, &statement->s_union.ret, func_type);
   default:
     fprintf(stderr, "Unexpected statement type, should not be possible\n");
-    abort();
+    assert(false);
   }
   return 0;
 }
@@ -106,7 +106,7 @@ unsigned char analyse_expression(Identifiers *identifiers, Expression *expr, Dat
   case E_COMPOUND:
     return analyse_comp_expression(identifiers, &expr->e_union.comp, expr_type);
   default:
-    abort();
+    assert(false);
   }
 }
 
@@ -186,7 +186,7 @@ unsigned char analyse_comp_expression(Identifiers *identifiers, CompoundExpr *co
   case E_TERMINAL:
     return analyse_term_expression(identifiers, &comp->rhs->e_union.term, term_type);
   default:
-    abort();
+    assert(false);
   }
 }
 
@@ -213,7 +213,7 @@ unsigned char analyse_operator_type(OperatorType op, DataType expr_type) {
     }
     break;
   default:
-    abort();
+    assert(false);
   }
 
   fprintf(stderr, "Invalid operator type %s for expression type %s\n", o_type_to_string(op),

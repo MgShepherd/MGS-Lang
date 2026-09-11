@@ -144,7 +144,7 @@ LLVMTypeRef get_type(const IRState *state, DataType d_type) {
   case D_BOOL:
     return LLVMInt1TypeInContext(state->context);
   default:
-    abort();
+    assert(false);
   }
 }
 
@@ -163,8 +163,7 @@ unsigned char build_statement(IRState *state, const Statement *statement) {
     build_assignment_statement(state, &statement->s_union.assign);
     break;
   default:
-    abort();
-    unreachable();
+    assert(false);
   }
 
   return 0;
@@ -220,7 +219,7 @@ LLVMValueRef build_expression(const IRState *state, const Expression *expr, cons
   case E_COMPOUND:
     return build_compound_expr(state, &expr->e_union.comp, d_type);
   default:
-    abort();
+    assert(false);
   }
 }
 
@@ -257,7 +256,7 @@ LLVMValueRef build_literal(const Literal *literal, const LLVMTypeRef d_type) {
   case L_BOOL:
     return LLVMConstInt(d_type, literal->l_union.b, false);
   default:
-    abort();
+    assert(false);
   }
 }
 

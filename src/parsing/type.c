@@ -65,6 +65,14 @@ OperatorType tok_to_op_type(TokenType t_type) {
     return O_PLUS;
   case T_MINUS:
     return O_MINUS;
+  case T_LT:
+    return O_LT;
+  case T_LTE:
+    return O_LTE;
+  case T_GT:
+    return O_GT;
+  case T_GTE:
+    return O_GTE;
   default:
     return O_NONE;
   }

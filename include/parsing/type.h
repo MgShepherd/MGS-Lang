@@ -21,6 +21,10 @@
 
 #define OPERATOR_TYPES                                                                                                 \
   X(O_NONE)                                                                                                            \
+  X(O_LT)                                                                                                              \
+  X(O_LTE)                                                                                                             \
+  X(O_GT)                                                                                                              \
+  X(O_GTE)                                                                                                             \
   X(O_PLUS)                                                                                                            \
   X(O_MINUS)
 

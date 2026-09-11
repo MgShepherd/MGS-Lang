@@ -150,6 +150,12 @@ unsigned char analyse_term_expression(Identifiers *identifiers, TerminalExpr *te
     break;
   case T_TRUE:
   case T_FALSE:
+    if (expr_type != D_BOOL) {
+      fprintf(stderr, "Boolean literal %s used in non-boolean expression type: %s\n", term->tok->item,
+              d_type_to_string(expr_type));
+      return INVALID_PROGRAM_CODE;
+    }
+
     term->literal.l_type = L_BOOL;
     term->literal.l_union.b = term->tok->t_type == T_TRUE;
     break;

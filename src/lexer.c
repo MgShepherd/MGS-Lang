@@ -152,6 +152,22 @@ unsigned char process_symbol_token(Token *token, const char *input, size_t input
     }
     token->t_type = T_MINUS;
     break;
+  case '<':
+    if (*idx + 1 < input_len && input[*idx + 1] == '=') {
+      *idx += 1;
+      token->t_type = T_LTE;
+      break;
+    }
+    token->t_type = T_LT;
+    break;
+  case '>':
+    if (*idx + 1 < input_len && input[*idx + 1] == '=') {
+      *idx += 1;
+      token->t_type = T_GTE;
+      break;
+    }
+    token->t_type = T_GT;
+    break;
   case '(':
     token->t_type = T_LEFT_PAREN;
     break;

@@ -4,5 +4,7 @@ func main() -> i32 {
 
 	my_bool: bool = false;
 	y = y + 100;
+
+	my_comp: bool = 10 < y;
 	return y;
 }

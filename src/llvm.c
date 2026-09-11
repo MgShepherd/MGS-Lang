@@ -264,9 +264,19 @@ LLVMValueRef build_literal(const Literal *literal, const LLVMTypeRef d_type) {
 LLVMValueRef build_compound_expr(const IRState *state, const CompoundExpr *comp, const LLVMTypeRef d_type) {
   assert(comp != NULL && comp->op != O_NONE);
 
-  LLVMValueRef lhs = build_terminal_expr(state, &comp->lhs, d_type);
+  LLVMTypeRef term_type = d_type;
+  if (term_type == LLVMInt1TypeInContext(state->context)) {
+    term_type = LLVMInt32TypeInContext(state->context);
+  }
+
+  LLVMValueRef lhs = build_terminal_expr(state, &comp->lhs, term_type);
   assert(lhs != NULL);
-  LLVMValueRef rhs = build_expression(state, comp->rhs, d_type);
+  LLVMValueRef rhs;
+  if (comp->rhs->e_type == E_TERMINAL) {
+    rhs = build_terminal_expr(state, &comp->rhs->e_union.term, term_type);
+  } else {
+    rhs = build_compound_expr(state, &comp->rhs->e_union.comp, d_type);
+  }
   assert(rhs != NULL);
 
   switch (comp->op) {
@@ -274,8 +284,16 @@ LLVMValueRef build_compound_expr(const IRState *state, const CompoundExpr *comp,
     return LLVMBuildAdd(state->builder, lhs, rhs, "ADD");
   case O_MINUS:
     return LLVMBuildSub(state->builder, lhs, rhs, "SUB");
+  case O_LT:
+    return LLVMBuildICmp(state->builder, LLVMIntSLT, lhs, rhs, "LT");
+  case O_GT:
+    return LLVMBuildICmp(state->builder, LLVMIntSGT, lhs, rhs, "GT");
+  case O_LTE:
+    return LLVMBuildICmp(state->builder, LLVMIntSLE, lhs, rhs, "LTE");
+  case O_GTE:
+    return LLVMBuildICmp(state->builder, LLVMIntSGE, lhs, rhs, "GTE");
   default:
-    abort();
+    assert(false);
   }
 }
 

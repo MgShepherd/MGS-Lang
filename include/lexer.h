@@ -24,6 +24,10 @@
   X(T_COLON)                                                                                                           \
   X(T_PLUS)                                                                                                            \
   X(T_MINUS)                                                                                                           \
+  X(T_LT)                                                                                                              \
+  X(T_LTE)                                                                                                             \
+  X(T_GT)                                                                                                              \
+  X(T_GTE)                                                                                                             \
   X(T_SEMI)
 
 // TODO: Should work out where we want type definitions to live in future

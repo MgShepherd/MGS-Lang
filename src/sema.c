@@ -21,6 +21,7 @@ unsigned char analyse_ret_statement(Identifiers *identifiers, ReturnStatement *r
 unsigned char analyse_expression(Identifiers *identifiers, Expression *expr, DataType expr_type);
 unsigned char analyse_term_expression(Identifiers *identifiers, TerminalExpr *term, DataType expr_type);
 unsigned char analyse_comp_expression(Identifiers *identifiers, CompoundExpr *comp, DataType expr_type);
+unsigned char analyse_operator_type(OperatorType op, DataType expr_type);
 
 const Identifier *get_identifier(const Identifiers *identifiers, const char *name);
 
@@ -98,13 +99,13 @@ unsigned char analyse_ret_statement(Identifiers *identifiers, ReturnStatement *r
 }
 
 unsigned char analyse_expression(Identifiers *identifiers, Expression *expr, DataType expr_type) {
+  assert(expr->e_type != E_NONE);
   switch (expr->e_type) {
   case E_TERMINAL:
     return analyse_term_expression(identifiers, &expr->e_union.term, expr_type);
   case E_COMPOUND:
     return analyse_comp_expression(identifiers, &expr->e_union.comp, expr_type);
   default:
-    fprintf(stderr, "Unexpected expression type, should not be possible\n");
     abort();
   }
 }
@@ -162,17 +163,62 @@ unsigned char analyse_term_expression(Identifiers *identifiers, TerminalExpr *te
 
 // TODO: With all these recursive functions, need to define some recursion limits in order to stop stack overflows
 unsigned char analyse_comp_expression(Identifiers *identifiers, CompoundExpr *comp, DataType expr_type) {
-  if (expr_type != D_I32) {
-    fprintf(stderr, "Data type %s cannot be used as part of compound expression\n", d_type_to_string(expr_type));
-    return INVALID_PROGRAM_CODE;
+  // TODO: Will need to refactor how this works when we support multiple integer types, how will we determine the type
+  DataType term_type = expr_type;
+  if (expr_type == D_BOOL) {
+    term_type = D_I32;
   }
 
-  unsigned char result = analyse_term_expression(identifiers, &comp->lhs, expr_type);
+  unsigned char result = analyse_term_expression(identifiers, &comp->lhs, term_type);
   if (result != 0) {
     return result;
   }
 
-  return analyse_expression(identifiers, comp->rhs, expr_type);
+  result = analyse_operator_type(comp->op, expr_type);
+  if (result != 0) {
+    return result;
+  }
+
+  assert(comp->rhs->e_type != E_NONE);
+  switch (comp->rhs->e_type) {
+  case E_COMPOUND:
+    return analyse_comp_expression(identifiers, &comp->rhs->e_union.comp, expr_type);
+  case E_TERMINAL:
+    return analyse_term_expression(identifiers, &comp->rhs->e_union.term, term_type);
+  default:
+    abort();
+  }
+}
+
+unsigned char analyse_operator_type(OperatorType op, DataType expr_type) {
+  static const OperatorType BOOL_OPS[] = {O_GT, O_LT, O_GTE, O_LTE};
+  static const size_t BOOL_OPS_LEN = sizeof(BOOL_OPS) / sizeof(OperatorType);
+
+  static const OperatorType INT_OPS[] = {O_MINUS, O_PLUS};
+  static const size_t INT_OPS_LEN = sizeof(INT_OPS) / sizeof(OperatorType);
+
+  switch (expr_type) {
+  case D_BOOL:
+    for (size_t i = 0; i < BOOL_OPS_LEN; i++) {
+      if (BOOL_OPS[i] == op) {
+        return 0;
+      }
+    }
+    break;
+  case D_I32:
+    for (size_t i = 0; i < INT_OPS_LEN; i++) {
+      if (INT_OPS[i] == op) {
+        return 0;
+      }
+    }
+    break;
+  default:
+    abort();
+  }
+
+  fprintf(stderr, "Invalid operator type %s for expression type %s\n", o_type_to_string(op),
+          d_type_to_string(expr_type));
+  return INVALID_PROGRAM_CODE;
 }
 
 const Identifier *get_identifier(const Identifiers *identifiers, const char *name) {

@@ -36,6 +36,8 @@ typedef struct {
 typedef struct {
   Expression expr;
   Statements body;
+  // else_body will have NULL elements and 0 count if no else provided
+  Statements else_body;
 } IfStatement;
 
 typedef union {

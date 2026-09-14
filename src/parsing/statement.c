@@ -77,8 +77,9 @@ void statement_free(Statement *statement) {
   case S_IF:
     IfStatement *if_cond = &statement->s_union.if_cond;
     expression_free(&if_cond->expr);
-    for (size_t i = 0; i < if_cond->body.count; i++) {
-      statement_free(&if_cond->body.elements[i]);
+    statements_free(&if_cond->body);
+    if (if_cond->else_body.elements != NULL) {
+      statements_free(&if_cond->else_body);
     }
     break;
   default:
@@ -224,6 +225,32 @@ unsigned char parse_if_statement(Statement *statement, const Tokens *tokens, siz
 
   statement->s_type = S_IF;
   statement->s_union.if_cond = if_cond;
+  statement->s_union.if_cond.else_body.elements = NULL;
+  statement->s_union.if_cond.else_body.count = 0;
+
+  if (expect_next(T_ELSE, tokens, idx) == NULL) {
+    return 0;
+  }
+
+  if (expect_next(T_LEFT_CURLY, tokens, idx) == NULL) {
+    fprintf(stderr, "Expected { after else keyword\n");
+    return 1;
+  }
+
+  Statements else_body;
+  dyn_array_init(&else_body, sizeof(Statement), IF_STATEMENTS_LEN_ESTIMATE);
+
+  if (parse_statements(&else_body, tokens, idx, T_RIGHT_CURLY) != 0) {
+    fprintf(stderr, "Failed to parse statements for else body\n");
+    return 1;
+  }
+
+  if (expect_next(T_RIGHT_CURLY, tokens, idx) == NULL) {
+    fprintf(stderr, "Expected closing curly brace after else statement body\n");
+    return 1;
+  }
+
+  statement->s_union.if_cond.else_body = else_body;
 
   return 0;
 }

@@ -1,12 +1,16 @@
 #include "parsing/statement.h"
 
 #include "dynamic_array.h"
+#include "parsing/expression.h"
 #include "parsing/utils.h"
 #include <stdio.h>
+
+#define IF_STATEMENTS_LEN_ESTIMATE 10
 
 unsigned char parse_dec_statement(Statement *statement, const Tokens *tokens, size_t *idx);
 unsigned char parse_assign_statement(Statement *statement, const Tokens *tokens, size_t *idx);
 unsigned char parse_ret_statement(Statement *statement, const Tokens *tokens, size_t *idx);
+unsigned char parse_if_statement(Statement *statement, const Tokens *tokens, size_t *idx);
 
 void statement_free(Statement *statement);
 
@@ -29,6 +33,9 @@ unsigned char parse_statements(Statements *statements, const Tokens *tokens, siz
       break;
     case T_RETURN:
       result = parse_ret_statement(&statement, tokens, idx);
+      break;
+    case T_IF:
+      result = parse_if_statement(&statement, tokens, idx);
       break;
     default:
       fprintf(stderr, "Unexpected Token Type: %s\n", t_type_to_string(tokens->elements[*idx].t_type));
@@ -62,8 +69,17 @@ void statement_free(Statement *statement) {
   case S_DECLARATION:
     expression_free(&statement->s_union.dec.expr);
     break;
+  case S_ASSIGNMENT:
+    expression_free(&statement->s_union.assign.expr);
   case S_RETURN:
     expression_free(&statement->s_union.ret.expr);
+    break;
+  case S_IF:
+    IfStatement *if_cond = &statement->s_union.if_cond;
+    expression_free(&if_cond->expr);
+    for (size_t i = 0; i < if_cond->body.count; i++) {
+      statement_free(&if_cond->body.elements[i]);
+    }
     break;
   default:
     break;
@@ -169,6 +185,45 @@ unsigned char parse_ret_statement(Statement *statement, const Tokens *tokens, si
 
   statement->s_type = S_RETURN;
   statement->s_union.ret = ret;
+
+  return 0;
+}
+
+unsigned char parse_if_statement(Statement *statement, const Tokens *tokens, size_t *idx) {
+  statement->s_type = S_NONE;
+  IfStatement if_cond;
+
+  if (expect_next(T_IF, tokens, idx) == NULL) {
+    fprintf(stderr, "Expected if keyword for if statment\n");
+    return 1;
+  }
+
+  if (parse_expression(&if_cond.expr, tokens, idx) != 0) {
+    fprintf(stderr, "Failed to parse expression for if statement\n");
+    return 1;
+  }
+
+  if (expect_next(T_LEFT_CURLY, tokens, idx) == NULL) {
+    fprintf(stderr, "Expected { after if condition\n");
+    return 1;
+  }
+
+  Statements statements;
+  dyn_array_init(&statements, sizeof(Statement), IF_STATEMENTS_LEN_ESTIMATE);
+
+  if (parse_statements(&statements, tokens, idx, T_RIGHT_CURLY) != 0) {
+    fprintf(stderr, "Failed to process if statement body\n");
+    return 1;
+  }
+  if_cond.body = statements;
+
+  if (expect_next(T_RIGHT_CURLY, tokens, idx) == NULL) {
+    fprintf(stderr, "Expected closing curly brace after if statement body\n");
+    return 1;
+  }
+
+  statement->s_type = S_IF;
+  statement->s_union.if_cond = if_cond;
 
   return 0;
 }

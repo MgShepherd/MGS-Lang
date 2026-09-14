@@ -42,9 +42,10 @@ unsigned char init_ir_state(IRState *state);
 unsigned char build_function(IRState *state, const Function *func);
 LLVMTypeRef get_type(const IRState *state, DataType d_type);
 
-unsigned char build_statement(IRState *state, const Statement *statement);
-// Declaration statement can only error due to failing to add ValueRef into array
+unsigned char build_statement(IRState *state, const Statement *statement, const LLVMValueRef func);
+// Statements which return unsigned char can only error due to failing to add ValueRef into array
 unsigned char build_declaration_statement(IRState *state, const DeclarationStatement *dec);
+unsigned char build_if_statement(IRState *state, const IfStatement *if_cond, const LLVMValueRef func);
 void build_assignment_statement(IRState *state, const AssignmentStatement *assign);
 void build_return_statement(const IRState *state, const ReturnStatement *ret);
 
@@ -122,7 +123,7 @@ unsigned char build_function(IRState *state, const Function *func) {
   LLVMPositionBuilderAtEnd(state->builder, block);
 
   for (size_t i = 0; i < func->statements.count; i++) {
-    if (build_statement(state, &func->statements.elements[i]) != 0) {
+    if (build_statement(state, &func->statements.elements[i], llvm_func) != 0) {
       fprintf(stderr, "Failed to build statement\n");
       return 1;
     }
@@ -148,7 +149,7 @@ LLVMTypeRef get_type(const IRState *state, DataType d_type) {
   }
 }
 
-unsigned char build_statement(IRState *state, const Statement *statement) {
+unsigned char build_statement(IRState *state, const Statement *statement, const LLVMValueRef func) {
   assert(state != NULL && statement != NULL);
   switch (statement->s_type) {
   case S_RETURN:
@@ -161,6 +162,11 @@ unsigned char build_statement(IRState *state, const Statement *statement) {
     break;
   case S_ASSIGNMENT:
     build_assignment_statement(state, &statement->s_union.assign);
+    break;
+  case S_IF:
+    if (build_if_statement(state, &statement->s_union.if_cond, func) != 0) {
+      return 1;
+    }
     break;
   default:
     assert(false);
@@ -208,6 +214,31 @@ void build_assignment_statement(IRState *state, const AssignmentStatement *assig
   assert(assign_var != NULL);
 
   LLVMBuildStore(state->builder, expr_output, assign_var);
+}
+
+unsigned char build_if_statement(IRState *state, const IfStatement *if_cond, const LLVMValueRef func) {
+  assert(if_cond != NULL);
+
+  const LLVMTypeRef bool_type = get_type(state, D_BOOL);
+  const LLVMValueRef expr = build_expression(state, &if_cond->expr, bool_type);
+  assert(expr != NULL);
+
+  const LLVMBasicBlockRef exit_if_block = LLVMAppendBasicBlockInContext(state->context, func, "if-exit");
+  const LLVMBasicBlockRef then_if_block = LLVMAppendBasicBlockInContext(state->context, func, "if-then");
+
+  LLVMBuildCondBr(state->builder, expr, then_if_block, exit_if_block);
+
+  LLVMPositionBuilderAtEnd(state->builder, then_if_block);
+  for (size_t i = 0; i < if_cond->body.count; i++) {
+    unsigned char result = build_statement(state, &if_cond->body.elements[i], func);
+    if (result != 0) {
+      return result;
+    }
+  }
+  LLVMBuildBr(state->builder, exit_if_block);
+
+  LLVMPositionBuilderAtEnd(state->builder, exit_if_block);
+  return 0;
 }
 
 LLVMValueRef build_expression(const IRState *state, const Expression *expr, const LLVMTypeRef d_type) {

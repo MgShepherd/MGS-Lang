@@ -33,10 +33,16 @@ typedef struct {
   DataType d_type;
 } ReturnStatement;
 
+typedef struct {
+  Expression expr;
+  Statements body;
+} IfStatement;
+
 typedef union {
   DeclarationStatement dec;
   ReturnStatement ret;
   AssignmentStatement assign;
+  IfStatement if_cond;
 } StatementUnion;
 
 struct Statement {

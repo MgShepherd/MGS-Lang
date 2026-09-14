@@ -1,0 +1,10 @@
+func main() -> i32 {
+	x: i32 = 10;
+	y: var i32 = 5;
+
+	if x < 12 {
+		y = 100;	
+	}
+
+	return y;
+}

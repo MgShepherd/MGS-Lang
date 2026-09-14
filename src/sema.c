@@ -13,6 +13,7 @@
 
 unsigned char analyse_func(Identifiers *identifiers, const Function *func);
 
+unsigned char analyse_statements(Identifiers *identifiers, const Statements *statements, DataType func_type);
 unsigned char analyse_statement(Identifiers *identifiers, Statement *statement, DataType func_type);
 unsigned char analyse_dec_statement(Identifiers *identifiers, DeclarationStatement *dec);
 unsigned char analyse_assign_statement(Identifiers *identifiers, AssignmentStatement *assign);
@@ -42,9 +43,13 @@ unsigned char analyse_program(Identifiers *identifiers, const Program *program) 
 }
 
 unsigned char analyse_func(Identifiers *identifiers, const Function *func) {
+  return analyse_statements(identifiers, &func->statements, func->return_type);
+}
+
+unsigned char analyse_statements(Identifiers *identifiers, const Statements *statements, DataType func_type) {
   unsigned char result = 0;
-  for (size_t i = 0; i < func->statements.count; i++) {
-    result = analyse_statement(identifiers, &func->statements.elements[i], func->return_type);
+  for (size_t i = 0; i < statements->count; i++) {
+    result = analyse_statement(identifiers, &statements->elements[i], func_type);
     if (result != 0) {
       return result;
     }
@@ -107,8 +112,13 @@ unsigned char analyse_if_statement(Identifiers *identifiers, IfStatement *if_con
     return result;
   }
 
-  for (size_t i = 0; i < if_cond->body.count; i++) {
-    result = analyse_statement(identifiers, &if_cond->body.elements[i], func_type);
+  result = analyse_statements(identifiers, &if_cond->body, func_type);
+  if (result != 0) {
+    return result;
+  }
+
+  if (if_cond->else_body.elements != NULL) {
+    result = analyse_statements(identifiers, &if_cond->else_body, func_type);
     if (result != 0) {
       return result;
     }

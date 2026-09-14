@@ -28,6 +28,7 @@
   X(T_LTE)                                                                                                             \
   X(T_GT)                                                                                                              \
   X(T_GTE)                                                                                                             \
+  X(T_IF)                                                                                                              \
   X(T_SEMI)
 
 // TODO: Should work out where we want type definitions to live in future

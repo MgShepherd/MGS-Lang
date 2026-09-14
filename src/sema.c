@@ -17,6 +17,7 @@ unsigned char analyse_statement(Identifiers *identifiers, Statement *statement, 
 unsigned char analyse_dec_statement(Identifiers *identifiers, DeclarationStatement *dec);
 unsigned char analyse_assign_statement(Identifiers *identifiers, AssignmentStatement *assign);
 unsigned char analyse_ret_statement(Identifiers *identifiers, ReturnStatement *ret, DataType func_type);
+unsigned char analyse_if_statement(Identifiers *identifiers, IfStatement *if_cond, DataType func_type);
 
 unsigned char analyse_expression(Identifiers *identifiers, Expression *expr, DataType expr_type);
 unsigned char analyse_term_expression(Identifiers *identifiers, TerminalExpr *term, DataType expr_type);
@@ -59,6 +60,8 @@ unsigned char analyse_statement(Identifiers *identifiers, Statement *statement, 
     return analyse_assign_statement(identifiers, &statement->s_union.assign);
   case S_RETURN:
     return analyse_ret_statement(identifiers, &statement->s_union.ret, func_type);
+  case S_IF:
+    return analyse_if_statement(identifiers, &statement->s_union.if_cond, func_type);
   default:
     fprintf(stderr, "Unexpected statement type, should not be possible\n");
     assert(false);
@@ -96,6 +99,22 @@ unsigned char analyse_assign_statement(Identifiers *identifiers, AssignmentState
 unsigned char analyse_ret_statement(Identifiers *identifiers, ReturnStatement *ret, DataType func_type) {
   ret->d_type = func_type;
   return analyse_expression(identifiers, &ret->expr, ret->d_type);
+}
+
+unsigned char analyse_if_statement(Identifiers *identifiers, IfStatement *if_cond, DataType func_type) {
+  unsigned char result = analyse_expression(identifiers, &if_cond->expr, D_BOOL);
+  if (result != 0) {
+    return result;
+  }
+
+  for (size_t i = 0; i < if_cond->body.count; i++) {
+    result = analyse_statement(identifiers, &if_cond->body.elements[i], func_type);
+    if (result != 0) {
+      return result;
+    }
+  }
+
+  return 0;
 }
 
 unsigned char analyse_expression(Identifiers *identifiers, Expression *expr, DataType expr_type) {

@@ -97,7 +97,7 @@ unsigned char process_word_token(Token *token, const char *input, size_t input_l
   static const TokenMapping keyword_mappings[] = {
       {.key = "func", .value = T_FUNCTION}, {.key = "return", .value = T_RETURN}, {.key = "var", .value = T_VAR},
       {.key = "i32", .value = T_I32},       {.key = "bool", .value = T_BOOL},     {.key = "true", .value = T_TRUE},
-      {.key = "false", .value = T_FALSE},
+      {.key = "false", .value = T_FALSE},   {.key = "if", .value = T_IF},
   };
 
   const size_t tok_start = *idx;

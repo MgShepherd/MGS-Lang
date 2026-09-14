@@ -7,6 +7,7 @@
   X(S_NONE)                                                                                                            \
   X(S_DECLARATION)                                                                                                     \
   X(S_ASSIGNMENT)                                                                                                      \
+  X(S_IF)                                                                                                              \
   X(S_RETURN)
 
 #define EXPRESSION_TYPES                                                                                               \

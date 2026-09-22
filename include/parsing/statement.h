@@ -36,15 +36,27 @@ typedef struct {
 typedef struct {
   Expression expr;
   Statements body;
+} IfBranch;
+
+typedef struct {
+  IfBranch *elements;
+  size_t count;
+  size_t capacity;
+} ElseIfBranches;
+
+typedef struct {
+  IfBranch if_branch;
+  // else_if_branches will have 0 count if no else_if provided
+  ElseIfBranches else_if_branches;
   // else_body will have NULL elements and 0 count if no else provided
   Statements else_body;
-} IfStatement;
+} IfBlock;
 
 typedef union {
   DeclarationStatement dec;
   ReturnStatement ret;
   AssignmentStatement assign;
-  IfStatement if_cond;
+  IfBlock if_block;
 } StatementUnion;
 
 struct Statement {

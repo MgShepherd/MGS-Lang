@@ -18,7 +18,8 @@ unsigned char analyse_statement(Identifiers *identifiers, Statement *statement, 
 unsigned char analyse_dec_statement(Identifiers *identifiers, DeclarationStatement *dec);
 unsigned char analyse_assign_statement(Identifiers *identifiers, AssignmentStatement *assign);
 unsigned char analyse_ret_statement(Identifiers *identifiers, ReturnStatement *ret, DataType func_type);
-unsigned char analyse_if_statement(Identifiers *identifiers, IfStatement *if_cond, DataType func_type);
+unsigned char analyse_if_block(Identifiers *identifiers, IfBlock *if_block, DataType func_type);
+unsigned char analyse_if_branch(Identifiers *identifiers, IfBranch *if_branch, DataType func_type);
 
 unsigned char analyse_expression(Identifiers *identifiers, Expression *expr, DataType expr_type);
 unsigned char analyse_term_expression(Identifiers *identifiers, TerminalExpr *term, DataType expr_type);
@@ -66,7 +67,7 @@ unsigned char analyse_statement(Identifiers *identifiers, Statement *statement, 
   case S_RETURN:
     return analyse_ret_statement(identifiers, &statement->s_union.ret, func_type);
   case S_IF:
-    return analyse_if_statement(identifiers, &statement->s_union.if_cond, func_type);
+    return analyse_if_block(identifiers, &statement->s_union.if_block, func_type);
   default:
     fprintf(stderr, "Unexpected statement type, should not be possible\n");
     assert(false);
@@ -106,22 +107,35 @@ unsigned char analyse_ret_statement(Identifiers *identifiers, ReturnStatement *r
   return analyse_expression(identifiers, &ret->expr, ret->d_type);
 }
 
-unsigned char analyse_if_statement(Identifiers *identifiers, IfStatement *if_cond, DataType func_type) {
-  unsigned char result = analyse_expression(identifiers, &if_cond->expr, D_BOOL);
-  if (result != 0) {
-    return result;
-  }
+unsigned char analyse_if_block(Identifiers *identifiers, IfBlock *if_block, DataType func_type) {
+  unsigned char result = analyse_if_branch(identifiers, &if_block->if_branch, func_type);
 
-  result = analyse_statements(identifiers, &if_cond->body, func_type);
-  if (result != 0) {
-    return result;
-  }
-
-  if (if_cond->else_body.elements != NULL) {
-    result = analyse_statements(identifiers, &if_cond->else_body, func_type);
+  for (size_t i = 0; i < if_block->else_if_branches.count; i++) {
+    result = analyse_if_branch(identifiers, &if_block->else_if_branches.elements[i], func_type);
     if (result != 0) {
       return result;
     }
+  }
+
+  if (if_block->else_body.elements != NULL) {
+    result = analyse_statements(identifiers, &if_block->else_body, func_type);
+    if (result != 0) {
+      return result;
+    }
+  }
+
+  return 0;
+}
+
+unsigned char analyse_if_branch(Identifiers *identifiers, IfBranch *if_branch, DataType func_type) {
+  unsigned char result = analyse_expression(identifiers, &if_branch->expr, D_BOOL);
+  if (result != 0) {
+    return result;
+  }
+
+  result = analyse_statements(identifiers, &if_branch->body, func_type);
+  if (result != 0) {
+    return result;
   }
 
   return 0;

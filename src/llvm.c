@@ -46,7 +46,7 @@ unsigned char build_statements(IRState *state, const Statements *statements, con
 unsigned char build_statement(IRState *state, const Statement *statement, const LLVMValueRef func);
 // Statements which return unsigned char can only error due to failing to add ValueRef into array
 unsigned char build_declaration_statement(IRState *state, const DeclarationStatement *dec);
-unsigned char build_if_statement(IRState *state, const IfStatement *if_cond, const LLVMValueRef func);
+unsigned char build_if_block(IRState *state, const IfBlock *if_block, const LLVMValueRef func);
 void build_assignment_statement(IRState *state, const AssignmentStatement *assign);
 void build_return_statement(const IRState *state, const ReturnStatement *ret);
 
@@ -175,7 +175,7 @@ unsigned char build_statement(IRState *state, const Statement *statement, const 
     build_assignment_statement(state, &statement->s_union.assign);
     break;
   case S_IF:
-    if (build_if_statement(state, &statement->s_union.if_cond, func) != 0) {
+    if (build_if_block(state, &statement->s_union.if_block, func) != 0) {
       return 1;
     }
     break;
@@ -227,30 +227,45 @@ void build_assignment_statement(IRState *state, const AssignmentStatement *assig
   LLVMBuildStore(state->builder, expr_output, assign_var);
 }
 
-// TODO: Test out program with multiple if statements
-unsigned char build_if_statement(IRState *state, const IfStatement *if_cond, const LLVMValueRef func) {
-  assert(if_cond != NULL);
+// TODO: Clean up repeated and messy code in this function
+unsigned char build_if_block(IRState *state, const IfBlock *if_block, const LLVMValueRef func) {
+  assert(if_block != NULL);
 
   const LLVMTypeRef bool_type = get_type(state, D_BOOL);
-  const LLVMValueRef expr = build_expression(state, &if_cond->expr, bool_type);
-  assert(expr != NULL);
 
   const LLVMBasicBlockRef exit_if_block = LLVMAppendBasicBlockInContext(state->context, func, "if-exit");
-  const LLVMBasicBlockRef else_block = LLVMAppendBasicBlockInContext(state->context, func, "else");
   const LLVMBasicBlockRef then_if_block = LLVMAppendBasicBlockInContext(state->context, func, "if-then");
+  LLVMBasicBlockRef next_branch_block = LLVMAppendBasicBlockInContext(state->context, func, "next");
 
-  LLVMBuildCondBr(state->builder, expr, then_if_block, else_block);
+  const LLVMValueRef if_expr = build_expression(state, &if_block->if_branch.expr, bool_type);
+  assert(if_expr != NULL);
+  LLVMBuildCondBr(state->builder, if_expr, then_if_block, next_branch_block);
 
   LLVMPositionBuilderAtEnd(state->builder, then_if_block);
-  if (build_statements(state, &if_cond->body, func) != 0) {
+  if (build_statements(state, &if_block->if_branch.body, func) != 0) {
     return 1;
   }
   LLVMBuildBr(state->builder, exit_if_block);
 
-  // If no else block is defined, will create an empty block which just branches to if exit - can maybe remove unneeded
-  // branches here
-  LLVMPositionBuilderAtEnd(state->builder, else_block);
-  if (if_cond->else_body.elements != NULL && build_statements(state, &if_cond->else_body, func) != 0) {
+  for (size_t i = 0; i < if_block->else_if_branches.count; i++) {
+    const LLVMBasicBlockRef then_else_if_block = LLVMAppendBasicBlockInContext(state->context, func, "else-if-then");
+
+    LLVMPositionBuilderAtEnd(state->builder, next_branch_block);
+    next_branch_block = LLVMAppendBasicBlockInContext(state->context, func, "next");
+
+    const LLVMValueRef else_if_expr = build_expression(state, &if_block->else_if_branches.elements[i].expr, bool_type);
+    assert(else_if_expr != NULL);
+    LLVMBuildCondBr(state->builder, else_if_expr, then_else_if_block, next_branch_block);
+
+    LLVMPositionBuilderAtEnd(state->builder, then_else_if_block);
+    if (build_statements(state, &if_block->else_if_branches.elements[i].body, func) != 0) {
+      return 1;
+    }
+    LLVMBuildBr(state->builder, exit_if_block);
+  }
+
+  LLVMPositionBuilderAtEnd(state->builder, next_branch_block);
+  if (if_block->else_body.elements != NULL && build_statements(state, &if_block->else_body, func) != 0) {
     return 1;
   }
   LLVMBuildBr(state->builder, exit_if_block);

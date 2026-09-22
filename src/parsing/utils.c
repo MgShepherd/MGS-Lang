@@ -15,3 +15,11 @@ const Token *expect_next(TokenType expected, const Tokens *tokens, size_t *idx) 
   *idx += 1;
   return next;
 }
+
+TokenType peek_index(const Tokens *tokens, size_t idx) {
+  if (idx >= tokens->count) {
+    return T_NONE;
+  }
+
+  return tokens->elements[idx].t_type;
+}

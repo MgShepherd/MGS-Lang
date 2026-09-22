@@ -10,4 +10,10 @@
  */
 const Token *expect_next(TokenType expected, const Tokens *tokens, size_t *idx);
 
+/*
+ * peek_index will retrieve the type of element from the tokens array at a given index
+ * Will return T_NONE if index is out of bounds
+ */
+TokenType peek_index(const Tokens *tokens, size_t idx);
+
 #endif // _PARSING_UTILS_H_

@@ -1,1 +1,0 @@
-func main()->i32{xdi32:i32=71;return xdi32;}

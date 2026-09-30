@@ -35,7 +35,7 @@ run: $(TARGET)
 	$(TARGET)
 
 test: $(TARGET)
-	go run tests/main.go
+	go run ./tests
 
 clean:
 	rm -rf $(BUILD_DIR)

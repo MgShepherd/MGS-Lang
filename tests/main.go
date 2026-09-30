@@ -1,85 +1,48 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
+	"michael/mgstests/internal/file"
 	"os"
-	"os/exec"
 )
 
-type Test struct {
-	ExitCode int `json:"exit_code"`
-}
-
-const TEST_PATH string = "./tests"
+const (
+	colorRed   = "\033[0;31m"
+	colorGreen = "\033[32m"
+	colorNone  = "\033[0m"
+)
 
 func main() {
-	dirs, err := os.ReadDir(TEST_PATH)
+	//TODO: Ensure that tests are run from the root of the project and that the compiler executable exits
+
+	tests, err := file.ProcessTestDirectory("./tests/inputs")
 	if err != nil {
-		fmt.Printf("Failed to read tests due to %v\n", err)
 		os.Exit(1)
 	}
 
-	for _, dir := range dirs {
-		if !dir.Type().IsDir() {
-			continue
-		}
-
-		valid, err := runDirTest(dir)
+	failedTests, totalTests := 0, 0
+	for _, test := range tests {
+		tempFile, err := os.CreateTemp("", "*.mgs")
 		if err != nil {
-			fmt.Printf("Error when processing directory: '%s', error: %v\n", dir.Name(), err)
+			fmt.Printf("Failed to create temporary file required for running tests\n")
 			os.Exit(1)
 		}
+		defer os.Remove(tempFile.Name())
 
-		if !valid {
-			fmt.Printf("Test in directory '%s' failed\n", dir.Name())
-			os.Exit(1)
+		totalTests += 1
+		if err := test.Run(tempFile); err != nil {
+			fmt.Printf("%s[FAILED]:\t%s\n", colorRed, *test.Name)
+			fmt.Printf("%v%s\n", err, colorNone)
+			failedTests += 1
+		} else {
+			fmt.Printf("%s[PASSED]:\t%s%s\n", colorGreen, *test.Name, colorNone)
 		}
 	}
 
-	fmt.Println("All tests passed!")
-}
-
-/*
-* Attempts to run the tests within a directory
-* If a directory does not have a valid test setup, will return error
-* Returned bool indicates whether test passed or failed
- */
-func runDirTest(dir os.DirEntry) (bool, error) {
-	testPath := fmt.Sprintf("%s/%s/test.json", TEST_PATH, dir.Name())
-	testData, err := os.ReadFile(testPath)
-
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to read file: %s\n", testPath)
-		return false, err
+	if failedTests != 0 {
+		fmt.Printf("Not all tests passed, %d out of %d failed\n", failedTests, totalTests)
+		os.Exit(1)
 	}
 
-	var testExpects Test
-	err = json.Unmarshal(testData, &testExpects)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to decode test json data into struct: %v\n", err)
-		return false, err
-	}
-
-	fileArg := fmt.Sprintf("%s/%s/input.mgs", TEST_PATH, dir.Name())
-	compileCommand := exec.Command("./build/Compiler", fileArg)
-	if err := compileCommand.Run(); err != nil {
-		fmt.Printf("Failed to run compiler command, error: %v\n", err)
-		return false, err
-	}
-
-	runCommand := exec.Command("./build/input")
-	if err := runCommand.Run(); err != nil {
-		exitError, ok := err.(*exec.ExitError)
-		if !ok {
-			return false, err
-		}
-
-		if exitError.ExitCode() != testExpects.ExitCode {
-			fmt.Fprintf(os.Stderr, "Expected exit code: %d, got %d\n", testExpects.ExitCode, exitError.ExitCode())
-			return false, err
-		}
-	}
-
-	return true, nil
+	fmt.Printf("All tests passed!\n")
 }

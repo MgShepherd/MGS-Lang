@@ -3,6 +3,7 @@
 
 #define HELP_RESPONSE_CODE 2
 
+// TODO: Support writing output to a specified file path
 typedef struct {
   char *filepath;
 } CmdArgs;

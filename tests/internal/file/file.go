@@ -50,10 +50,11 @@ func ProcessTestFile(baseDir, fileName string) ([]test.Test, error) {
 		nextLine := strings.TrimSpace(nextLine)
 
 		// If we have the header filled for a test, but reach a directive line, we have reached the end of a test block
+		// TODO: Rather than checking if the header is filled, maybe better to keep processing until we don't have a directive line in order for better errors
 		if currentTest.IsHeaderFilled() && len(nextLine) >= 2 && nextLine[:2] == "--" {
 			currentTest.Body = currentTestBody.String()
 			if len(currentTest.Body) == 0 {
-				return []test.Test{}, fmt.Errorf("Invalid empty body provided for test")
+				return []test.Test{}, fmt.Errorf("Invalid empty body provided for test \"%s\" at line %d", *currentTest.Name, lineNum+1)
 			}
 
 			tests = append(tests, currentTest)
@@ -109,18 +110,14 @@ func fillTestHeaderFromDirective(t *test.Test, directiveLine, fileName string) e
 
 	switch elements[1] {
 	case "TEST":
-		if err := processTestDirective(t, elements, fileName); err != nil {
-			return err
-		}
+		return processTestDirective(t, elements, fileName)
 	case "EXPECTED_STATUS_CODE":
-		if err := processExpectedStatusCodeDirective(t, elements); err != nil {
-			return err
-		}
+		return processStatusCodeDirective(t, elements)
+	case "EXPECTED_COMPILATION_ERROR":
+		return processCompilationErrorDirective(t, elements)
 	default:
 		return fmt.Errorf("Unknown directive: %s\n", elements[1])
 	}
-
-	return nil
 }
 
 func processTestDirective(t *test.Test, elements []string, fileName string) error {
@@ -139,9 +136,13 @@ func processTestDirective(t *test.Test, elements []string, fileName string) erro
 	return nil
 }
 
-func processExpectedStatusCodeDirective(t *test.Test, elements []string) error {
+func processStatusCodeDirective(t *test.Test, elements []string) error {
 	if t.ExitCode != nil {
 		return fmt.Errorf("Multiple EXPECTED_STATUS_CODE directives provided in same test header")
+	}
+
+	if t.CompilationError != nil {
+		return fmt.Errorf("Test directive cannot include both an EXPECTED_STATUS_CODE and EXPECTED_COMPILATION_ERROR")
 	}
 
 	exitCodeIdx := 2
@@ -155,6 +156,25 @@ func processExpectedStatusCodeDirective(t *test.Test, elements []string) error {
 	}
 
 	t.ExitCode = new(exitCode)
+
+	return nil
+}
+
+func processCompilationErrorDirective(t *test.Test, elements []string) error {
+	if t.CompilationError != nil {
+		return fmt.Errorf("Multiple EXPECTED_COMPILATION_ERROR directives in the same test header")
+	}
+
+	if t.ExitCode != nil {
+		return fmt.Errorf("Test directive cannot include both an EXPECTED_STATUS_CODE and EXPECTED_COMPILATION_ERROR")
+	}
+
+	msgStartIdx := 2
+	if len(elements) <= msgStartIdx {
+		return fmt.Errorf("Provided empty name in EXPECTED_COMPILATION_ERROR directive")
+	}
+
+	t.CompilationError = new(strings.Join(elements[msgStartIdx:], " "))
 
 	return nil
 }

@@ -17,6 +17,7 @@ func main() {
 
 	tests, err := file.ProcessTestDirectory("./tests/inputs")
 	if err != nil {
+		fmt.Printf("Failed to process tests: %v\n", err)
 		os.Exit(1)
 	}
 

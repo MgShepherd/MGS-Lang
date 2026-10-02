@@ -1,4 +1,4 @@
--- TEST Single if Branch
+-- TEST single if Branch
 -- EXPECTED_STATUS_CODE 100
 func main() -> i32 {
 	x: i32 = 10;
@@ -11,7 +11,7 @@ func main() -> i32 {
 	return y;
 }
 
--- TEST If with else
+-- TEST if with else
 -- EXPECTED_STATUS_CODE 1
 func main() -> i32 {
 	x: i32 = 10;
@@ -26,7 +26,7 @@ func main() -> i32 {
 	return y;
 }
 
--- TEST If with else if
+-- TEST if with else if
 -- EXPECTED_STATUS_CODE 12
 func main() -> i32 {
 	x: i32 = 10;
@@ -44,4 +44,78 @@ func main() -> i32 {
 	}
 
 	return y;
+}
+
+-- TEST if with no condition
+-- EXPECTED_COMPILATION_ERROR Invalid token type for expression: T_LEFT_CURLY
+func main() -> i32 {
+	x: var i32 = 10;
+
+	if {
+		x = 100;
+	}
+
+	return x;
+}
+
+-- TEST else if with no condition
+-- EXPECTED_COMPILATION_ERROR Invalid token type for expression: T_LEFT_CURLY
+func main() -> i32 {
+	x: var i32 = 10;
+
+	if x < 10 {
+		x = 100;
+	} else if {
+		x = 20;
+	}
+
+	return x;
+}
+
+-- TEST else if without leading if
+-- EXPECTED_COMPILATION_ERROR Unexpected Token Type: T_ELSE
+func main() -> i32 {
+	x: var i32 = 10;
+
+	else if x < 10 {
+		x = 100;
+	}
+
+	return x;
+}
+
+-- TEST else without leading if
+-- EXPECTED_COMPILATION_ERROR Unexpected Token Type: T_ELSE
+func main() -> i32 {
+	x: var i32 = 10;
+
+	else {
+		x = 100;
+	}
+
+	return x;
+}
+
+-- TEST if with non-boolean terminal expression
+-- EXPECTED_COMPILATION_ERROR Numeric literal 10 used in non-numerical expression type: D_BOOL
+func main() -> i32 {
+	x: var i32 = 10;
+
+	if 10 {
+		x = 100;
+	}
+
+	return x;
+}
+
+-- TEST if with non-boolean compound expression
+-- EXPECTED_COMPILATION_ERROR Invalid operator type O_PLUS for expression type D_BOOL
+func main() -> i32 {
+	x: var i32 = 10;
+
+	if x + 10 {
+		x = 100;
+	}
+
+	return x;
 }

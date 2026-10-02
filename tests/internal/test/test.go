@@ -7,22 +7,24 @@ import (
 	"michael/mgstests/internal/utils"
 	"os"
 	"os/exec"
+	"strings"
 )
 
 type Test struct {
-	Name     *string
-	ExitCode *int
-	Body     string
+	Name             *string
+	ExitCode         *int
+	CompilationError *string
+	Body             string
 }
 
 const buildPath = "./build/"
 
 func (t Test) IsHeaderFilled() bool {
-	return t.Name != nil && t.ExitCode != nil
+	return t.Name != nil && (t.ExitCode != nil || t.CompilationError != nil)
 }
 
 func (t Test) IsHeaderEmpty() bool {
-	return t.Name == nil && t.ExitCode == nil
+	return t.Name == nil && t.ExitCode == nil && t.CompilationError == nil
 }
 
 func (t Test) String() string {
@@ -44,7 +46,19 @@ func (t Test) Run(outFile *os.File) error {
 		if !ok {
 			return errors.New("Failed to run compilation command\n")
 		}
+
+		if t.CompilationError != nil {
+			if strings.Contains(stderr.String(), *t.CompilationError) {
+				return nil
+			}
+
+			return fmt.Errorf("[ERROR]:\tExpected compilation error to include: \"%s\", but error was:\n%s", *t.CompilationError, stderr.String())
+		}
 		return errors.New(stderr.String())
+	}
+
+	if t.CompilationError != nil {
+		return fmt.Errorf("[ERROR]:\tExpected compilation error, but code compiled successfully\n")
 	}
 
 	fileNameNoExt := utils.GetFileNameWithoutExtension(outFile.Name())

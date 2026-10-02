@@ -60,15 +60,9 @@ make run
 
 The compiler comes with a series of unit tests to ensure that compilation is working as expected.
 
-As there is no standardised unit testing framework in C, we use a combination of hand written 
-comparisons as well as `assert.h` (for a good example of this, refer to `tests/lexer_tests.c`)
+These tests also serve as documentation for the language, since each test contains a snippet of mgs code.
 
-To build and run all the tests, use:
-```
-make test
-```
-Unfortunately, due to the custom nature of the testing setup, there is currently no way to run
-individual tests, but this is something which may be added in the future.
+For more information on these tests and how to run them, see the README in the `tests` directory.
 
 ## AI Usage
 

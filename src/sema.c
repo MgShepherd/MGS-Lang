@@ -76,6 +76,8 @@ unsigned char analyse_statement(Identifiers *identifiers, Statement *statement, 
 }
 
 unsigned char analyse_dec_statement(Identifiers *identifiers, DeclarationStatement *dec) {
+  const unsigned char result = analyse_expression(identifiers, &dec->expr, dec->d_type);
+
   Identifier new_ident = {
       .d_type = dec->d_type,
       .variable = dec->variable,
@@ -84,7 +86,7 @@ unsigned char analyse_dec_statement(Identifiers *identifiers, DeclarationStateme
 
   dyn_array_insert(identifiers, new_ident);
 
-  return analyse_expression(identifiers, &dec->expr, dec->d_type);
+  return result;
 }
 
 unsigned char analyse_assign_statement(Identifiers *identifiers, AssignmentStatement *assign) {

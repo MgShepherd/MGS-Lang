@@ -1,9 +1,14 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"michael/mgstests/internal/file"
+	"michael/mgstests/internal/test"
 	"os"
+	"runtime"
+	"sync"
+	"sync/atomic"
 )
 
 const (
@@ -21,29 +26,43 @@ func main() {
 		os.Exit(1)
 	}
 
-	failedTests, totalTests := 0, 0
-	for _, test := range tests {
-		tempFile, err := os.CreateTemp("", "*.mgs")
-		if err != nil {
-			fmt.Printf("Failed to create temporary file required for running tests\n")
-			os.Exit(1)
-		}
-		defer os.Remove(tempFile.Name())
+	var waitGroup sync.WaitGroup
+	threadLimiter := make(chan struct{}, runtime.NumCPU())
 
-		totalTests += 1
-		if err := test.Run(tempFile); err != nil {
-			fmt.Printf("%s[FAILED]:\t%s\n", colorRed, *test.Name)
-			fmt.Printf("%v%s\n", err, colorNone)
-			failedTests += 1
-		} else {
-			fmt.Printf("%s[PASSED]:\t%s%s\n", colorGreen, *test.Name, colorNone)
-		}
+	var failedTests atomic.Int32
+	for _, t := range tests {
+		// Write to the threadLimiter channel so that this will block when the channel is full
+		threadLimiter <- struct{}{}
+
+		waitGroup.Go(func() {
+			// Once this func has finished, free one on the threadLimiter slots
+			defer func() { <-threadLimiter }()
+
+			if err := setupAndRunTest(&t); err != nil {
+				fmt.Printf("%s[FAILED]:\t%s\n%v%s\n", colorRed, *t.Name, err, colorNone)
+				failedTests.Add(1)
+				return
+			}
+			fmt.Printf("%s[PASSED]:\t%s%s\n", colorGreen, *t.Name, colorNone)
+		})
 	}
+	waitGroup.Wait()
 
-	if failedTests != 0 {
-		fmt.Printf("Not all tests passed, %d out of %d failed\n", failedTests, totalTests)
+	if numFailed := failedTests.Load(); numFailed != 0 {
+		fmt.Printf("Not all tests passed, %d out of %d failed\n", numFailed, len(tests))
 		os.Exit(1)
 	}
 
 	fmt.Printf("All tests passed!\n")
+}
+
+func setupAndRunTest(t *test.Test) error {
+	tempFile, err := os.CreateTemp("", "*.mgs")
+	if err != nil {
+		return errors.Join(errors.New("Failed to create temporary file for test\n"), err)
+	}
+	defer tempFile.Close()
+	defer os.Remove(tempFile.Name())
+
+	return t.Run(tempFile)
 }

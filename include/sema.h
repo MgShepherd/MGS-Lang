@@ -2,12 +2,13 @@
 #define _SEMA_H_
 
 #include "parsing/program.h"
+#include "parsing/type.h"
 
 // TODO: All identifiers can currently be accessed globally, need to define the concept of scopes
 typedef struct {
   const char *name;
   DataType d_type;
-  bool variable;
+  IdentifierType i_type;
 } Identifier;
 
 typedef struct {

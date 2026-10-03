@@ -26,6 +26,9 @@ unsigned char analyse_term_expression(Identifiers *identifiers, TerminalExpr *te
 unsigned char analyse_comp_expression(Identifiers *identifiers, CompoundExpr *comp, DataType expr_type);
 unsigned char analyse_operator_type(OperatorType op, DataType expr_type);
 
+unsigned char analyse_terminal_token(Identifiers *identifiers, Literal *literal, const Token *tok, DataType expr_type);
+unsigned char analyse_terminal_func_call(Identifiers *identifiers, const FunctionCall *func_call, DataType expr_type);
+
 const Identifier *get_identifier(const Identifiers *identifiers, const char *name);
 
 unsigned char analyse_program(Identifiers *identifiers, const Program *program) {
@@ -44,7 +47,18 @@ unsigned char analyse_program(Identifiers *identifiers, const Program *program) 
 }
 
 unsigned char analyse_func(Identifiers *identifiers, const Function *func) {
-  return analyse_statements(identifiers, &func->statements, func->return_type);
+  if (analyse_statements(identifiers, &func->statements, func->return_type) != 0) {
+    return 1;
+  }
+
+  Identifier new_ident = {
+      .d_type = func->return_type,
+      .i_type = I_FUNC,
+      .name = func->name,
+  };
+
+  dyn_array_insert(identifiers, new_ident);
+  return 0;
 }
 
 unsigned char analyse_statements(Identifiers *identifiers, const Statements *statements, DataType func_type) {
@@ -78,9 +92,10 @@ unsigned char analyse_statement(Identifiers *identifiers, Statement *statement, 
 unsigned char analyse_dec_statement(Identifiers *identifiers, DeclarationStatement *dec) {
   const unsigned char result = analyse_expression(identifiers, &dec->expr, dec->d_type);
 
+  IdentifierType i_type = dec->variable ? I_VARIABLE : I_CONST;
   Identifier new_ident = {
       .d_type = dec->d_type,
-      .variable = dec->variable,
+      .i_type = i_type,
       .name = dec->lhs,
   };
 
@@ -96,7 +111,7 @@ unsigned char analyse_assign_statement(Identifiers *identifiers, AssignmentState
     return INVALID_PROGRAM_CODE;
   }
 
-  if (!ident->variable) {
+  if (ident->i_type != I_VARIABLE) {
     fprintf(stderr, "Attempted to modify constant: %s\n", assign->lhs);
     return INVALID_PROGRAM_CODE;
   }
@@ -164,11 +179,22 @@ unsigned char analyse_term_expression(Identifiers *identifiers, TerminalExpr *te
     return INVALID_PROGRAM_CODE;
   }
 
-  switch (term->tok->t_type) {
+  switch (term->item.t_type) {
+  case TERM_TOK:
+    return analyse_terminal_token(identifiers, &term->literal, term->item.t_union.tok, expr_type);
+  case TERM_FUNC_CALL:
+    return analyse_terminal_func_call(identifiers, &term->item.t_union.func_call, expr_type);
+  default:
+    assert(false);
+  }
+}
+
+unsigned char analyse_terminal_token(Identifiers *identifiers, Literal *literal, const Token *tok, DataType expr_type) {
+  switch (tok->t_type) {
   case T_IDENTIFIER:
-    const Identifier *ident = get_identifier(identifiers, term->tok->item);
+    const Identifier *ident = get_identifier(identifiers, tok->item);
     if (ident == NULL) {
-      fprintf(stderr, "Undefined variable: %s\n", term->tok->item);
+      fprintf(stderr, "Undefined variable: %s\n", tok->item);
       return INVALID_PROGRAM_CODE;
     }
 
@@ -176,39 +202,51 @@ unsigned char analyse_term_expression(Identifiers *identifiers, TerminalExpr *te
       fprintf(stderr, "Variable %s does not have expected type %s\n", ident->name, d_type_to_string(expr_type));
       return INVALID_PROGRAM_CODE;
     }
-    break;
+    return 0;
   case T_NUMERIC_LIT:
     if (expr_type != D_I32) {
-      fprintf(stderr, "Numeric literal %s used in non-numerical expression type: %s\n", term->tok->item,
+      fprintf(stderr, "Numeric literal %s used in non-numerical expression type: %s\n", tok->item,
               d_type_to_string(expr_type));
       return INVALID_PROGRAM_CODE;
     }
 
-    const long long int_val = strtoll(term->tok->item, NULL, INT_BASE);
-    if (int_val == LLONG_MIN || int_val == LLONG_MAX || (int_val == 0 && strcmp(term->tok->item, "0") != 0)) {
-      fprintf(stderr, "Failed to convert value into numeric literal: %s\n", term->tok->item);
+    const long long int_val = strtoll(tok->item, NULL, INT_BASE);
+    if (int_val == LLONG_MIN || int_val == LLONG_MAX || (int_val == 0 && strcmp(tok->item, "0") != 0)) {
+      fprintf(stderr, "Failed to convert value into numeric literal: %s\n", tok->item);
       return INVALID_PROGRAM_CODE;
     }
 
-    term->literal.l_type = L_NUM;
-    term->literal.l_union.num = int_val;
-    break;
+    literal->l_type = L_NUM;
+    literal->l_union.num = int_val;
+    return 0;
   case T_TRUE:
   case T_FALSE:
     if (expr_type != D_BOOL) {
-      fprintf(stderr, "Boolean literal %s used in non-boolean expression type: %s\n", term->tok->item,
+      fprintf(stderr, "Boolean literal %s used in non-boolean expression type: %s\n", tok->item,
               d_type_to_string(expr_type));
       return INVALID_PROGRAM_CODE;
     }
 
-    term->literal.l_type = L_BOOL;
-    term->literal.l_union.b = term->tok->t_type == T_TRUE;
-    break;
+    literal->l_type = L_BOOL;
+    literal->l_union.b = tok->t_type == T_TRUE;
+    return 0;
   default:
-    fprintf(stderr, "Unexpected token type for terminal expression: %s\n", t_type_to_string(term->tok->t_type));
+    fprintf(stderr, "Unexpected token type for terminal expression: %s\n", t_type_to_string(tok->t_type));
+    return INVALID_PROGRAM_CODE;
+  }
+}
+
+unsigned char analyse_terminal_func_call(Identifiers *identifiers, const FunctionCall *func_call, DataType expr_type) {
+  const Identifier *func = get_identifier(identifiers, func_call->name->item);
+  if (func == NULL) {
+    fprintf(stderr, "Undefined function: %s\n", func_call->name->item);
     return INVALID_PROGRAM_CODE;
   }
 
+  if (func->d_type != expr_type) {
+    fprintf(stderr, "Function %s does not return expected type %s\n", func->name, d_type_to_string(expr_type));
+    return INVALID_PROGRAM_CODE;
+  }
   return 0;
 }
 

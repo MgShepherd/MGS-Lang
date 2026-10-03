@@ -1,10 +1,13 @@
 #include "parsing/expression.h"
 #include "lexer.h"
 #include "parsing/type.h"
+#include "parsing/utils.h"
 
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
+
+#define PARAMETER_LIST_LEN_ESTIMATE 6
 
 unsigned char parse_terminal_expr(TerminalExpr *term, const Tokens *tokens, size_t *idx);
 
@@ -61,8 +64,8 @@ void expression_free(Expression *expression) {
 }
 
 unsigned char parse_terminal_expr(TerminalExpr *term, const Tokens *tokens, size_t *idx) {
-  static const TokenType TERMINAL_TOKEN_TYPES[] = {T_NUMERIC_LIT, T_IDENTIFIER, T_TRUE, T_FALSE};
-  static const size_t TERMINAL_TOKEN_LEN = sizeof(TERMINAL_TOKEN_TYPES) / sizeof(TokenType);
+  static const TokenType LITERAL_TOKEN_TYPES[] = {T_NUMERIC_LIT, T_TRUE, T_FALSE};
+  static const size_t LITERAL_TOKEN_LEN = sizeof(LITERAL_TOKEN_TYPES) / sizeof(TokenType);
 
   const Token *next = &tokens->elements[(*idx)++];
 
@@ -73,9 +76,29 @@ unsigned char parse_terminal_expr(TerminalExpr *term, const Tokens *tokens, size
     term->sign = NULL;
   }
 
-  for (size_t i = 0; i < TERMINAL_TOKEN_LEN; i++) {
-    if (next->t_type == TERMINAL_TOKEN_TYPES[i]) {
-      term->tok = next;
+  if (next->t_type == T_IDENTIFIER) {
+    const TokenType after_type = peek_index(tokens, *idx);
+    if (after_type != T_LEFT_PAREN) {
+      term->item.t_union.tok = next;
+      term->item.t_type = TERM_TOK;
+      return 0;
+    }
+
+    *idx += 1;
+    if (expect_next(T_RIGHT_PAREN, tokens, idx) == NULL) {
+      fprintf(stderr, "Expected ')' for end of parameter list\n");
+      return 1;
+    }
+
+    term->item.t_union.func_call.name = next;
+    term->item.t_type = TERM_FUNC_CALL;
+    return 0;
+  }
+
+  for (size_t i = 0; i < LITERAL_TOKEN_LEN; i++) {
+    if (next->t_type == LITERAL_TOKEN_TYPES[i]) {
+      term->item.t_union.tok = next;
+      term->item.t_type = TERM_TOK;
       return 0;
     }
   }

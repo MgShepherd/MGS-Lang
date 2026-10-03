@@ -17,9 +17,23 @@ typedef struct {
 } Literal;
 
 typedef struct {
+  const Token *name;
+} FunctionCall;
+
+typedef struct {
   const Token *tok;
+  FunctionCall func_call;
+} TerminalUnion;
+
+typedef struct {
+  TerminalUnion t_union;
+  TerminalType t_type;
+} Terminal;
+
+typedef struct {
+  Terminal item;
   const Token *sign;
-  // Will be populated by sema if the token is a literal, for identifier tokens this field should not be used
+  // Will be populated by sema if the token is a literal, for other terminals this field should not be used
   Literal literal;
 } TerminalExpr;
 

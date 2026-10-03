@@ -46,6 +46,22 @@ const char *l_type_to_string(LiteralType l) {
     return "unknown";
   }
 }
+
+const char *term_type_to_string(TerminalType t) {
+  switch (t) {
+    TERMINAL_TYPES
+  default:
+    return "unknown";
+  }
+}
+
+const char *i_type_to_string(IdentifierType i) {
+  switch (i) {
+    IDENTIFIER_TYPE
+  default:
+    return "unknown";
+  }
+}
 #undef X
 
 DataType tok_to_data_type(TokenType t_type) {

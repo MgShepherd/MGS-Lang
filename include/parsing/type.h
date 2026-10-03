@@ -34,12 +34,25 @@
   X(L_NUM)                                                                                                             \
   X(L_BOOL)
 
+#define TERMINAL_TYPES                                                                                                 \
+  X(TERM_NONE)                                                                                                         \
+  X(TERM_TOK)                                                                                                          \
+  X(TERM_FUNC_CALL)
+
+#define IDENTIFIER_TYPE                                                                                                \
+  X(I_NONE)                                                                                                            \
+  X(I_VARIABLE)                                                                                                        \
+  X(I_CONST)                                                                                                           \
+  X(I_FUNC)
+
 #define X(N) N,
 typedef enum { STATEMENT_TYPES } StatementType;
 typedef enum { EXPRESSION_TYPES } ExpressionType;
 typedef enum { DATA_TYPES } DataType;
 typedef enum { OPERATOR_TYPES } OperatorType;
 typedef enum { LITERAL_TYPES } LiteralType;
+typedef enum { TERMINAL_TYPES } TerminalType;
+typedef enum { IDENTIFIER_TYPE } IdentifierType;
 #undef X
 
 const char *s_type_to_string(StatementType s);
@@ -47,6 +60,8 @@ const char *e_type_to_string(ExpressionType e);
 const char *d_type_to_string(DataType d);
 const char *o_type_to_string(OperatorType o);
 const char *l_type_to_string(LiteralType l);
+const char *i_type_to_string(IdentifierType i);
+const char *term_type_to_string(TerminalType t);
 
 /*
  * Converts a provided token type into the matching datatype

@@ -21,7 +21,7 @@
 typedef struct {
   const char *name;
   LLVMValueRef ptr;
-  bool variable;
+  IdentifierType i_type;
 } ValueRef;
 
 typedef struct {
@@ -134,6 +134,14 @@ unsigned char build_function(IRState *state, const Function *func) {
     fprintf(stderr, "Failed to build function\n");
     return 1;
   }
+
+  const ValueRef func_ref = {
+      .name = func->name,
+      .ptr = llvm_func,
+      .i_type = I_FUNC,
+  };
+  dyn_array_insert(&state->values, func_ref);
+
   return 0;
 }
 
@@ -205,10 +213,11 @@ unsigned char build_declaration_statement(IRState *state, const DeclarationState
   assert(expr_output != NULL);
   LLVMBuildStore(state->builder, expr_output, var_ptr);
 
+  const IdentifierType i_type = dec->variable ? I_VARIABLE : I_CONST;
   ValueRef var = {
       .name = dec->lhs,
       .ptr = var_ptr,
-      .variable = dec->variable,
+      .i_type = i_type,
   };
   dyn_array_insert(&state->values, var);
 
@@ -287,18 +296,31 @@ LLVMValueRef build_expression(const IRState *state, const Expression *expr, cons
   }
 }
 
-// TODO: Re-add support for boolean terminals - add back once we have semantic analysis step
 LLVMValueRef build_terminal_expr(const IRState *state, const TerminalExpr *term, const LLVMTypeRef d_type) {
   LLVMValueRef processed;
 
-  if (term->tok->t_type == T_IDENTIFIER) {
-    processed = build_identifier(state, term->tok->item, d_type);
-  } else {
-    processed = build_literal(&term->literal, d_type);
+  switch (term->item.t_type) {
+  case TERM_TOK:
+    if (term->item.t_union.tok->t_type == T_IDENTIFIER) {
+      processed = build_identifier(state, term->item.t_union.tok->item, d_type);
+    } else {
+      processed = build_literal(&term->literal, d_type);
+    }
+    break;
+  case TERM_FUNC_CALL:
+    const LLVMValueRef func_ref = load_identifier(&state->values, term->item.t_union.func_call.name->item);
+    assert(func_ref != NULL);
+
+    // TODO: This should probably be stored with the function itself, rather than hardcoding here
+    const LLVMTypeRef func_type = LLVMFunctionType(d_type, NULL, 0, false);
+    processed = LLVMBuildCall2(state->builder, func_type, func_ref, NULL, 0, term->item.t_union.func_call.name->item);
+    break;
+  default:
+    assert(false);
   }
 
   if (term->sign != NULL && term->sign->t_type == T_MINUS) {
-    return LLVMBuildNeg(state->builder, processed, term->tok->item);
+    return LLVMBuildNeg(state->builder, processed, "negative-term");
   }
 
   return processed;

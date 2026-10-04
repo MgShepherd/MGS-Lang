@@ -9,6 +9,17 @@ func main() -> i32 {
 	return result;
 }
 
+-- TEST function call within compound expression
+-- EXPECTED_STATUS_CODE 42
+func test1() -> i32 {
+	return 22;
+}
+
+func main() -> i32 {
+	result: i32 = 20 + test1();
+	return result;
+}
+
 -- TEST void function
 -- EXPECTED_STATUS_CODE 12
 func test1() -> void {
@@ -20,3 +31,24 @@ func main() -> i32 {
 	return 12;
 }
 
+-- TEST function call without parentheseses
+-- EXPECTED_COMPILATION_ERROR Identifier test1 is used as a constant/variable, but has type I_FUNC
+func test1() -> void {
+	x: i32 = 10;
+}
+
+func main() -> i32 {
+	test1;
+	return 12;
+}
+
+-- TEST void function used within typed expression
+-- EXPECTED_COMPILATION_ERROR Function test1 does not return expected type D_I32
+func test1() -> void {
+	x: i32 = 10;
+}
+
+func main() -> i32 {
+	x: i32 = test1();
+	return 12;
+}

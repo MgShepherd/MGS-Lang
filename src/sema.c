@@ -93,6 +93,11 @@ unsigned char analyse_statement(Identifiers *identifiers, Statement *statement, 
 }
 
 unsigned char analyse_dec_statement(Identifiers *identifiers, DeclarationStatement *dec) {
+  if (dec->d_type == D_VOID) {
+    fprintf(stderr, "Cannot use void as datatype for variable\n");
+    return INVALID_PROGRAM_CODE;
+  }
+
   const unsigned char result = analyse_expression(identifiers, &dec->expr, dec->d_type);
 
   IdentifierType i_type = dec->variable ? I_VARIABLE : I_CONST;
@@ -202,6 +207,12 @@ unsigned char analyse_terminal_token(Identifiers *identifiers, Literal *literal,
     const Identifier *ident = get_identifier(identifiers, tok->item);
     if (ident == NULL) {
       fprintf(stderr, "Undefined variable: %s\n", tok->item);
+      return INVALID_PROGRAM_CODE;
+    }
+
+    if (ident->i_type != I_CONST && ident->i_type != I_VARIABLE) {
+      fprintf(stderr, "Identifier %s is used as a constant/variable, but has type %s\n", ident->name,
+              i_type_to_string(ident->i_type));
       return INVALID_PROGRAM_CODE;
     }
 

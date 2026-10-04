@@ -11,6 +11,7 @@
 unsigned char parse_dec_statement(Statement *statement, const Tokens *tokens, size_t *idx);
 unsigned char parse_assign_statement(Statement *statement, const Tokens *tokens, size_t *idx);
 unsigned char parse_ret_statement(Statement *statement, const Tokens *tokens, size_t *idx);
+unsigned char parse_void_statement(Statement *statement, const Tokens *tokens, size_t *idx);
 unsigned char parse_if_block(Statement *statement, const Tokens *tokens, size_t *idx);
 
 unsigned char parse_if_branch(IfBranch *if_branch, const Tokens *tokens, size_t *idx);
@@ -30,8 +31,10 @@ unsigned char parse_statements(Statements *statements, const Tokens *tokens, siz
       }
       if (tokens->elements[*idx + 1].t_type == T_COLON) {
         result = parse_dec_statement(&statement, tokens, idx);
-      } else {
+      } else if (tokens->elements[*idx + 1].t_type == T_EQUALS) {
         result = parse_assign_statement(&statement, tokens, idx);
+      } else {
+        result = parse_void_statement(&statement, tokens, idx);
       }
       break;
     case T_RETURN:
@@ -41,7 +44,7 @@ unsigned char parse_statements(Statements *statements, const Tokens *tokens, siz
       result = parse_if_block(&statement, tokens, idx);
       break;
     default:
-      fprintf(stderr, "Unexpected Token Type: %s\n", t_type_to_string(tokens->elements[*idx].t_type));
+      result = parse_void_statement(&statement, tokens, idx);
     }
 
     if (result != 0) {
@@ -193,6 +196,26 @@ unsigned char parse_ret_statement(Statement *statement, const Tokens *tokens, si
 
   statement->s_type = S_RETURN;
   statement->s_union.ret = ret;
+
+  return 0;
+}
+
+unsigned char parse_void_statement(Statement *statement, const Tokens *tokens, size_t *idx) {
+  statement->s_type = S_NONE;
+  VoidStatement void_s;
+
+  if (parse_expression(&void_s.expr, tokens, idx) != 0) {
+    fprintf(stderr, "Expected valid expression for void statement\n");
+    return 1;
+  }
+
+  if (expect_next(T_SEMI, tokens, idx) == NULL) {
+    fprintf(stderr, "Expected ';' at end of void statement\n");
+    return 1;
+  }
+
+  statement->s_type = S_VOID;
+  statement->s_union.void_s = void_s;
 
   return 0;
 }

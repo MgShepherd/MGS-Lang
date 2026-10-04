@@ -35,6 +35,10 @@ typedef struct {
 
 typedef struct {
   Expression expr;
+} VoidStatement;
+
+typedef struct {
+  Expression expr;
   Statements body;
 } IfBranch;
 
@@ -56,6 +60,7 @@ typedef union {
   DeclarationStatement dec;
   ReturnStatement ret;
   AssignmentStatement assign;
+  VoidStatement void_s;
   IfBlock if_block;
 } StatementUnion;
 

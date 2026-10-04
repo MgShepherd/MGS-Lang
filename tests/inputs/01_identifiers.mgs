@@ -71,3 +71,10 @@ func main() -> i32 {
 	x: i32 = 10 + y;
 	return x;
 }
+
+-- TEST single expression statement with none-void type
+-- EXPECTED_COMPILATION_ERROR Numeric literal 10 used in non-numerical expression type: D_VOID
+func main() -> i32 {
+	10 + 12;
+	return x;
+}

@@ -70,6 +70,8 @@ DataType tok_to_data_type(TokenType t_type) {
     return D_I32;
   case T_BOOL:
     return D_BOOL;
+  case T_VOID:
+    return D_VOID;
   default:
     return D_NONE;
   }

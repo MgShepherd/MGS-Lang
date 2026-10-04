@@ -8,6 +8,7 @@
   X(S_DECLARATION)                                                                                                     \
   X(S_ASSIGNMENT)                                                                                                      \
   X(S_IF)                                                                                                              \
+  X(S_VOID)                                                                                                            \
   X(S_RETURN)
 
 #define EXPRESSION_TYPES                                                                                               \
@@ -18,6 +19,7 @@
 #define DATA_TYPES                                                                                                     \
   X(D_NONE)                                                                                                            \
   X(D_BOOL)                                                                                                            \
+  X(D_VOID)                                                                                                            \
   X(D_I32)
 
 #define OPERATOR_TYPES                                                                                                 \

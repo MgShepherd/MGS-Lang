@@ -20,6 +20,7 @@ unsigned char analyse_assign_statement(Identifiers *identifiers, AssignmentState
 unsigned char analyse_ret_statement(Identifiers *identifiers, ReturnStatement *ret, DataType func_type);
 unsigned char analyse_if_block(Identifiers *identifiers, IfBlock *if_block, DataType func_type);
 unsigned char analyse_if_branch(Identifiers *identifiers, IfBranch *if_branch, DataType func_type);
+unsigned char analyse_void_statement(Identifiers *identifiers, VoidStatement *void_s);
 
 unsigned char analyse_expression(Identifiers *identifiers, Expression *expr, DataType expr_type);
 unsigned char analyse_term_expression(Identifiers *identifiers, TerminalExpr *term, DataType expr_type);
@@ -82,6 +83,8 @@ unsigned char analyse_statement(Identifiers *identifiers, Statement *statement, 
     return analyse_ret_statement(identifiers, &statement->s_union.ret, func_type);
   case S_IF:
     return analyse_if_block(identifiers, &statement->s_union.if_block, func_type);
+  case S_VOID:
+    return analyse_void_statement(identifiers, &statement->s_union.void_s);
   default:
     fprintf(stderr, "Unexpected statement type, should not be possible\n");
     assert(false);
@@ -156,6 +159,10 @@ unsigned char analyse_if_branch(Identifiers *identifiers, IfBranch *if_branch, D
   }
 
   return 0;
+}
+
+unsigned char analyse_void_statement(Identifiers *identifiers, VoidStatement *void_s) {
+  return analyse_expression(identifiers, &void_s->expr, D_VOID);
 }
 
 unsigned char analyse_expression(Identifiers *identifiers, Expression *expr, DataType expr_type) {

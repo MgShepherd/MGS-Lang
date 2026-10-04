@@ -8,3 +8,15 @@ func main() -> i32 {
 	result: i32 = test1();
 	return result;
 }
+
+-- TEST void function
+-- EXPECTED_STATUS_CODE 12
+func test1() -> void {
+	x: i32 = 10;
+}
+
+func main() -> i32 {
+	test1();
+	return 12;
+}
+

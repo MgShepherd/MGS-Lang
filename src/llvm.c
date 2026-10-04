@@ -49,6 +49,7 @@ unsigned char build_declaration_statement(IRState *state, const DeclarationState
 unsigned char build_if_block(IRState *state, const IfBlock *if_block, const LLVMValueRef func);
 void build_assignment_statement(IRState *state, const AssignmentStatement *assign);
 void build_return_statement(const IRState *state, const ReturnStatement *ret);
+void build_void_statement(const IRState *state, const VoidStatement *void_s);
 
 /*
  * build_expression will build the required statements in order to get a single output
@@ -130,6 +131,10 @@ unsigned char build_function(IRState *state, const Function *func) {
     }
   }
 
+  if (func->return_type == D_VOID) {
+    LLVMBuildRetVoid(state->builder);
+  }
+
   if (LLVMVerifyFunction(llvm_func, LLVMPrintMessageAction) != 0) {
     fprintf(stderr, "Failed to build function\n");
     return 1;
@@ -153,6 +158,8 @@ LLVMTypeRef get_type(const IRState *state, DataType d_type) {
     return LLVMInt32TypeInContext(state->context);
   case D_BOOL:
     return LLVMInt1TypeInContext(state->context);
+  case D_VOID:
+    return LLVMVoidTypeInContext(state->context);
   default:
     assert(false);
   }
@@ -186,6 +193,9 @@ unsigned char build_statement(IRState *state, const Statement *statement, const 
     if (build_if_block(state, &statement->s_union.if_block, func) != 0) {
       return 1;
     }
+    break;
+  case S_VOID:
+    build_void_statement(state, &statement->s_union.void_s);
     break;
   default:
     assert(false);
@@ -283,6 +293,14 @@ unsigned char build_if_block(IRState *state, const IfBlock *if_block, const LLVM
   return 0;
 }
 
+void build_void_statement(const IRState *state, const VoidStatement *void_s) {
+  assert(void_s != NULL);
+
+  const LLVMTypeRef statement_type = get_type(state, D_VOID);
+  const LLVMValueRef expr_output = build_expression(state, &void_s->expr, statement_type);
+  assert(expr_output != NULL);
+}
+
 LLVMValueRef build_expression(const IRState *state, const Expression *expr, const LLVMTypeRef d_type) {
   assert(expr->e_type != E_NONE);
 
@@ -313,7 +331,12 @@ LLVMValueRef build_terminal_expr(const IRState *state, const TerminalExpr *term,
 
     // TODO: This should probably be stored with the function itself, rather than hardcoding here
     const LLVMTypeRef func_type = LLVMFunctionType(d_type, NULL, 0, false);
-    processed = LLVMBuildCall2(state->builder, func_type, func_ref, NULL, 0, term->item.t_union.func_call.name->item);
+
+    if (d_type != LLVMVoidTypeInContext(state->context)) {
+      processed = LLVMBuildCall2(state->builder, func_type, func_ref, NULL, 0, term->item.t_union.func_call.name->item);
+    } else {
+      processed = LLVMBuildCall2(state->builder, func_type, func_ref, NULL, 0, "");
+    }
     break;
   default:
     assert(false);

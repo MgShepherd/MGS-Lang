@@ -10,6 +10,7 @@
   X(T_VAR)                                                                                                             \
   X(T_RETURN)                                                                                                          \
   X(T_I32)                                                                                                             \
+  X(T_VOID)                                                                                                            \
   X(T_BOOL)                                                                                                            \
   X(T_TRUE)                                                                                                            \
   X(T_FALSE)                                                                                                           \

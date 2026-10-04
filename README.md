@@ -66,9 +66,6 @@ For more information on these tests and how to run them, see the README in the `
 
 ## AI Usage
 
-All the code in this project is handwritten. AI has only been used for code review and general 
-querying, but never for actually making changes within the project.
-
-The main rationale behind this is purely that I enjoy writing code and since this is a hobby project,
-I see no reason to get AI to write all the code for me. I have no plans to make AI start
-writing any code within this project.
+All the code in this project is handwritten. The main rationale behind this is purely that I enjoy
+writing code and since this is a hobby project, I see no reason to get AI to write all the code for me.
+I have no plans to make AI start writing any code within this project.

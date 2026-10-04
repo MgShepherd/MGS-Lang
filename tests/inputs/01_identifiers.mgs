@@ -78,3 +78,14 @@ func main() -> i32 {
 	10 + 12;
 	return x;
 }
+
+-- TEST variable definition with void datatype
+-- EXPECTED_COMPILATION_ERROR Cannot use void as datatype for variable
+func test1() -> void {
+	y: i32 = 10;
+}
+
+func main() -> i32 {
+	x: void = test1();
+	return 10;
+}

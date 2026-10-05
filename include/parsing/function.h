@@ -6,8 +6,20 @@
 
 typedef struct {
   const char *name;
+  DataType d_type;
+} Parameter;
+
+typedef struct {
+  Parameter *elements;
+  size_t count;
+  size_t capacity;
+} Parameters;
+
+typedef struct {
+  const char *name;
   DataType return_type;
   Statements statements;
+  Parameters parameters;
 } Function;
 
 typedef struct {

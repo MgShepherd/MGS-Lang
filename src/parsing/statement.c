@@ -64,6 +64,10 @@ unsigned char parse_statements(Statements *statements, const Tokens *tokens, siz
 }
 
 void statements_free(Statements *statements) {
+  if (statements->elements == NULL) {
+    return;
+  }
+
   for (size_t j = 0; j < statements->count; j++) {
     statement_free(&statements->elements[j]);
   }
@@ -77,6 +81,7 @@ void statement_free(Statement *statement) {
     break;
   case S_ASSIGNMENT:
     expression_free(&statement->s_union.assign.expr);
+    break;
   case S_RETURN:
     expression_free(&statement->s_union.ret.expr);
     break;

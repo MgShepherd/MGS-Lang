@@ -17,7 +17,14 @@ typedef struct {
 } Literal;
 
 typedef struct {
+  Expression *elements;
+  size_t count;
+  size_t capacity;
+} CallParameters;
+
+typedef struct {
   const Token *name;
+  CallParameters parameters;
 } FunctionCall;
 
 typedef struct {

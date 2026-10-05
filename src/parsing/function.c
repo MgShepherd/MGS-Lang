@@ -2,12 +2,15 @@
 
 #include "dynamic_array.h"
 #include "parsing/statement.h"
+#include "parsing/type.h"
 #include "parsing/utils.h"
 #include <stdio.h>
 
 #define FUNCTION_STATEMENTS_LEN_ESTIMATE 10
+#define PARAMETERS_LEN_ESTIMATE 5
 
 unsigned char parse_function(Function *function, const Tokens *tokens, size_t *idx);
+unsigned char parse_parameters(Parameters *parameters, const Tokens *tokens, size_t *idx);
 
 unsigned char parse_functions(Functions *functions, const Tokens *tokens) {
   size_t idx = 0;
@@ -33,6 +36,7 @@ unsigned char parse_functions(Functions *functions, const Tokens *tokens) {
 void functions_free(Functions *functions) {
   for (size_t i = 0; i < functions->count; i++) {
     statements_free(&functions->elements[i].statements);
+    dyn_array_free(&functions->elements[i].parameters);
   }
   dyn_array_free(functions);
 }
@@ -52,6 +56,12 @@ unsigned char parse_function(Function *function, const Tokens *tokens, size_t *i
 
   if (expect_next(T_LEFT_PAREN, tokens, idx) == NULL) {
     fprintf(stderr, "Expected opening parenthesis in function\n");
+    return 1;
+  }
+
+  dyn_array_init(&function->parameters, sizeof(Parameter), PARAMETERS_LEN_ESTIMATE);
+  if (parse_parameters(&function->parameters, tokens, idx) != 0) {
+    fprintf(stderr, "Failed to parse parameters\n");
     return 1;
   }
 
@@ -76,21 +86,51 @@ unsigned char parse_function(Function *function, const Tokens *tokens, size_t *i
     return 1;
   }
 
-  Statements statements;
-  dyn_array_init(&statements, sizeof(Statement), FUNCTION_STATEMENTS_LEN_ESTIMATE);
-
-  if (parse_statements(&statements, tokens, idx, T_RIGHT_CURLY) != 0) {
+  dyn_array_init(&function->statements, sizeof(Statement), FUNCTION_STATEMENTS_LEN_ESTIMATE);
+  if (parse_statements(&function->statements, tokens, idx, T_RIGHT_CURLY) != 0) {
     fprintf(stderr, "Failed to process function body\n");
-    dyn_array_free(&statements);
     return 1;
   }
-  function->statements = statements;
 
   if (expect_next(T_RIGHT_CURLY, tokens, idx) == NULL) {
     fprintf(stderr, "Expected closing curly brace after function body\n");
-    dyn_array_free(&statements);
     return 1;
   }
 
   return 0;
+}
+
+unsigned char parse_parameters(Parameters *parameters, const Tokens *tokens, size_t *idx) {
+  if (peek_index(tokens, *idx) == T_RIGHT_PAREN) {
+    return 0;
+  }
+
+  while (true) {
+    Parameter parameter;
+    const Token *ident = expect_next(T_IDENTIFIER, tokens, idx);
+    if (ident == NULL) {
+      fprintf(stderr, "Expected identifier for parameter value\n");
+      return 1;
+    }
+    assert(ident->item != NULL);
+    parameter.name = ident->item;
+
+    if (expect_next(T_COLON, tokens, idx) == NULL) {
+      fprintf(stderr, "Expected colon after parameter value\n");
+      return 1;
+    }
+
+    parameter.d_type = tok_to_data_type(tokens->elements[(*idx)++].t_type);
+    if (parameter.d_type == D_NONE) {
+      fprintf(stderr, "Expected datatype for parameter\n");
+      return 1;
+    }
+
+    dyn_array_insert(parameters, parameter);
+
+    if (peek_index(tokens, *idx) != T_COMMA) {
+      return 0;
+    }
+    *idx += 1;
+  }
 }

@@ -29,6 +29,7 @@
  */
 #define dyn_array_init(dyn_arr, element_size, initial_cap)                                                             \
   {                                                                                                                    \
+    (dyn_arr)->elements = NULL;                                                                                        \
     if (initial_cap == 0) {                                                                                            \
       fprintf(stderr, "Dynamic Array cannot be created with 0 capacity\n");                                            \
       return 1;                                                                                                        \

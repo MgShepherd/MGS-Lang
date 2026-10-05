@@ -12,6 +12,7 @@
 #define INT_BASE 10
 
 unsigned char analyse_func(Identifiers *identifiers, const Function *func);
+unsigned char analyse_parameters(Identifiers *identifiers, const Parameters *parameters);
 
 unsigned char analyse_statements(Identifiers *identifiers, const Statements *statements, DataType func_type);
 unsigned char analyse_statement(Identifiers *identifiers, Statement *statement, DataType func_type);
@@ -48,6 +49,10 @@ unsigned char analyse_program(Identifiers *identifiers, const Program *program) 
 }
 
 unsigned char analyse_func(Identifiers *identifiers, const Function *func) {
+  if (analyse_parameters(identifiers, &func->parameters) != 0) {
+    return 1;
+  }
+
   if (analyse_statements(identifiers, &func->statements, func->return_type) != 0) {
     return 1;
   }
@@ -59,6 +64,19 @@ unsigned char analyse_func(Identifiers *identifiers, const Function *func) {
   };
 
   dyn_array_insert(identifiers, new_ident);
+  return 0;
+}
+
+unsigned char analyse_parameters(Identifiers *identifiers, const Parameters *parameters) {
+  for (size_t i = 0; i < parameters->count; i++) {
+    Identifier new_ident = {
+        .d_type = parameters->elements[i].d_type,
+        .i_type = I_CONST,
+        .name = parameters->elements[i].name,
+    };
+
+    dyn_array_insert(identifiers, new_ident);
+  }
   return 0;
 }
 
@@ -259,6 +277,14 @@ unsigned char analyse_terminal_func_call(Identifiers *identifiers, const Functio
   if (func == NULL) {
     fprintf(stderr, "Undefined function: %s\n", func_call->name->item);
     return INVALID_PROGRAM_CODE;
+  }
+
+  for (size_t i = 0; i < func_call->parameters.count; i++) {
+    // TODO: Need to fix this - getting the right type of the parameter, this should be stored with the parameters
+    if (analyse_expression(identifiers, &func_call->parameters.elements[i], D_I32) != 0) {
+      fprintf(stderr, "Failed to analyse parameter expression\n");
+      return INVALID_PROGRAM_CODE;
+    }
   }
 
   if (func->d_type != expr_type) {

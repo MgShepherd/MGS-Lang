@@ -31,6 +31,17 @@ func main() -> i32 {
 	return 12;
 }
 
+-- TEST function with parameters
+-- EXPECTED_STATUS_CODE 27
+func add10(x: i32) -> i32 {
+	return x + 10;
+}
+
+func main() -> i32 {
+	y: i32 = add10(12) + 5;
+	return y;
+}
+
 -- TEST function call without parentheseses
 -- EXPECTED_COMPILATION_ERROR Identifier test1 is used as a constant/variable, but has type I_FUNC
 func test1() -> void {

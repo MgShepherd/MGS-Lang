@@ -49,7 +49,7 @@ Assuming all the dependencies are installed, simply run:
 ```
 make
 ```
-This will create the compiler executable as `./build/Compiler` which can then be run.
+This will create the compiler executable as `./build/mgs` which can then be run.
 
 If you instead want to build and run the project in a single command, you can instead run:
 ```

@@ -5,7 +5,9 @@
 
 // TODO: Support writing output to a specified file path
 typedef struct {
-  char *filepath;
+  const char *filepath;
+  bool llvm_debug;
+  const char *output_folder;
 } CmdArgs;
 
 /*

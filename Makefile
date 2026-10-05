@@ -11,7 +11,7 @@ CFLAGS := -Wall -Wextra -g -std=c23 -I./include $(LLVM_C_FLAGS)
 LIBS := $(LLVM_LIBS) $(LLVM_SYSLIBS)
 LD_FLAGS := $(LLVM_LD_FLAGS)
 
-TARGET := $(BUILD_DIR)/Compiler
+TARGET := $(BUILD_DIR)/mgs
 
 rwildcard = $(foreach d,$(wildcard $1/*),$(call rwildcard,$d,$2) $(filter $(subst *,%,$2),$d))
 SRCS := $(call rwildcard,$(SRC_DIR),*.c)

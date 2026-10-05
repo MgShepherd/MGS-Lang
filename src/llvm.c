@@ -88,7 +88,7 @@ void dispose_ir_state(IRState *state);
 LLVMValueRef load_identifier(const ValueRefs *values, const char *identifier);
 const LlvmFunc *load_function(const FuncRefs *funcs, const char *identifier);
 
-unsigned char program_to_object_file(const Program *program, const char *file_name) {
+unsigned char program_to_object_file(const Program *program, const char *file_name, bool llvm_debug) {
   assert(program != NULL);
 
   IRState state;
@@ -110,6 +110,10 @@ unsigned char program_to_object_file(const Program *program, const char *file_na
     LLVMDisposeMessage(message);
     dispose_ir_state(&state);
     return 1;
+  }
+
+  if (llvm_debug) {
+    fprintf(stdout, "%s\n", LLVMPrintModuleToString(state.module));
   }
 
   if (generate_object_file(&state, file_name) != 0) {

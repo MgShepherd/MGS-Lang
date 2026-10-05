@@ -18,6 +18,7 @@ type Test struct {
 }
 
 const buildPath = "./build/"
+const compilerExecName = "mgs"
 
 func (t Test) IsHeaderFilled() bool {
 	return t.Name != nil && (t.ExitCode != nil || t.CompilationError != nil)
@@ -37,7 +38,7 @@ func (t Test) Run(outFile *os.File) error {
 		return errors.Join(errors.New("Failed to write test data to file\n"), err)
 	}
 
-	compileCmd := exec.Command(fmt.Sprintf("%s%s", buildPath, "Compiler"), outFile.Name())
+	compileCmd := exec.Command(fmt.Sprintf("%s%s", buildPath, compilerExecName), outFile.Name(), fmt.Sprintf("--output-folder=%s", buildPath))
 	var stderr bytes.Buffer
 	compileCmd.Stderr = &stderr
 

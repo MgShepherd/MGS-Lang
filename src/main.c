@@ -84,13 +84,13 @@ int main(int argc, char **argv) {
     goto cleanup;
   }
 
-  if (program_to_object_file(&program, obj_file_path) != 0) {
+  if (program_to_object_file(&program, obj_file_path, args.llvm_debug) != 0) {
     fprintf(stderr, "Failed to build LLVM IR from program AST\n");
     response_code = 1;
     goto cleanup;
   }
 
-  const size_t exe_file_len = strlen(BUILD_FOLDER) + strlen(file_name) + 1;
+  const size_t exe_file_len = strlen(args.output_folder) + strlen(file_name) + 1;
   exe_file_path = malloc(exe_file_len * sizeof(char));
   if (exe_file_path == NULL) {
     fprintf(stderr, "Failed to allocate required memory for executable file path\n");
@@ -98,7 +98,7 @@ int main(int argc, char **argv) {
     goto cleanup;
   }
 
-  if (snprintf(exe_file_path, exe_file_len, "%s%s", BUILD_FOLDER, file_name) < 0) {
+  if (snprintf(exe_file_path, exe_file_len, "%s%s", args.output_folder, file_name) < 0) {
     fprintf(stderr, "Failed to write executable file path to string\n");
     response_code = 1;
     goto cleanup;

@@ -44,8 +44,7 @@
 #define IDENTIFIER_TYPE                                                                                                \
   X(I_NONE)                                                                                                            \
   X(I_VARIABLE)                                                                                                        \
-  X(I_CONST)                                                                                                           \
-  X(I_FUNC)
+  X(I_CONST)
 
 #define X(N) N,
 typedef enum { STATEMENT_TYPES } StatementType;

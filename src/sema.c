@@ -11,63 +11,69 @@
 #define NUM_VARIABLES_ESTIMATE 10
 #define INT_BASE 10
 
-unsigned char analyse_func(Identifiers *identifiers, const Function *func);
-unsigned char analyse_parameters(Identifiers *identifiers, const Parameters *parameters);
+typedef struct {
+  Identifiers identifiers;
+  const Functions functions;
+} SemaState;
 
-unsigned char analyse_statements(Identifiers *identifiers, const Statements *statements, DataType func_type);
-unsigned char analyse_statement(Identifiers *identifiers, Statement *statement, DataType func_type);
-unsigned char analyse_dec_statement(Identifiers *identifiers, DeclarationStatement *dec);
-unsigned char analyse_assign_statement(Identifiers *identifiers, AssignmentStatement *assign);
-unsigned char analyse_ret_statement(Identifiers *identifiers, ReturnStatement *ret, DataType func_type);
-unsigned char analyse_if_block(Identifiers *identifiers, IfBlock *if_block, DataType func_type);
-unsigned char analyse_if_branch(Identifiers *identifiers, IfBranch *if_branch, DataType func_type);
-unsigned char analyse_void_statement(Identifiers *identifiers, VoidStatement *void_s);
+unsigned char analyse_func(SemaState *state, const Function *func);
+unsigned char analyse_parameters(SemaState *state, const Parameters *parameters);
 
-unsigned char analyse_expression(Identifiers *identifiers, Expression *expr, DataType expr_type);
-unsigned char analyse_term_expression(Identifiers *identifiers, TerminalExpr *term, DataType expr_type);
-unsigned char analyse_comp_expression(Identifiers *identifiers, CompoundExpr *comp, DataType expr_type);
+unsigned char analyse_statements(SemaState *state, const Statements *statements, DataType func_type);
+unsigned char analyse_statement(SemaState *state, Statement *statement, DataType func_type);
+unsigned char analyse_dec_statement(SemaState *state, DeclarationStatement *dec);
+unsigned char analyse_assign_statement(SemaState *state, AssignmentStatement *assign);
+unsigned char analyse_ret_statement(SemaState *state, ReturnStatement *ret, DataType func_type);
+unsigned char analyse_if_block(SemaState *state, IfBlock *if_block, DataType func_type);
+unsigned char analyse_if_branch(SemaState *state, IfBranch *if_branch, DataType func_type);
+unsigned char analyse_void_statement(SemaState *state, VoidStatement *void_s);
+
+unsigned char analyse_expression(SemaState *state, Expression *expr, DataType expr_type);
+unsigned char analyse_term_expression(SemaState *state, TerminalExpr *term, DataType expr_type);
+unsigned char analyse_comp_expression(SemaState *state, CompoundExpr *comp, DataType expr_type);
 unsigned char analyse_operator_type(OperatorType op, DataType expr_type);
 
-unsigned char analyse_terminal_token(Identifiers *identifiers, Literal *literal, const Token *tok, DataType expr_type);
-unsigned char analyse_terminal_func_call(Identifiers *identifiers, const FunctionCall *func_call, DataType expr_type);
+unsigned char analyse_terminal_token(SemaState *state, Literal *literal, const Token *tok, DataType expr_type);
+unsigned char analyse_terminal_func_call(SemaState *state, const FunctionCall *func_call, DataType expr_type);
 
 const Identifier *get_identifier(const Identifiers *identifiers, const char *name);
+const Function *get_function(const Functions *functions, const char *name);
 
-unsigned char analyse_program(Identifiers *identifiers, const Program *program) {
-  dyn_array_init(identifiers, sizeof(Identifier), NUM_VARIABLES_ESTIMATE);
-  assert(identifiers->elements != NULL);
+unsigned char analyse_program(const Program *program) {
+  Identifiers identifiers;
+  dyn_array_init(&identifiers, sizeof(Identifier), NUM_VARIABLES_ESTIMATE);
+  assert(identifiers.elements != NULL);
+
+  SemaState state = {
+      .identifiers = identifiers,
+      .functions = program->functions,
+  };
 
   unsigned char result = 0;
   for (size_t i = 0; i < program->functions.count; i++) {
-    result = analyse_func(identifiers, &program->functions.elements[i]);
+    result = analyse_func(&state, &program->functions.elements[i]);
     if (result != 0) {
-      return result;
+      break;
     }
   }
 
-  return 0;
+  dyn_array_free(&identifiers);
+  return result;
 }
 
-unsigned char analyse_func(Identifiers *identifiers, const Function *func) {
-  if (analyse_parameters(identifiers, &func->parameters) != 0) {
+unsigned char analyse_func(SemaState *state, const Function *func) {
+  if (analyse_parameters(state, &func->parameters) != 0) {
     return 1;
   }
 
-  if (analyse_statements(identifiers, &func->statements, func->return_type) != 0) {
+  if (analyse_statements(state, &func->statements, func->return_type) != 0) {
     return 1;
   }
 
-  Identifier new_ident = {
-      .d_type = func->return_type,
-      .i_type = I_FUNC,
-      .name = func->name,
-  };
-
-  dyn_array_insert(identifiers, new_ident);
   return 0;
 }
 
-unsigned char analyse_parameters(Identifiers *identifiers, const Parameters *parameters) {
+unsigned char analyse_parameters(SemaState *state, const Parameters *parameters) {
   for (size_t i = 0; i < parameters->count; i++) {
     Identifier new_ident = {
         .d_type = parameters->elements[i].d_type,
@@ -75,15 +81,15 @@ unsigned char analyse_parameters(Identifiers *identifiers, const Parameters *par
         .name = parameters->elements[i].name,
     };
 
-    dyn_array_insert(identifiers, new_ident);
+    dyn_array_insert(&state->identifiers, new_ident);
   }
   return 0;
 }
 
-unsigned char analyse_statements(Identifiers *identifiers, const Statements *statements, DataType func_type) {
+unsigned char analyse_statements(SemaState *state, const Statements *statements, DataType func_type) {
   unsigned char result = 0;
   for (size_t i = 0; i < statements->count; i++) {
-    result = analyse_statement(identifiers, &statements->elements[i], func_type);
+    result = analyse_statement(state, &statements->elements[i], func_type);
     if (result != 0) {
       return result;
     }
@@ -91,18 +97,18 @@ unsigned char analyse_statements(Identifiers *identifiers, const Statements *sta
   return 0;
 }
 
-unsigned char analyse_statement(Identifiers *identifiers, Statement *statement, DataType func_type) {
+unsigned char analyse_statement(SemaState *state, Statement *statement, DataType func_type) {
   switch (statement->s_type) {
   case S_DECLARATION:
-    return analyse_dec_statement(identifiers, &statement->s_union.dec);
+    return analyse_dec_statement(state, &statement->s_union.dec);
   case S_ASSIGNMENT:
-    return analyse_assign_statement(identifiers, &statement->s_union.assign);
+    return analyse_assign_statement(state, &statement->s_union.assign);
   case S_RETURN:
-    return analyse_ret_statement(identifiers, &statement->s_union.ret, func_type);
+    return analyse_ret_statement(state, &statement->s_union.ret, func_type);
   case S_IF:
-    return analyse_if_block(identifiers, &statement->s_union.if_block, func_type);
+    return analyse_if_block(state, &statement->s_union.if_block, func_type);
   case S_VOID:
-    return analyse_void_statement(identifiers, &statement->s_union.void_s);
+    return analyse_void_statement(state, &statement->s_union.void_s);
   default:
     fprintf(stderr, "Unexpected statement type, should not be possible\n");
     assert(false);
@@ -110,13 +116,13 @@ unsigned char analyse_statement(Identifiers *identifiers, Statement *statement, 
   return 0;
 }
 
-unsigned char analyse_dec_statement(Identifiers *identifiers, DeclarationStatement *dec) {
+unsigned char analyse_dec_statement(SemaState *state, DeclarationStatement *dec) {
   if (dec->d_type == D_VOID) {
     fprintf(stderr, "Cannot use void as datatype for variable\n");
     return INVALID_PROGRAM_CODE;
   }
 
-  const unsigned char result = analyse_expression(identifiers, &dec->expr, dec->d_type);
+  const unsigned char result = analyse_expression(state, &dec->expr, dec->d_type);
 
   IdentifierType i_type = dec->variable ? I_VARIABLE : I_CONST;
   Identifier new_ident = {
@@ -125,13 +131,13 @@ unsigned char analyse_dec_statement(Identifiers *identifiers, DeclarationStateme
       .name = dec->lhs,
   };
 
-  dyn_array_insert(identifiers, new_ident);
+  dyn_array_insert(&state->identifiers, new_ident);
 
   return result;
 }
 
-unsigned char analyse_assign_statement(Identifiers *identifiers, AssignmentStatement *assign) {
-  const Identifier *ident = get_identifier(identifiers, assign->lhs);
+unsigned char analyse_assign_statement(SemaState *state, AssignmentStatement *assign) {
+  const Identifier *ident = get_identifier(&state->identifiers, assign->lhs);
   if (ident == NULL) {
     fprintf(stderr, "Undefined variable: %s\n", assign->lhs);
     return INVALID_PROGRAM_CODE;
@@ -143,25 +149,25 @@ unsigned char analyse_assign_statement(Identifiers *identifiers, AssignmentState
   }
 
   assign->d_type = ident->d_type;
-  return analyse_expression(identifiers, &assign->expr, assign->d_type);
+  return analyse_expression(state, &assign->expr, assign->d_type);
 }
-unsigned char analyse_ret_statement(Identifiers *identifiers, ReturnStatement *ret, DataType func_type) {
+unsigned char analyse_ret_statement(SemaState *state, ReturnStatement *ret, DataType func_type) {
   ret->d_type = func_type;
-  return analyse_expression(identifiers, &ret->expr, ret->d_type);
+  return analyse_expression(state, &ret->expr, ret->d_type);
 }
 
-unsigned char analyse_if_block(Identifiers *identifiers, IfBlock *if_block, DataType func_type) {
-  unsigned char result = analyse_if_branch(identifiers, &if_block->if_branch, func_type);
+unsigned char analyse_if_block(SemaState *state, IfBlock *if_block, DataType func_type) {
+  unsigned char result = analyse_if_branch(state, &if_block->if_branch, func_type);
 
   for (size_t i = 0; i < if_block->else_if_branches.count; i++) {
-    result = analyse_if_branch(identifiers, &if_block->else_if_branches.elements[i], func_type);
+    result = analyse_if_branch(state, &if_block->else_if_branches.elements[i], func_type);
     if (result != 0) {
       return result;
     }
   }
 
   if (if_block->else_body.elements != NULL) {
-    result = analyse_statements(identifiers, &if_block->else_body, func_type);
+    result = analyse_statements(state, &if_block->else_body, func_type);
     if (result != 0) {
       return result;
     }
@@ -170,13 +176,13 @@ unsigned char analyse_if_block(Identifiers *identifiers, IfBlock *if_block, Data
   return 0;
 }
 
-unsigned char analyse_if_branch(Identifiers *identifiers, IfBranch *if_branch, DataType func_type) {
-  unsigned char result = analyse_expression(identifiers, &if_branch->expr, D_BOOL);
+unsigned char analyse_if_branch(SemaState *state, IfBranch *if_branch, DataType func_type) {
+  unsigned char result = analyse_expression(state, &if_branch->expr, D_BOOL);
   if (result != 0) {
     return result;
   }
 
-  result = analyse_statements(identifiers, &if_branch->body, func_type);
+  result = analyse_statements(state, &if_branch->body, func_type);
   if (result != 0) {
     return result;
   }
@@ -184,23 +190,23 @@ unsigned char analyse_if_branch(Identifiers *identifiers, IfBranch *if_branch, D
   return 0;
 }
 
-unsigned char analyse_void_statement(Identifiers *identifiers, VoidStatement *void_s) {
-  return analyse_expression(identifiers, &void_s->expr, D_VOID);
+unsigned char analyse_void_statement(SemaState *state, VoidStatement *void_s) {
+  return analyse_expression(state, &void_s->expr, D_VOID);
 }
 
-unsigned char analyse_expression(Identifiers *identifiers, Expression *expr, DataType expr_type) {
+unsigned char analyse_expression(SemaState *state, Expression *expr, DataType expr_type) {
   assert(expr->e_type != E_NONE);
   switch (expr->e_type) {
   case E_TERMINAL:
-    return analyse_term_expression(identifiers, &expr->e_union.term, expr_type);
+    return analyse_term_expression(state, &expr->e_union.term, expr_type);
   case E_COMPOUND:
-    return analyse_comp_expression(identifiers, &expr->e_union.comp, expr_type);
+    return analyse_comp_expression(state, &expr->e_union.comp, expr_type);
   default:
     assert(false);
   }
 }
 
-unsigned char analyse_term_expression(Identifiers *identifiers, TerminalExpr *term, DataType expr_type) {
+unsigned char analyse_term_expression(SemaState *state, TerminalExpr *term, DataType expr_type) {
   term->literal.l_type = L_NONE;
 
   if (term->sign != NULL && expr_type != D_I32) {
@@ -211,18 +217,18 @@ unsigned char analyse_term_expression(Identifiers *identifiers, TerminalExpr *te
 
   switch (term->item.t_type) {
   case TERM_TOK:
-    return analyse_terminal_token(identifiers, &term->literal, term->item.t_union.tok, expr_type);
+    return analyse_terminal_token(state, &term->literal, term->item.t_union.tok, expr_type);
   case TERM_FUNC_CALL:
-    return analyse_terminal_func_call(identifiers, &term->item.t_union.func_call, expr_type);
+    return analyse_terminal_func_call(state, &term->item.t_union.func_call, expr_type);
   default:
     assert(false);
   }
 }
 
-unsigned char analyse_terminal_token(Identifiers *identifiers, Literal *literal, const Token *tok, DataType expr_type) {
+unsigned char analyse_terminal_token(SemaState *state, Literal *literal, const Token *tok, DataType expr_type) {
   switch (tok->t_type) {
   case T_IDENTIFIER:
-    const Identifier *ident = get_identifier(identifiers, tok->item);
+    const Identifier *ident = get_identifier(&state->identifiers, tok->item);
     if (ident == NULL) {
       fprintf(stderr, "Undefined variable: %s\n", tok->item);
       return INVALID_PROGRAM_CODE;
@@ -272,37 +278,41 @@ unsigned char analyse_terminal_token(Identifiers *identifiers, Literal *literal,
   }
 }
 
-unsigned char analyse_terminal_func_call(Identifiers *identifiers, const FunctionCall *func_call, DataType expr_type) {
-  const Identifier *func = get_identifier(identifiers, func_call->name->item);
+unsigned char analyse_terminal_func_call(SemaState *state, const FunctionCall *func_call, DataType expr_type) {
+  const Function *func = get_function(&state->functions, func_call->name->item);
   if (func == NULL) {
     fprintf(stderr, "Undefined function: %s\n", func_call->name->item);
     return INVALID_PROGRAM_CODE;
   }
 
+  if (func_call->parameters.count != func->parameters.count) {
+    fprintf(stderr, "Mismatched number of parameters in function call, expected %zu, got %zu\n", func->parameters.count,
+            func_call->parameters.count);
+    return INVALID_PROGRAM_CODE;
+  }
+
   for (size_t i = 0; i < func_call->parameters.count; i++) {
-    // TODO: Need to fix this - getting the right type of the parameter, this should be stored with the parameters
-    if (analyse_expression(identifiers, &func_call->parameters.elements[i], D_I32) != 0) {
+    if (analyse_expression(state, &func_call->parameters.elements[i], func->parameters.elements[i].d_type) != 0) {
       fprintf(stderr, "Failed to analyse parameter expression\n");
       return INVALID_PROGRAM_CODE;
     }
   }
 
-  if (func->d_type != expr_type) {
+  if (func->return_type != expr_type) {
     fprintf(stderr, "Function %s does not return expected type %s\n", func->name, d_type_to_string(expr_type));
     return INVALID_PROGRAM_CODE;
   }
   return 0;
 }
 
-// TODO: With all these recursive functions, need to define some recursion limits in order to stop stack overflows
-unsigned char analyse_comp_expression(Identifiers *identifiers, CompoundExpr *comp, DataType expr_type) {
+unsigned char analyse_comp_expression(SemaState *state, CompoundExpr *comp, DataType expr_type) {
   // TODO: Will need to refactor how this works when we support multiple integer types, how will we determine the type
   DataType term_type = expr_type;
   if (expr_type == D_BOOL) {
     term_type = D_I32;
   }
 
-  unsigned char result = analyse_term_expression(identifiers, &comp->lhs, term_type);
+  unsigned char result = analyse_term_expression(state, &comp->lhs, term_type);
   if (result != 0) {
     return result;
   }
@@ -315,9 +325,9 @@ unsigned char analyse_comp_expression(Identifiers *identifiers, CompoundExpr *co
   assert(comp->rhs->e_type != E_NONE);
   switch (comp->rhs->e_type) {
   case E_COMPOUND:
-    return analyse_comp_expression(identifiers, &comp->rhs->e_union.comp, expr_type);
+    return analyse_comp_expression(state, &comp->rhs->e_union.comp, expr_type);
   case E_TERMINAL:
-    return analyse_term_expression(identifiers, &comp->rhs->e_union.term, term_type);
+    return analyse_term_expression(state, &comp->rhs->e_union.term, term_type);
   default:
     assert(false);
   }
@@ -358,6 +368,15 @@ const Identifier *get_identifier(const Identifiers *identifiers, const char *nam
   for (size_t i = 0; i < identifiers->count; i++) {
     if (strcmp(identifiers->elements[i].name, name) == 0) {
       return &identifiers->elements[i];
+    }
+  }
+  return NULL;
+}
+
+const Function *get_function(const Functions *functions, const char *name) {
+  for (size_t i = 0; i < functions->count; i++) {
+    if (strcmp(functions->elements[i].name, name) == 0) {
+      return &functions->elements[i];
     }
   }
   return NULL;

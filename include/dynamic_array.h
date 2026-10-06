@@ -23,23 +23,16 @@
 
 /*
  * Initialises the dynamic array memory with the provided capacity
- * Be aware: This function will return from the function it is used in the case of an error with allocating the
- * memory
- * Will return a 1 status code on error - ensure calling function uses this convention to be able to use
+ * On failure to allocate required extra memory, this function will cause an assertion failure
+ * This is deemed acceptable as the compiler will likely be unable to function if out of memory, so crashing is okay
  */
 #define dyn_array_init(dyn_arr, element_size, initial_cap)                                                             \
   {                                                                                                                    \
     (dyn_arr)->elements = NULL;                                                                                        \
-    if (initial_cap == 0) {                                                                                            \
-      fprintf(stderr, "Dynamic Array cannot be created with 0 capacity\n");                                            \
-      return 1;                                                                                                        \
-    }                                                                                                                  \
+    assert(initial_cap != 0);                                                                                          \
                                                                                                                        \
     (dyn_arr)->elements = malloc(initial_cap * element_size);                                                          \
-    if ((dyn_arr)->elements == NULL) {                                                                                 \
-      fprintf(stderr, "Failed to allocate required memory for dynamic array\n");                                       \
-      return 1;                                                                                                        \
-    }                                                                                                                  \
+    assert((dyn_arr)->elements != NULL && "Out of memory");                                                            \
     (dyn_arr)->capacity = initial_cap;                                                                                 \
     (dyn_arr)->count = 0;                                                                                              \
   }
@@ -47,9 +40,8 @@
 /*
  * Inserts an element into a dynamic array - will resize the array if it does not have enough capacity
  * Undefined behaviour if typeof element does not match that of the array
- * Be aware: This function will return from the function it is used in the case of an error with allocating the
- * memory
- * Will return a 1 status code on error - ensure calling function uses this convention to be able to use
+ * On failure to allocate required extra memory, this function will cause an assertion failure
+ * This is deemed acceptable as the compiler will likely be unable to function if out of memory, so crashing is okay
  */
 #define dyn_array_insert(dyn_arr, element)                                                                             \
   {                                                                                                                    \
@@ -57,15 +49,26 @@
                                                                                                                        \
     if ((dyn_arr)->count >= (dyn_arr)->capacity) {                                                                     \
       (dyn_arr)->capacity = (dyn_arr)->capacity * ARRAY_REALLOC_FACTOR;                                                \
-      void *new_elements = realloc((dyn_arr)->elements, (dyn_arr)->capacity * sizeof((dyn_arr)->elements[0]));         \
-      if (new_elements == NULL) {                                                                                      \
-        fprintf(stderr, "Failed to allocate additional required space for dynamic array\n");                           \
-        return 1;                                                                                                      \
-      }                                                                                                                \
-      (dyn_arr)->elements = new_elements;                                                                              \
+      (dyn_arr)->elements = realloc((dyn_arr)->elements, (dyn_arr)->capacity * sizeof((dyn_arr)->elements[0]));        \
+      assert((dyn_arr)->elements != NULL && "Out of memory");                                                          \
     }                                                                                                                  \
                                                                                                                        \
     (dyn_arr)->elements[(dyn_arr)->count++] = element;                                                                 \
+  }
+
+/*
+ * Removes the last element from a dynamic array
+ * Will print to stderr but not crash the program if called on a 0 element array
+ */
+#define dyn_array_pop(dyn_arr)                                                                                         \
+  {                                                                                                                    \
+    assert((dyn_arr)->elements != NULL);                                                                               \
+                                                                                                                       \
+    if ((dyn_arr)->count <= 0) {                                                                                       \
+      fprintf(stderr, "Attempted to remove element from empty array\n");                                               \
+    }                                                                                                                  \
+                                                                                                                       \
+    (dyn_arr)->count--;                                                                                                \
   }
 
 /*

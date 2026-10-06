@@ -20,8 +20,7 @@ typedef struct {
 /*
  * analyse_program takes in a parsed AST program and will analyse to ensure this is a valid program
  * Will return 0 for a valid program, 1 on unexpected error, and 2 for an invalid program
- * For a valid program, will output any identifiers used in the program into the identifiers parameter
  */
-unsigned char analyse_program(Identifiers *identifiers, const Program *program);
+unsigned char analyse_program(const Program *program);
 
 #endif // _SEMA_H_

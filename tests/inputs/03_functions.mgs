@@ -42,8 +42,25 @@ func main() -> i32 {
 	return y;
 }
 
+-- TEST function with multiple parameters of different types
+-- EXPECTED_STATUS_CODE 17
+func my_func(x: i32, my_bool: bool) -> i32 {
+	y: var i32 = x;
+	if my_bool {
+		y = y + 5;
+	} else {
+		y = y - 5;
+	}
+	return y;
+}
+
+func main() -> i32 {
+	z: i32 = my_func(12, true);
+	return z;
+}
+
 -- TEST function call without parentheseses
--- EXPECTED_COMPILATION_ERROR Identifier test1 is used as a constant/variable, but has type I_FUNC
+-- EXPECTED_COMPILATION_ERROR Undefined variable: test1
 func test1() -> void {
 	x: i32 = 10;
 }
@@ -62,4 +79,21 @@ func test1() -> void {
 func main() -> i32 {
 	x: i32 = test1();
 	return 12;
+}
+
+-- TEST function call with incorrect number of parameters
+-- EXPECTED_COMPILATION_ERROR Mismatched number of parameters in function call, expected 2, got 1
+func my_func(x: i32, my_bool: bool) -> i32 {
+	y: var i32 = x;
+	if my_bool {
+		y = y + 5;
+	} else {
+		y = y - 5;
+	}
+	return y;
+}
+
+func main() -> i32 {
+	z: i32 = my_func(12);
+	return z;
 }

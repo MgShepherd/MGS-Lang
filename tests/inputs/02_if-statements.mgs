@@ -119,3 +119,17 @@ func main() -> i32 {
 
 	return x;
 }
+
+-- TEST Variable defined in if statement only has scope in that if statement
+-- EXPECTED_COMPILATION_ERROR Undefined variable: y
+func main() -> i32 {
+	x: var i32 = 10;
+
+	if x + 10 {
+		y: i32 = 10;
+		x = 100 + y;
+	}
+	x = x - y;
+
+	return x;
+}

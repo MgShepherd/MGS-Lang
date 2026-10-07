@@ -9,11 +9,13 @@
 
 #define INVALID_PROGRAM_CODE 2
 #define NUM_VARIABLES_ESTIMATE 10
+#define NUM_SCOPES_ESTIMATE 5
 #define INT_BASE 10
 
 typedef struct {
   Identifiers identifiers;
   const Functions functions;
+  Scopes scopes;
 } SemaState;
 
 unsigned char analyse_func(SemaState *state, const Function *func);
@@ -38,26 +40,34 @@ unsigned char analyse_terminal_func_call(SemaState *state, const FunctionCall *f
 
 const Identifier *get_identifier(const Identifiers *identifiers, const char *name);
 const Function *get_function(const Functions *functions, const char *name);
+bool is_identifier_in_scope(const Scopes *scopes, const Identifier *identifier);
 
 unsigned char analyse_program(const Program *program) {
   Identifiers identifiers;
   dyn_array_init(&identifiers, sizeof(Identifier), NUM_VARIABLES_ESTIMATE);
   assert(identifiers.elements != NULL);
+  Scopes scopes;
+  dyn_array_init(&scopes, sizeof(void *), NUM_SCOPES_ESTIMATE);
+  assert(scopes.elements != NULL);
 
   SemaState state = {
       .identifiers = identifiers,
       .functions = program->functions,
+      .scopes = scopes,
   };
 
   unsigned char result = 0;
   for (size_t i = 0; i < program->functions.count; i++) {
+    dyn_array_insert(&state.scopes, &program->functions.elements[i]);
     result = analyse_func(&state, &program->functions.elements[i]);
     if (result != 0) {
       break;
     }
+    dyn_array_pop(&state.scopes);
   }
 
   dyn_array_free(&identifiers);
+  dyn_array_free(&scopes);
   return result;
 }
 
@@ -79,6 +89,7 @@ unsigned char analyse_parameters(SemaState *state, const Parameters *parameters)
         .d_type = parameters->elements[i].d_type,
         .i_type = I_CONST,
         .name = parameters->elements[i].name,
+        .scope = state->scopes.elements[state->scopes.count - 1],
     };
 
     dyn_array_insert(&state->identifiers, new_ident);
@@ -129,6 +140,7 @@ unsigned char analyse_dec_statement(SemaState *state, DeclarationStatement *dec)
       .d_type = dec->d_type,
       .i_type = i_type,
       .name = dec->lhs,
+      .scope = state->scopes.elements[state->scopes.count - 1],
   };
 
   dyn_array_insert(&state->identifiers, new_ident);
@@ -157,20 +169,26 @@ unsigned char analyse_ret_statement(SemaState *state, ReturnStatement *ret, Data
 }
 
 unsigned char analyse_if_block(SemaState *state, IfBlock *if_block, DataType func_type) {
+  dyn_array_insert(&state->scopes, &if_block->if_branch);
   unsigned char result = analyse_if_branch(state, &if_block->if_branch, func_type);
+  dyn_array_pop(&state->scopes);
 
   for (size_t i = 0; i < if_block->else_if_branches.count; i++) {
+    dyn_array_insert(&state->scopes, &if_block->else_if_branches.elements[i]);
     result = analyse_if_branch(state, &if_block->else_if_branches.elements[i], func_type);
     if (result != 0) {
       return result;
     }
+    dyn_array_pop(&state->scopes);
   }
 
   if (if_block->else_body.elements != NULL) {
+    dyn_array_insert(&state->scopes, &if_block->else_body);
     result = analyse_statements(state, &if_block->else_body, func_type);
     if (result != 0) {
       return result;
     }
+    dyn_array_pop(&state->scopes);
   }
 
   return 0;
@@ -229,7 +247,7 @@ unsigned char analyse_terminal_token(SemaState *state, Literal *literal, const T
   switch (tok->t_type) {
   case T_IDENTIFIER:
     const Identifier *ident = get_identifier(&state->identifiers, tok->item);
-    if (ident == NULL) {
+    if (ident == NULL || !is_identifier_in_scope(&state->scopes, ident)) {
       fprintf(stderr, "Undefined variable: %s\n", tok->item);
       return INVALID_PROGRAM_CODE;
     }
@@ -380,4 +398,13 @@ const Function *get_function(const Functions *functions, const char *name) {
     }
   }
   return NULL;
+}
+
+bool is_identifier_in_scope(const Scopes *scopes, const Identifier *identifier) {
+  for (size_t i = 0; i < scopes->count; i++) {
+    if (scopes->elements[i] == identifier->scope) {
+      return true;
+    }
+  }
+  return false;
 }

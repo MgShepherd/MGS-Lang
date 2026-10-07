@@ -3,7 +3,6 @@
 
 #define HELP_RESPONSE_CODE 2
 
-// TODO: Support writing output to a specified file path
 typedef struct {
   const char *filepath;
   bool llvm_debug;

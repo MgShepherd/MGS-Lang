@@ -38,7 +38,8 @@
 
 #define TERMINAL_TYPES                                                                                                 \
   X(TERM_NONE)                                                                                                         \
-  X(TERM_TOK)                                                                                                          \
+  X(TERM_LITERAL)                                                                                                      \
+  X(TERM_IDENTIFIER)                                                                                                   \
   X(TERM_FUNC_CALL)
 
 #define IDENTIFIER_TYPE                                                                                                \

@@ -112,7 +112,7 @@ unsigned char parse_dec_statement(Statement *statement, const Tokens *tokens, si
     return 1;
   }
   assert(ident->item != NULL);
-  dec.lhs = ident->item;
+  dec.term_ident.name = ident->item;
 
   if (expect_next(T_COLON, tokens, idx) == NULL) {
     fprintf(stderr, "Failed to read colon for declaration statement\n");
@@ -158,7 +158,7 @@ unsigned char parse_assign_statement(Statement *statement, const Tokens *tokens,
     return 1;
   }
   assert(ident->item != NULL);
-  assign.lhs = ident->item;
+  assign.term_ident.name = ident->item;
 
   if (expect_next(T_EQUALS, tokens, idx) == NULL) {
     fprintf(stderr, "Failed to read equals for assignment statement\n");

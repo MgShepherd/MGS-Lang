@@ -18,8 +18,8 @@ typedef struct {
   Scopes scopes;
 } SemaState;
 
-unsigned char analyse_func(SemaState *state, const Function *func);
-unsigned char analyse_parameters(SemaState *state, const Parameters *parameters);
+unsigned char analyse_func(SemaState *state, Function *func);
+unsigned char analyse_parameters(SemaState *state, Parameters *parameters);
 
 unsigned char analyse_statements(SemaState *state, const Statements *statements, DataType func_type);
 unsigned char analyse_statement(SemaState *state, Statement *statement, DataType func_type);
@@ -37,10 +37,15 @@ unsigned char analyse_operator_type(OperatorType op, DataType expr_type);
 
 unsigned char analyse_terminal_token(SemaState *state, Literal *literal, const Token *tok, DataType expr_type);
 unsigned char analyse_terminal_func_call(SemaState *state, const FunctionCall *func_call, DataType expr_type);
+unsigned char analyse_terminal_identifier(SemaState *state, TerminalIdentifier *term_ident, DataType expr_type);
+unsigned char analyse_terminal_literal(TerminalLiteral *term_lit, DataType expr_type);
 
-const Identifier *get_identifier(const Identifiers *identifiers, const char *name);
+unsigned char insert_identifier(SemaState *state, const char *name, DataType d_type, IdentifierType i_type);
+const Identifier *get_identifier(const SemaState *state, const char *name);
 const Function *get_function(const Functions *functions, const char *name);
 bool is_identifier_in_scope(const Scopes *scopes, const Identifier *identifier);
+
+void free_sema_state(SemaState *state);
 
 unsigned char analyse_program(const Program *program) {
   Identifiers identifiers;
@@ -66,12 +71,11 @@ unsigned char analyse_program(const Program *program) {
     dyn_array_pop(&state.scopes);
   }
 
-  dyn_array_free(&identifiers);
-  dyn_array_free(&scopes);
+  free_sema_state(&state);
   return result;
 }
 
-unsigned char analyse_func(SemaState *state, const Function *func) {
+unsigned char analyse_func(SemaState *state, Function *func) {
   if (analyse_parameters(state, &func->parameters) != 0) {
     return 1;
   }
@@ -83,16 +87,14 @@ unsigned char analyse_func(SemaState *state, const Function *func) {
   return 0;
 }
 
-unsigned char analyse_parameters(SemaState *state, const Parameters *parameters) {
+unsigned char analyse_parameters(SemaState *state, Parameters *parameters) {
   for (size_t i = 0; i < parameters->count; i++) {
-    Identifier new_ident = {
-        .d_type = parameters->elements[i].d_type,
-        .i_type = I_CONST,
-        .name = parameters->elements[i].name,
-        .scope = state->scopes.elements[state->scopes.count - 1],
-    };
+    Parameter *param = &parameters->elements[i];
+    if (insert_identifier(state, param->term_ident.name, param->d_type, I_CONST) != 0) {
+      return 1;
+    }
 
-    dyn_array_insert(&state->identifiers, new_ident);
+    param->term_ident.scope = state->identifiers.elements[state->identifiers.count - 1].scope;
   }
   return 0;
 }
@@ -133,34 +135,36 @@ unsigned char analyse_dec_statement(SemaState *state, DeclarationStatement *dec)
     return INVALID_PROGRAM_CODE;
   }
 
-  const unsigned char result = analyse_expression(state, &dec->expr, dec->d_type);
+  unsigned char result = analyse_expression(state, &dec->expr, dec->d_type);
+  if (result != 0) {
+    return result;
+  }
 
   IdentifierType i_type = dec->variable ? I_VARIABLE : I_CONST;
-  Identifier new_ident = {
-      .d_type = dec->d_type,
-      .i_type = i_type,
-      .name = dec->lhs,
-      .scope = state->scopes.elements[state->scopes.count - 1],
-  };
+  result = insert_identifier(state, dec->term_ident.name, dec->d_type, i_type);
+  if (result != 0) {
+    return result;
+  }
 
-  dyn_array_insert(&state->identifiers, new_ident);
+  dec->term_ident.scope = state->scopes.elements[state->scopes.count - 1];
 
-  return result;
+  return 0;
 }
 
 unsigned char analyse_assign_statement(SemaState *state, AssignmentStatement *assign) {
-  const Identifier *ident = get_identifier(&state->identifiers, assign->lhs);
+  const Identifier *ident = get_identifier(state, assign->term_ident.name);
   if (ident == NULL) {
-    fprintf(stderr, "Undefined variable: %s\n", assign->lhs);
+    fprintf(stderr, "Undefined variable: %s\n", assign->term_ident.name);
     return INVALID_PROGRAM_CODE;
   }
 
   if (ident->i_type != I_VARIABLE) {
-    fprintf(stderr, "Attempted to modify constant: %s\n", assign->lhs);
+    fprintf(stderr, "Attempted to modify constant: %s\n", assign->term_ident.name);
     return INVALID_PROGRAM_CODE;
   }
 
   assign->d_type = ident->d_type;
+  assign->term_ident.scope = ident->scope;
   return analyse_expression(state, &assign->expr, assign->d_type);
 }
 unsigned char analyse_ret_statement(SemaState *state, ReturnStatement *ret, DataType func_type) {
@@ -171,6 +175,9 @@ unsigned char analyse_ret_statement(SemaState *state, ReturnStatement *ret, Data
 unsigned char analyse_if_block(SemaState *state, IfBlock *if_block, DataType func_type) {
   dyn_array_insert(&state->scopes, &if_block->if_branch);
   unsigned char result = analyse_if_branch(state, &if_block->if_branch, func_type);
+  if (result != 0) {
+    return result;
+  }
   dyn_array_pop(&state->scopes);
 
   for (size_t i = 0; i < if_block->else_if_branches.count; i++) {
@@ -225,8 +232,6 @@ unsigned char analyse_expression(SemaState *state, Expression *expr, DataType ex
 }
 
 unsigned char analyse_term_expression(SemaState *state, TerminalExpr *term, DataType expr_type) {
-  term->literal.l_type = L_NONE;
-
   if (term->sign != NULL && expr_type != D_I32) {
     fprintf(stderr, "Invalid use of sign: %s, must only be used with integer values\n",
             t_type_to_string(term->sign->t_type));
@@ -234,65 +239,14 @@ unsigned char analyse_term_expression(SemaState *state, TerminalExpr *term, Data
   }
 
   switch (term->item.t_type) {
-  case TERM_TOK:
-    return analyse_terminal_token(state, &term->literal, term->item.t_union.tok, expr_type);
+  case TERM_IDENTIFIER:
+    return analyse_terminal_identifier(state, &term->item.t_union.ident, expr_type);
+  case TERM_LITERAL:
+    return analyse_terminal_literal(&term->item.t_union.lit, expr_type);
   case TERM_FUNC_CALL:
     return analyse_terminal_func_call(state, &term->item.t_union.func_call, expr_type);
   default:
     assert(false);
-  }
-}
-
-unsigned char analyse_terminal_token(SemaState *state, Literal *literal, const Token *tok, DataType expr_type) {
-  switch (tok->t_type) {
-  case T_IDENTIFIER:
-    const Identifier *ident = get_identifier(&state->identifiers, tok->item);
-    if (ident == NULL || !is_identifier_in_scope(&state->scopes, ident)) {
-      fprintf(stderr, "Undefined variable: %s\n", tok->item);
-      return INVALID_PROGRAM_CODE;
-    }
-
-    if (ident->i_type != I_CONST && ident->i_type != I_VARIABLE) {
-      fprintf(stderr, "Identifier %s is used as a constant/variable, but has type %s\n", ident->name,
-              i_type_to_string(ident->i_type));
-      return INVALID_PROGRAM_CODE;
-    }
-
-    if (ident->d_type != expr_type) {
-      fprintf(stderr, "Variable %s does not have expected type %s\n", ident->name, d_type_to_string(expr_type));
-      return INVALID_PROGRAM_CODE;
-    }
-    return 0;
-  case T_NUMERIC_LIT:
-    if (expr_type != D_I32) {
-      fprintf(stderr, "Numeric literal %s used in non-numerical expression type: %s\n", tok->item,
-              d_type_to_string(expr_type));
-      return INVALID_PROGRAM_CODE;
-    }
-
-    const long long int_val = strtoll(tok->item, NULL, INT_BASE);
-    if (int_val == LLONG_MIN || int_val == LLONG_MAX || (int_val == 0 && strcmp(tok->item, "0") != 0)) {
-      fprintf(stderr, "Failed to convert value into numeric literal: %s\n", tok->item);
-      return INVALID_PROGRAM_CODE;
-    }
-
-    literal->l_type = L_NUM;
-    literal->l_union.num = int_val;
-    return 0;
-  case T_TRUE:
-  case T_FALSE:
-    if (expr_type != D_BOOL) {
-      fprintf(stderr, "Boolean literal %s used in non-boolean expression type: %s\n", tok->item,
-              d_type_to_string(expr_type));
-      return INVALID_PROGRAM_CODE;
-    }
-
-    literal->l_type = L_BOOL;
-    literal->l_union.b = tok->t_type == T_TRUE;
-    return 0;
-  default:
-    fprintf(stderr, "Unexpected token type for terminal expression: %s\n", t_type_to_string(tok->t_type));
-    return INVALID_PROGRAM_CODE;
   }
 }
 
@@ -320,6 +274,60 @@ unsigned char analyse_terminal_func_call(SemaState *state, const FunctionCall *f
     fprintf(stderr, "Function %s does not return expected type %s\n", func->name, d_type_to_string(expr_type));
     return INVALID_PROGRAM_CODE;
   }
+  return 0;
+}
+
+unsigned char analyse_terminal_identifier(SemaState *state, TerminalIdentifier *term_ident, DataType expr_type) {
+  const Identifier *ident = get_identifier(state, term_ident->name);
+  if (ident == NULL) {
+    fprintf(stderr, "Undefined variable: %s\n", term_ident->name);
+    return INVALID_PROGRAM_CODE;
+  }
+
+  if (ident->d_type != expr_type) {
+    fprintf(stderr, "Variable %s does not have expected type %s\n", ident->name, d_type_to_string(expr_type));
+    return INVALID_PROGRAM_CODE;
+  }
+
+  term_ident->scope = ident->scope;
+
+  return 0;
+}
+
+unsigned char analyse_terminal_literal(TerminalLiteral *term_lit, DataType expr_type) {
+  switch (term_lit->tok->t_type) {
+  case T_NUMERIC_LIT:
+    if (expr_type != D_I32) {
+      fprintf(stderr, "Numeric literal %s used in non-numerical expression type: %s\n", term_lit->tok->item,
+              d_type_to_string(expr_type));
+      return INVALID_PROGRAM_CODE;
+    }
+
+    const long long int_val = strtoll(term_lit->tok->item, NULL, INT_BASE);
+    if (int_val == LLONG_MIN || int_val == LLONG_MAX || (int_val == 0 && strcmp(term_lit->tok->item, "0") != 0)) {
+      fprintf(stderr, "Failed to convert value into numeric literal: %s\n", term_lit->tok->item);
+      return INVALID_PROGRAM_CODE;
+    }
+
+    term_lit->literal.l_type = L_NUM;
+    term_lit->literal.l_union.num = int_val;
+    return 0;
+  case T_TRUE:
+  case T_FALSE:
+    if (expr_type != D_BOOL) {
+      fprintf(stderr, "Boolean literal %s used in non-boolean expression type: %s\n", term_lit->tok->item,
+              d_type_to_string(expr_type));
+      return INVALID_PROGRAM_CODE;
+    }
+
+    term_lit->literal.l_type = L_BOOL;
+    term_lit->literal.l_union.b = term_lit->tok->t_type == T_TRUE;
+    return 0;
+  default:
+    fprintf(stderr, "Unexpected token type for terminal expression: %s\n", t_type_to_string(term_lit->tok->t_type));
+    return INVALID_PROGRAM_CODE;
+  }
+
   return 0;
 }
 
@@ -382,11 +390,35 @@ unsigned char analyse_operator_type(OperatorType op, DataType expr_type) {
   return INVALID_PROGRAM_CODE;
 }
 
-const Identifier *get_identifier(const Identifiers *identifiers, const char *name) {
-  for (size_t i = 0; i < identifiers->count; i++) {
-    if (strcmp(identifiers->elements[i].name, name) == 0) {
-      return &identifiers->elements[i];
+unsigned char insert_identifier(SemaState *state, const char *name, DataType d_type, IdentifierType i_type) {
+  const Identifier *existing = get_identifier(state, name);
+  if (existing != NULL) {
+    fprintf(stderr, "Variable %s shadows existing variable in scope\n", existing->name);
+    return INVALID_PROGRAM_CODE;
+  }
+
+  Identifier new_ident = {
+      .d_type = d_type,
+      .i_type = i_type,
+      .name = name,
+      .scope = state->scopes.elements[state->scopes.count - 1],
+  };
+
+  dyn_array_insert(&state->identifiers, new_ident);
+  return 0;
+}
+
+const Identifier *get_identifier(const SemaState *state, const char *name) {
+  for (size_t i = 0; i < state->identifiers.count; i++) {
+    if (strcmp(state->identifiers.elements[i].name, name) != 0) {
+      continue;
     }
+
+    if (!is_identifier_in_scope(&state->scopes, &state->identifiers.elements[i])) {
+      continue;
+    }
+
+    return &state->identifiers.elements[i];
   }
   return NULL;
 }
@@ -407,4 +439,9 @@ bool is_identifier_in_scope(const Scopes *scopes, const Identifier *identifier) 
     }
   }
   return false;
+}
+
+void free_sema_state(SemaState *state) {
+  dyn_array_free(&state->identifiers);
+  dyn_array_free(&state->scopes);
 }

@@ -1,11 +1,12 @@
 #ifndef _PARSING_FUNCTION_H_
 #define _PARSING_FUNCTION_H_
 
+#include "parsing/expression.h"
 #include "parsing/statement.h"
 #include "parsing/type.h"
 
 typedef struct {
-  const char *name;
+  TerminalIdentifier term_ident;
   DataType d_type;
 } Parameter;
 

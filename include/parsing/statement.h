@@ -14,14 +14,14 @@ typedef struct {
 } Statements;
 
 typedef struct {
-  const char *lhs;
+  TerminalIdentifier term_ident;
   bool variable;
   DataType d_type;
   Expression expr;
 } DeclarationStatement;
 
 typedef struct {
-  const char *lhs;
+  TerminalIdentifier term_ident;
   Expression expr;
   // d_type will be populated as part of semantic analysis
   DataType d_type;

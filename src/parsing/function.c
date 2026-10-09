@@ -113,7 +113,7 @@ unsigned char parse_parameters(Parameters *parameters, const Tokens *tokens, siz
       return 1;
     }
     assert(ident->item != NULL);
-    parameter.name = ident->item;
+    parameter.term_ident.name = ident->item;
 
     if (expect_next(T_COLON, tokens, idx) == NULL) {
       fprintf(stderr, "Expected colon after parameter value\n");

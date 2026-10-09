@@ -23,6 +23,7 @@ typedef struct {
   const char *name;
   LLVMValueRef ptr;
   IdentifierType i_type;
+  const void *scope;
 } ValueRef;
 
 typedef struct {
@@ -78,14 +79,14 @@ LLVMValueRef build_terminal_expr(const IRState *state, const TerminalExpr *term,
 LLVMValueRef build_compound_expr(const IRState *state, const CompoundExpr *comp, const LLVMTypeRef d_type);
 LLVMValueRef build_func_call(const IRState *state, const FunctionCall *func_call, const LLVMTypeRef d_type);
 
-LLVMValueRef build_identifier(const IRState *state, const char *name, const LLVMTypeRef d_type);
+LLVMValueRef build_identifier(const IRState *state, const TerminalIdentifier *term_ident, const LLVMTypeRef d_type);
 LLVMValueRef build_literal(const Literal *literal, const LLVMTypeRef d_type);
 
 unsigned char generate_object_file(const IRState *state, const char *file_name);
 
 void dispose_ir_state(IRState *state);
 
-LLVMValueRef load_identifier(const ValueRefs *values, const char *identifier);
+LLVMValueRef load_identifier(const ValueRefs *values, const TerminalIdentifier *term_ident);
 const LlvmFunc *load_function(const FuncRefs *funcs, const char *identifier);
 
 unsigned char program_to_object_file(const Program *program, const char *file_name, bool llvm_debug) {
@@ -161,16 +162,19 @@ unsigned char build_function(IRState *state, const Function *func) {
     LLVMGetParams(llvm_func, params);
 
     for (size_t i = 0; i < func->parameters.count; i++) {
-      const LLVMValueRef param_ptr = LLVMBuildAlloca(state->builder, param_types[i], func->parameters.elements[i].name);
+      const Parameter *param = &func->parameters.elements[i];
+      const LLVMValueRef param_ptr = LLVMBuildAlloca(state->builder, param_types[i], param->term_ident.name);
       assert(param_ptr != NULL);
       LLVMBuildStore(state->builder, params[i], param_ptr);
 
-      ValueRef param = {
-          .name = func->parameters.elements[i].name,
+      // TODO: ValueRef in LLVM is very simlar to Identifier in sema, can we combine these somehow?
+      ValueRef param_val = {
+          .name = param->term_ident.name,
           .ptr = param_ptr,
           .i_type = I_CONST,
+          .scope = param->term_ident.scope,
       };
-      dyn_array_insert(&state->values, param);
+      dyn_array_insert(&state->values, param_val);
     }
   }
 
@@ -270,7 +274,7 @@ unsigned char build_declaration_statement(IRState *state, const DeclarationState
   assert(dec != NULL && dec->d_type != D_NONE);
 
   const LLVMTypeRef statement_type = get_type(state, dec->d_type);
-  const LLVMValueRef var_ptr = LLVMBuildAlloca(state->builder, statement_type, dec->lhs);
+  const LLVMValueRef var_ptr = LLVMBuildAlloca(state->builder, statement_type, dec->term_ident.name);
 
   const LLVMValueRef expr_output = build_expression(state, &dec->expr, statement_type);
   assert(expr_output != NULL);
@@ -278,9 +282,10 @@ unsigned char build_declaration_statement(IRState *state, const DeclarationState
 
   const IdentifierType i_type = dec->variable ? I_VARIABLE : I_CONST;
   ValueRef var = {
-      .name = dec->lhs,
+      .name = dec->term_ident.name,
       .ptr = var_ptr,
       .i_type = i_type,
+      .scope = dec->term_ident.scope,
   };
   dyn_array_insert(&state->values, var);
 
@@ -293,7 +298,7 @@ void build_assignment_statement(IRState *state, const AssignmentStatement *assig
   const LLVMTypeRef statement_type = get_type(state, assign->d_type);
   const LLVMValueRef expr_output = build_expression(state, &assign->expr, statement_type);
   assert(expr_output != NULL);
-  const LLVMValueRef assign_var = load_identifier(&state->values, assign->lhs);
+  const LLVMValueRef assign_var = load_identifier(&state->values, &assign->term_ident);
   assert(assign_var != NULL);
 
   LLVMBuildStore(state->builder, expr_output, assign_var);
@@ -371,12 +376,11 @@ LLVMValueRef build_terminal_expr(const IRState *state, const TerminalExpr *term,
   LLVMValueRef processed;
 
   switch (term->item.t_type) {
-  case TERM_TOK:
-    if (term->item.t_union.tok->t_type == T_IDENTIFIER) {
-      processed = build_identifier(state, term->item.t_union.tok->item, d_type);
-    } else {
-      processed = build_literal(&term->literal, d_type);
-    }
+  case TERM_IDENTIFIER:
+    processed = build_identifier(state, &term->item.t_union.ident, d_type);
+    break;
+  case TERM_LITERAL:
+    processed = build_literal(&term->item.t_union.lit.literal, d_type);
     break;
   case TERM_FUNC_CALL:
     processed = build_func_call(state, &term->item.t_union.func_call, d_type);
@@ -412,11 +416,11 @@ LLVMValueRef build_func_call(const IRState *state, const FunctionCall *func_call
   return LLVMBuildCall2(state->builder, func->func_type, func->ptr, params, func->num_params, "");
 }
 
-LLVMValueRef build_identifier(const IRState *state, const char *name, const LLVMTypeRef d_type) {
-  const LLVMValueRef value_ref = load_identifier(&state->values, name);
+LLVMValueRef build_identifier(const IRState *state, const TerminalIdentifier *term_ident, const LLVMTypeRef d_type) {
+  const LLVMValueRef value_ref = load_identifier(&state->values, term_ident);
   assert(value_ref != NULL);
 
-  return LLVMBuildLoad2(state->builder, d_type, value_ref, name);
+  return LLVMBuildLoad2(state->builder, d_type, value_ref, term_ident->name);
 }
 
 LLVMValueRef build_literal(const Literal *literal, const LLVMTypeRef d_type) {
@@ -514,11 +518,17 @@ void dispose_ir_state(IRState *state) {
   LLVMContextDispose(state->context);
 }
 
-LLVMValueRef load_identifier(const ValueRefs *values, const char *identifier) {
+LLVMValueRef load_identifier(const ValueRefs *values, const TerminalIdentifier *term_ident) {
   for (size_t i = 0; i < values->count; i++) {
-    if (strcmp(values->elements[i].name, identifier) == 0) {
-      return values->elements[i].ptr;
+    if (strcmp(values->elements[i].name, term_ident->name) != 0) {
+      continue;
     }
+
+    if (term_ident->scope != values->elements[i].scope) {
+      continue;
+    }
+
+    return values->elements[i].ptr;
   }
 
   return NULL;

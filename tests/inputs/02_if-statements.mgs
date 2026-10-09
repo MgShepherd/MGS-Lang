@@ -125,7 +125,7 @@ func main() -> i32 {
 func main() -> i32 {
 	x: var i32 = 10;
 
-	if x + 10 {
+	if x < 10 {
 		y: i32 = 10;
 		x = 100 + y;
 	}

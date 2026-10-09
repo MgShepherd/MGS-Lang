@@ -90,8 +90,9 @@ unsigned char parse_terminal_expr(TerminalExpr *term, const Tokens *tokens, size
   if (next->t_type == T_IDENTIFIER) {
     const TokenType after_type = peek_index(tokens, *idx);
     if (after_type != T_LEFT_PAREN) {
-      term->item.t_union.tok = next;
-      term->item.t_type = TERM_TOK;
+      term->item.t_type = TERM_IDENTIFIER;
+      term->item.t_union.ident.name = next->item;
+      term->item.t_union.ident.scope = NULL;
       return 0;
     }
     *idx += 1;
@@ -117,8 +118,8 @@ unsigned char parse_terminal_expr(TerminalExpr *term, const Tokens *tokens, size
 
   for (size_t i = 0; i < LITERAL_TOKEN_LEN; i++) {
     if (next->t_type == LITERAL_TOKEN_TYPES[i]) {
-      term->item.t_union.tok = next;
-      term->item.t_type = TERM_TOK;
+      term->item.t_type = TERM_LITERAL;
+      term->item.t_union.lit.tok = next;
       return 0;
     }
   }

@@ -5,6 +5,12 @@
 #include "parsing/type.h"
 
 typedef struct {
+  const void **elements;
+  size_t count;
+  size_t capacity;
+} Scopes;
+
+typedef struct {
   const char *name;
   DataType d_type;
   IdentifierType i_type;
@@ -16,12 +22,6 @@ typedef struct {
   size_t count;
   size_t capacity;
 } Identifiers;
-
-typedef struct {
-  const void **elements;
-  size_t count;
-  size_t capacity;
-} Scopes;
 
 /*
  * analyse_program takes in a parsed AST program and will analyse to ensure this is a valid program

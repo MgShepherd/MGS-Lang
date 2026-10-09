@@ -30,6 +30,18 @@ func main() -> i32 {
 	return my_num;
 }
 
+-- TEST variable redefined in multiple functions
+-- EXPECTED_STATUS_CODE 31
+func example() -> void {
+	x: i32 = 10;
+}
+
+func main() -> i32 {
+	x: i32 = 31;
+	return x;
+}
+
+
 -- TEST undefined variable in return
 -- EXPECTED_COMPILATION_ERROR Undefined variable: x
 func main() -> i32 {
@@ -100,4 +112,14 @@ func test1() -> i32 {
 func main() -> i32 {
 	x: i32 = test1() + y;
 	return 10;
+}
+
+-- TEST variable shadowing is not allowed
+-- EXPECTED_COMPILATION_ERROR Variable x shadows existing variable in scope
+func main() -> i32 {
+	x: i32 = 10;
+	if 5 < 10 {
+		x: i32 = 12;
+	}
+	return x;
 }

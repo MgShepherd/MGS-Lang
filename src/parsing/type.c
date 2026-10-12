@@ -68,6 +68,12 @@ DataType tok_to_data_type(TokenType t_type) {
   switch (t_type) {
   case T_I32:
     return D_I32;
+  case T_I64:
+    return D_I64;
+  case T_I8:
+    return D_I8;
+  case T_I16:
+    return D_I16;
   case T_BOOL:
     return D_BOOL;
   case T_VOID:

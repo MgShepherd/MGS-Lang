@@ -96,7 +96,8 @@ unsigned char process_next_token(Token *token, const char *input, size_t input_l
 unsigned char process_word_token(Token *token, const char *input, size_t input_len, size_t *idx) {
   static const TokenMapping keyword_mappings[] = {
       {.key = "func", .value = T_FUNCTION}, {.key = "return", .value = T_RETURN}, {.key = "var", .value = T_VAR},
-      {.key = "i32", .value = T_I32},       {.key = "bool", .value = T_BOOL},     {.key = "true", .value = T_TRUE},
+      {.key = "i32", .value = T_I32},       {.key = "i64", .value = T_I64},       {.key = "i8", .value = T_I8},
+      {.key = "i16", .value = T_I16},       {.key = "bool", .value = T_BOOL},     {.key = "true", .value = T_TRUE},
       {.key = "false", .value = T_FALSE},   {.key = "if", .value = T_IF},         {.key = "else", .value = T_ELSE},
       {.key = "void", .value = T_VOID},
   };

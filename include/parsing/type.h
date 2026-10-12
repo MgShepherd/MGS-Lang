@@ -20,7 +20,10 @@
   X(D_NONE)                                                                                                            \
   X(D_BOOL)                                                                                                            \
   X(D_VOID)                                                                                                            \
-  X(D_I32)
+  X(D_I8)                                                                                                              \
+  X(D_I16)                                                                                                             \
+  X(D_I32)                                                                                                             \
+  X(D_I64)
 
 #define OPERATOR_TYPES                                                                                                 \
   X(O_NONE)                                                                                                            \

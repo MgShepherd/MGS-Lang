@@ -1,0 +1,47 @@
+-- TEST integer types
+-- EXPECTED_STATUS_CODE 101
+func main() -> i64 {
+	my_i32: i32 = 100;
+	my_i64: i64 = 101;
+	my_i8: i8 = 100;
+	my_i16: i16 = 100;
+	return my_i64;
+}
+
+-- TEST cannot add integers of different types
+-- EXPECTED_COMPILATION_ERROR Variable my_i32 does not have expected type D_I64
+func main() -> i32 {
+	my_i32: i32 = 100;
+	my_i64: i64 = 101;
+	my_sum: i64 = my_i32 + my_i64;
+	return my_i32;
+}
+
+-- TEST Attempting to store constant value too large for i8
+-- EXPECTED_COMPILATION_ERROR Value 200 does not fit in i8 integer
+func main() -> i8 {
+	my_i8: i8 = 200;
+	return my_i8;
+}
+
+-- TEST Attempting to store constant value too large for i16
+-- EXPECTED_COMPILATION_ERROR Value 32768 does not fit in i16 integer
+func main() -> i16 {
+	my_i16: i16 = 32768;
+	return my_i16;
+}
+
+
+-- TEST Attempting to store constant value too small for i32
+-- EXPECTED_COMPILATION_ERROR Value -2200000000 does not fit in i32 integer
+func main() -> i32 {
+	my_i32: i32 = -2200000000;
+	return my_i32;
+}
+
+-- TEST Attempting to store constant value too small for i64
+-- EXPECTED_COMPILATION_ERROR Value -9223372036854775809 does not fit in integer
+func main() -> i64 {
+	my_i64: i64 = -9223372036854775809;
+	return my_i64;
+}

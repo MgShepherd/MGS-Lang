@@ -211,8 +211,14 @@ LLVMTypeRef get_type(const IRState *state, DataType d_type) {
   assert(state != NULL && d_type != D_NONE);
 
   switch (d_type) {
+  case D_I8:
+    return LLVMInt8TypeInContext(state->context);
+  case D_I16:
+    return LLVMInt16TypeInContext(state->context);
   case D_I32:
     return LLVMInt32TypeInContext(state->context);
+  case D_I64:
+    return LLVMInt64TypeInContext(state->context);
   case D_BOOL:
     return LLVMInt1TypeInContext(state->context);
   case D_VOID:
@@ -424,12 +430,18 @@ LLVMValueRef build_identifier(const IRState *state, const TerminalIdentifier *te
 }
 
 LLVMValueRef build_literal(const Literal *literal, const LLVMTypeRef d_type) {
-  assert(literal->l_type != L_NONE);
+  assert(literal->d_type != D_NONE);
 
-  switch (literal->l_type) {
-  case L_NUM:
-    return LLVMConstInt(d_type, literal->l_union.num, false);
-  case L_BOOL:
+  switch (literal->d_type) {
+  case D_I8:
+    return LLVMConstInt(d_type, literal->l_union.i8, false);
+  case D_I16:
+    return LLVMConstInt(d_type, literal->l_union.i16, false);
+  case D_I32:
+    return LLVMConstInt(d_type, literal->l_union.i32, false);
+  case D_I64:
+    return LLVMConstInt(d_type, literal->l_union.i64, false);
+  case D_BOOL:
     return LLVMConstInt(d_type, literal->l_union.b, false);
   default:
     assert(false);

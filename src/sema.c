@@ -4,6 +4,7 @@
 #include "parsing/type.h"
 
 #include <limits.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -38,12 +39,16 @@ unsigned char analyse_operator_type(OperatorType op, DataType expr_type);
 unsigned char analyse_terminal_token(SemaState *state, Literal *literal, const Token *tok, DataType expr_type);
 unsigned char analyse_terminal_func_call(SemaState *state, const FunctionCall *func_call, DataType expr_type);
 unsigned char analyse_terminal_identifier(SemaState *state, TerminalIdentifier *term_ident, DataType expr_type);
-unsigned char analyse_terminal_literal(TerminalLiteral *term_lit, DataType expr_type);
+unsigned char analyse_terminal_literal(TerminalLiteral *term_lit, const Token *sign, DataType expr_type);
+
+unsigned char analyse_numeric_literal(TerminalLiteral *term_lit, bool is_negative, DataType expr_type);
 
 unsigned char insert_identifier(SemaState *state, const char *name, DataType d_type, IdentifierType i_type);
 const Identifier *get_identifier(const SemaState *state, const char *name);
 const Function *get_function(const Functions *functions, const char *name);
 bool is_identifier_in_scope(const Scopes *scopes, const Identifier *identifier);
+bool is_numerical_type(const DataType d_type);
+bool is_number_in_range(long long input, long long min, long long max);
 
 void free_sema_state(SemaState *state);
 
@@ -232,7 +237,7 @@ unsigned char analyse_expression(SemaState *state, Expression *expr, DataType ex
 }
 
 unsigned char analyse_term_expression(SemaState *state, TerminalExpr *term, DataType expr_type) {
-  if (term->sign != NULL && expr_type != D_I32) {
+  if (term->sign != NULL && !is_numerical_type(expr_type)) {
     fprintf(stderr, "Invalid use of sign: %s, must only be used with integer values\n",
             t_type_to_string(term->sign->t_type));
     return INVALID_PROGRAM_CODE;
@@ -242,7 +247,7 @@ unsigned char analyse_term_expression(SemaState *state, TerminalExpr *term, Data
   case TERM_IDENTIFIER:
     return analyse_terminal_identifier(state, &term->item.t_union.ident, expr_type);
   case TERM_LITERAL:
-    return analyse_terminal_literal(&term->item.t_union.lit, expr_type);
+    return analyse_terminal_literal(&term->item.t_union.lit, term->sign, expr_type);
   case TERM_FUNC_CALL:
     return analyse_terminal_func_call(state, &term->item.t_union.func_call, expr_type);
   default:
@@ -294,24 +299,16 @@ unsigned char analyse_terminal_identifier(SemaState *state, TerminalIdentifier *
   return 0;
 }
 
-unsigned char analyse_terminal_literal(TerminalLiteral *term_lit, DataType expr_type) {
+unsigned char analyse_terminal_literal(TerminalLiteral *term_lit, const Token *sign, DataType expr_type) {
   switch (term_lit->tok->t_type) {
   case T_NUMERIC_LIT:
-    if (expr_type != D_I32) {
+    if (!is_numerical_type(expr_type)) {
       fprintf(stderr, "Numeric literal %s used in non-numerical expression type: %s\n", term_lit->tok->item,
               d_type_to_string(expr_type));
       return INVALID_PROGRAM_CODE;
     }
-
-    const long long int_val = strtoll(term_lit->tok->item, NULL, INT_BASE);
-    if (int_val == LLONG_MIN || int_val == LLONG_MAX || (int_val == 0 && strcmp(term_lit->tok->item, "0") != 0)) {
-      fprintf(stderr, "Failed to convert value into numeric literal: %s\n", term_lit->tok->item);
-      return INVALID_PROGRAM_CODE;
-    }
-
-    term_lit->literal.l_type = L_NUM;
-    term_lit->literal.l_union.num = int_val;
-    return 0;
+    const bool is_negative = sign != NULL && sign->t_type == T_MINUS;
+    return analyse_numeric_literal(term_lit, is_negative, expr_type);
   case T_TRUE:
   case T_FALSE:
     if (expr_type != D_BOOL) {
@@ -320,7 +317,7 @@ unsigned char analyse_terminal_literal(TerminalLiteral *term_lit, DataType expr_
       return INVALID_PROGRAM_CODE;
     }
 
-    term_lit->literal.l_type = L_BOOL;
+    term_lit->literal.d_type = D_BOOL;
     term_lit->literal.l_union.b = term_lit->tok->t_type == T_TRUE;
     return 0;
   default:
@@ -331,8 +328,57 @@ unsigned char analyse_terminal_literal(TerminalLiteral *term_lit, DataType expr_
   return 0;
 }
 
+unsigned char analyse_numeric_literal(TerminalLiteral *term_lit, bool is_negative, DataType expr_type) {
+  assert(term_lit->tok->t_type == T_NUMERIC_LIT && term_lit->tok->item != NULL);
+  term_lit->literal.d_type = expr_type;
+
+  const size_t input_len = strlen(term_lit->tok->item);
+  char num_buf[input_len + 2];
+  char sign = is_negative ? '-' : '+';
+  if (snprintf(num_buf, input_len + 2, "%c%s", sign, term_lit->tok->item) < 0) {
+    fprintf(stderr, "Failed to write numerical value to string buffer\n");
+    return INVALID_PROGRAM_CODE;
+  }
+
+  const long long int_val = strtoll(num_buf, NULL, INT_BASE);
+  if (int_val == LLONG_MIN || int_val == LLONG_MAX || (int_val == 0 && strcmp(term_lit->tok->item, "0") != 0)) {
+    fprintf(stderr, "Value %s does not fit in integer\n", num_buf);
+    return INVALID_PROGRAM_CODE;
+  }
+
+  switch (term_lit->literal.d_type) {
+  case D_I8:
+    if (!is_number_in_range(int_val, INT8_MIN, INT8_MAX)) {
+      fprintf(stderr, "Value %lld does not fit in i8 integer\n", int_val);
+      return INVALID_PROGRAM_CODE;
+    }
+    term_lit->literal.l_union.i8 = (int8_t)int_val;
+    break;
+  case D_I16:
+    if (!is_number_in_range(int_val, INT16_MIN, INT16_MAX)) {
+      fprintf(stderr, "Value %lld does not fit in i16 integer\n", int_val);
+      return INVALID_PROGRAM_CODE;
+    }
+    term_lit->literal.l_union.i16 = (int16_t)int_val;
+    break;
+  case D_I32:
+    if (!is_number_in_range(int_val, INT32_MIN, INT32_MAX)) {
+      fprintf(stderr, "Value %lld does not fit in i32 integer\n", int_val);
+      return INVALID_PROGRAM_CODE;
+    }
+    term_lit->literal.l_union.i32 = (int32_t)int_val;
+    break;
+  case D_I64:
+    term_lit->literal.l_union.i64 = (int64_t)int_val;
+    break;
+  default:
+    assert(false);
+  }
+
+  return 0;
+}
+
 unsigned char analyse_comp_expression(SemaState *state, CompoundExpr *comp, DataType expr_type) {
-  // TODO: Will need to refactor how this works when we support multiple integer types, how will we determine the type
   DataType term_type = expr_type;
   if (expr_type == D_BOOL) {
     term_type = D_I32;
@@ -445,3 +491,17 @@ void free_sema_state(SemaState *state) {
   dyn_array_free(&state->identifiers);
   dyn_array_free(&state->scopes);
 }
+
+bool is_numerical_type(const DataType d_type) {
+  switch (d_type) {
+  case D_I32:
+  case D_I64:
+  case D_I8:
+  case D_I16:
+    return true;
+  default:
+    return false;
+  }
+}
+
+bool is_number_in_range(long long input, long long min, long long max) { return input >= min && input <= max; }

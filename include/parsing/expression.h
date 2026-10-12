@@ -3,16 +3,20 @@
 
 #include "lexer.h"
 #include "parsing/type.h"
+#include <stdint.h>
 
 typedef struct Expression Expression;
 
 typedef union {
-  long long num;
+  int8_t i8;
+  int16_t i16;
+  int32_t i32;
+  int64_t i64;
   bool b;
 } LiteralUnion;
 
 typedef struct {
-  LiteralType l_type;
+  DataType d_type;
   LiteralUnion l_union;
 } Literal;
 

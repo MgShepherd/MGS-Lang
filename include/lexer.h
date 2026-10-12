@@ -9,7 +9,10 @@
   X(T_FUNCTION)                                                                                                        \
   X(T_VAR)                                                                                                             \
   X(T_RETURN)                                                                                                          \
+  X(T_I8)                                                                                                              \
+  X(T_I16)                                                                                                             \
   X(T_I32)                                                                                                             \
+  X(T_I64)                                                                                                             \
   X(T_VOID)                                                                                                            \
   X(T_BOOL)                                                                                                            \
   X(T_TRUE)                                                                                                            \

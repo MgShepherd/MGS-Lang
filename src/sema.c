@@ -43,6 +43,8 @@ unsigned char analyse_terminal_literal(TerminalLiteral *term_lit, const Token *s
 
 unsigned char analyse_numeric_literal(TerminalLiteral *term_lit, bool is_negative, DataType expr_type);
 
+unsigned char analyse_block(SemaState *state, Block *block, DataType func_type);
+
 unsigned char insert_identifier(SemaState *state, const char *name, DataType d_type, IdentifierType i_type);
 const Identifier *get_identifier(const SemaState *state, const char *name);
 const Function *get_function(const Functions *functions, const char *name);
@@ -85,11 +87,7 @@ unsigned char analyse_func(SemaState *state, Function *func) {
     return 1;
   }
 
-  if (analyse_statements(state, &func->statements, func->return_type) != 0) {
-    return 1;
-  }
-
-  return 0;
+  return analyse_block(state, &func->block, func->return_type);
 }
 
 unsigned char analyse_parameters(SemaState *state, Parameters *parameters) {
@@ -194,9 +192,9 @@ unsigned char analyse_if_block(SemaState *state, IfBlock *if_block, DataType fun
     dyn_array_pop(&state->scopes);
   }
 
-  if (if_block->else_body.elements != NULL) {
-    dyn_array_insert(&state->scopes, &if_block->else_body);
-    result = analyse_statements(state, &if_block->else_body, func_type);
+  if (if_block->else_branch.block.body.count > 0) {
+    dyn_array_insert(&state->scopes, &if_block->else_branch.block.body);
+    result = analyse_if_branch(state, &if_block->else_branch, func_type);
     if (result != 0) {
       return result;
     }
@@ -207,17 +205,15 @@ unsigned char analyse_if_block(SemaState *state, IfBlock *if_block, DataType fun
 }
 
 unsigned char analyse_if_branch(SemaState *state, IfBranch *if_branch, DataType func_type) {
-  unsigned char result = analyse_expression(state, &if_branch->expr, D_BOOL);
-  if (result != 0) {
-    return result;
+  unsigned char result;
+  if (if_branch->expr.e_type != E_NONE) {
+    result = analyse_expression(state, &if_branch->expr, D_BOOL);
+    if (result != 0) {
+      return result;
+    }
   }
 
-  result = analyse_statements(state, &if_branch->body, func_type);
-  if (result != 0) {
-    return result;
-  }
-
-  return 0;
+  return analyse_block(state, &if_branch->block, func_type);
 }
 
 unsigned char analyse_void_statement(SemaState *state, VoidStatement *void_s) {
@@ -340,6 +336,7 @@ unsigned char analyse_numeric_literal(TerminalLiteral *term_lit, bool is_negativ
     return INVALID_PROGRAM_CODE;
   }
 
+  // TODO: Check what happens for i64 when provided value is LLONG_MIN or LLONG_MAX which is valid - shouldn't error
   const long long int_val = strtoll(num_buf, NULL, INT_BASE);
   if (int_val == LLONG_MIN || int_val == LLONG_MAX || (int_val == 0 && strcmp(term_lit->tok->item, "0") != 0)) {
     fprintf(stderr, "Value %s does not fit in integer\n", num_buf);
@@ -451,6 +448,29 @@ unsigned char insert_identifier(SemaState *state, const char *name, DataType d_t
   };
 
   dyn_array_insert(&state->identifiers, new_ident);
+  return 0;
+}
+
+unsigned char analyse_block(SemaState *state, Block *block, DataType func_type) {
+  unsigned char result = analyse_statements(state, &block->body, func_type);
+  if (result != 0) {
+    return result;
+  }
+
+  // TODO: This is inefficient to have to search through the statements again, can we improve this
+  block->has_return = false;
+  for (size_t i = 0; i < block->body.count; i++) {
+    if (block->body.elements[i].s_type != S_RETURN) {
+      continue;
+    }
+
+    block->has_return = true;
+    if (i < block->body.count - 1) {
+      fprintf(stderr, "Dead code after return statement\n");
+      return 1;
+    }
+  }
+
   return 0;
 }
 

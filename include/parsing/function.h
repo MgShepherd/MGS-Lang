@@ -19,8 +19,8 @@ typedef struct {
 typedef struct {
   const char *name;
   DataType return_type;
-  Statements statements;
   Parameters parameters;
+  Block block;
 } Function;
 
 typedef struct {

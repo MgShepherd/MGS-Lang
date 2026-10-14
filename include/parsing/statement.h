@@ -38,8 +38,14 @@ typedef struct {
 } VoidStatement;
 
 typedef struct {
-  Expression expr;
   Statements body;
+  // has_return will be populated as part of semantic analysis
+  bool has_return;
+} Block;
+
+typedef struct {
+  Expression expr;
+  Block block;
 } IfBranch;
 
 typedef struct {
@@ -52,8 +58,8 @@ typedef struct {
   IfBranch if_branch;
   // else_if_branches will have 0 count if no else_if provided
   ElseIfBranches else_if_branches;
-  // else_body will have NULL elements and 0 count if no else provided
-  Statements else_body;
+  // else_branch will have body with 0 elements if no else provided
+  IfBranch else_branch;
 } IfBlock;
 
 typedef union {

@@ -88,13 +88,13 @@ void statement_free(Statement *statement) {
   case S_IF:
     IfBlock *if_block = &statement->s_union.if_block;
     expression_free(&if_block->if_branch.expr);
-    statements_free(&if_block->if_branch.body);
+    statements_free(&if_block->if_branch.block.body);
     for (size_t i = 0; i < if_block->else_if_branches.count; i++) {
       expression_free(&if_block->else_if_branches.elements[i].expr);
-      statements_free(&if_block->else_if_branches.elements[i].body);
+      statements_free(&if_block->else_if_branches.elements[i].block.body);
     }
-    if (if_block->else_body.elements != NULL) {
-      statements_free(&if_block->else_body);
+    if (if_block->else_branch.block.body.count != 0) {
+      statements_free(&if_block->else_branch.block.body);
     }
     break;
   default:
@@ -233,8 +233,7 @@ unsigned char parse_if_block(Statement *statement, const Tokens *tokens, size_t 
   }
 
   statement->s_type = S_IF;
-  statement->s_union.if_block.else_body.elements = NULL;
-  statement->s_union.if_block.else_body.count = 0;
+  statement->s_union.if_block.else_branch.block.body.count = 0;
   dyn_array_init(&statement->s_union.if_block.else_if_branches, sizeof(IfBranch), NUM_ELSE_IF_BRANCHES_ESTIMATE);
 
   while (peek_index(tokens, *idx) == T_ELSE && peek_index(tokens, *idx + 1) == T_IF) {
@@ -257,10 +256,11 @@ unsigned char parse_if_block(Statement *statement, const Tokens *tokens, size_t 
     return 1;
   }
 
-  Statements else_body;
-  dyn_array_init(&else_body, sizeof(Statement), IF_STATEMENTS_LEN_ESTIMATE);
+  IfBranch else_branch;
+  else_branch.expr.e_type = E_NONE;
+  dyn_array_init(&else_branch.block.body, sizeof(Statement), IF_STATEMENTS_LEN_ESTIMATE);
 
-  if (parse_statements(&else_body, tokens, idx, T_RIGHT_CURLY) != 0) {
+  if (parse_statements(&else_branch.block.body, tokens, idx, T_RIGHT_CURLY) != 0) {
     fprintf(stderr, "Failed to parse statements for else body\n");
     return 1;
   }
@@ -270,7 +270,7 @@ unsigned char parse_if_block(Statement *statement, const Tokens *tokens, size_t 
     return 1;
   }
 
-  statement->s_union.if_block.else_body = else_body;
+  statement->s_union.if_block.else_branch = else_branch;
 
   return 0;
 }
@@ -298,7 +298,7 @@ unsigned char parse_if_branch(IfBranch *if_branch, const Tokens *tokens, size_t 
     fprintf(stderr, "Failed to process if statement body\n");
     return 1;
   }
-  if_branch->body = statements;
+  if_branch->block.body = statements;
 
   if (expect_next(T_RIGHT_CURLY, tokens, idx) == NULL) {
     fprintf(stderr, "Expected closing curly brace after if statement body\n");

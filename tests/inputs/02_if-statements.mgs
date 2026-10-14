@@ -46,6 +46,22 @@ func main() -> i32 {
 	return y;
 }
 
+-- TEST Early return from if statements
+-- EXPECTED_STATUS_CODE 100
+func main() -> i32 {
+	x: var i32 = 9;
+
+	if x < 10 {
+		return 100;
+	} else if x < 20 {
+		return 200;
+	} else {
+		return 10;
+	}
+
+	return 20;
+}
+
 -- TEST if with no condition
 -- EXPECTED_COMPILATION_ERROR Invalid token type for expression: T_LEFT_CURLY
 func main() -> i32 {
@@ -53,6 +69,19 @@ func main() -> i32 {
 
 	if {
 		x = 100;
+	}
+
+	return x;
+}
+
+-- TEST if with code after return statement
+-- EXPECTED_COMPILATION_ERROR Dead code after return statement
+func main() -> i32 {
+	x: var i32 = 10;
+
+	if x < 12 {
+		return 100;
+		x = 10;
 	}
 
 	return x;

@@ -35,7 +35,7 @@ unsigned char parse_functions(Functions *functions, const Tokens *tokens) {
 
 void functions_free(Functions *functions) {
   for (size_t i = 0; i < functions->count; i++) {
-    statements_free(&functions->elements[i].statements);
+    statements_free(&functions->elements[i].block.body);
     dyn_array_free(&functions->elements[i].parameters);
   }
   dyn_array_free(functions);
@@ -86,8 +86,8 @@ unsigned char parse_function(Function *function, const Tokens *tokens, size_t *i
     return 1;
   }
 
-  dyn_array_init(&function->statements, sizeof(Statement), FUNCTION_STATEMENTS_LEN_ESTIMATE);
-  if (parse_statements(&function->statements, tokens, idx, T_RIGHT_CURLY) != 0) {
+  dyn_array_init(&function->block.body, sizeof(Statement), FUNCTION_STATEMENTS_LEN_ESTIMATE);
+  if (parse_statements(&function->block.body, tokens, idx, T_RIGHT_CURLY) != 0) {
     fprintf(stderr, "Failed to process function body\n");
     return 1;
   }

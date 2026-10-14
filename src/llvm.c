@@ -178,8 +178,8 @@ unsigned char build_function(IRState *state, const Function *func) {
     }
   }
 
-  for (size_t i = 0; i < func->statements.count; i++) {
-    if (build_statement(state, &func->statements.elements[i], llvm_func) != 0) {
+  for (size_t i = 0; i < func->block.body.count; i++) {
+    if (build_statement(state, &func->block.body.elements[i], llvm_func) != 0) {
       fprintf(stderr, "Failed to build statement\n");
       return 1;
     }
@@ -325,10 +325,12 @@ unsigned char build_if_block(IRState *state, const IfBlock *if_block, const LLVM
   LLVMBuildCondBr(state->builder, if_expr, then_if_block, next_branch_block);
 
   LLVMPositionBuilderAtEnd(state->builder, then_if_block);
-  if (build_statements(state, &if_block->if_branch.body, func) != 0) {
+  if (build_statements(state, &if_block->if_branch.block.body, func) != 0) {
     return 1;
   }
-  LLVMBuildBr(state->builder, exit_if_block);
+  if (!if_block->if_branch.block.has_return) {
+    LLVMBuildBr(state->builder, exit_if_block);
+  }
 
   for (size_t i = 0; i < if_block->else_if_branches.count; i++) {
     const LLVMBasicBlockRef then_else_if_block = LLVMAppendBasicBlockInContext(state->context, func, "else-if-then");
@@ -341,17 +343,25 @@ unsigned char build_if_block(IRState *state, const IfBlock *if_block, const LLVM
     LLVMBuildCondBr(state->builder, else_if_expr, then_else_if_block, next_branch_block);
 
     LLVMPositionBuilderAtEnd(state->builder, then_else_if_block);
-    if (build_statements(state, &if_block->else_if_branches.elements[i].body, func) != 0) {
+    if (build_statements(state, &if_block->else_if_branches.elements[i].block.body, func) != 0) {
       return 1;
     }
-    LLVMBuildBr(state->builder, exit_if_block);
+    if (!if_block->else_if_branches.elements[i].block.has_return) {
+      LLVMBuildBr(state->builder, exit_if_block);
+    }
   }
 
   LLVMPositionBuilderAtEnd(state->builder, next_branch_block);
-  if (if_block->else_body.elements != NULL && build_statements(state, &if_block->else_body, func) != 0) {
-    return 1;
+  if (if_block->else_branch.block.body.count == 0) {
+    LLVMBuildBr(state->builder, exit_if_block);
+  } else {
+    if (build_statements(state, &if_block->else_branch.block.body, func) != 0) {
+      return 1;
+    }
+    if (!if_block->else_branch.block.has_return) {
+      LLVMBuildBr(state->builder, exit_if_block);
+    }
   }
-  LLVMBuildBr(state->builder, exit_if_block);
 
   LLVMPositionBuilderAtEnd(state->builder, exit_if_block);
   return 0;

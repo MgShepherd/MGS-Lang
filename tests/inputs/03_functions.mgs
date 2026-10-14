@@ -97,3 +97,11 @@ func main() -> i32 {
 	z: i32 = my_func(12);
 	return z;
 }
+
+-- TEST function with statements after return expression
+-- EXPECTED_COMPILATION_ERROR Dead code after return statement
+func main() -> i32 {
+	x: var i32 = 20;
+	return x;
+	x = 10;
+}

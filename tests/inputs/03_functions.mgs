@@ -105,3 +105,15 @@ func main() -> i32 {
 	return x;
 	x = 10;
 }
+
+-- TEST no main function
+-- EXPECTED_COMPILATION_ERROR All programs must have a main function defined
+func example() -> i32 {
+	return 10;
+}
+
+-- TEST main function with invalid signature
+-- EXPECTED_COMPILATION_ERROR Return type from main function must be an integer type (i8, i16, i32, i64)
+func main() -> bool {
+	return true;
+}

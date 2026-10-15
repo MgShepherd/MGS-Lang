@@ -49,7 +49,7 @@ unsigned char insert_identifier(SemaState *state, const char *name, DataType d_t
 const Identifier *get_identifier(const SemaState *state, const char *name);
 const Function *get_function(const Functions *functions, const char *name);
 bool is_identifier_in_scope(const Scopes *scopes, const Identifier *identifier);
-bool is_numerical_type(const DataType d_type);
+bool is_integer_type(const DataType d_type);
 bool is_number_in_range(long long input, long long min, long long max);
 
 void free_sema_state(SemaState *state);
@@ -69,15 +69,31 @@ unsigned char analyse_program(const Program *program) {
   };
 
   unsigned char result = 0;
+  bool has_valid_main = false;
   for (size_t i = 0; i < program->functions.count; i++) {
     dyn_array_insert(&state.scopes, &program->functions.elements[i]);
     result = analyse_func(&state, &program->functions.elements[i]);
     if (result != 0) {
-      break;
+      goto sema_cleanup;
     }
     dyn_array_pop(&state.scopes);
+
+    if (strcmp(program->functions.elements[i].name, "main") == 0) {
+      if (!is_integer_type(program->functions.elements[i].return_type)) {
+        fprintf(stderr, "Return type from main function must be an integer type (i8, i16, i32, i64)\n");
+        result = 1;
+        goto sema_cleanup;
+      }
+      has_valid_main = true;
+    }
   }
 
+  if (!has_valid_main) {
+    fprintf(stderr, "All programs must have a main function defined\n");
+    result = 1;
+  }
+
+sema_cleanup:
   free_sema_state(&state);
   return result;
 }
@@ -233,7 +249,7 @@ unsigned char analyse_expression(SemaState *state, Expression *expr, DataType ex
 }
 
 unsigned char analyse_term_expression(SemaState *state, TerminalExpr *term, DataType expr_type) {
-  if (term->sign != NULL && !is_numerical_type(expr_type)) {
+  if (term->sign != NULL && !is_integer_type(expr_type)) {
     fprintf(stderr, "Invalid use of sign: %s, must only be used with integer values\n",
             t_type_to_string(term->sign->t_type));
     return INVALID_PROGRAM_CODE;
@@ -298,7 +314,7 @@ unsigned char analyse_terminal_identifier(SemaState *state, TerminalIdentifier *
 unsigned char analyse_terminal_literal(TerminalLiteral *term_lit, const Token *sign, DataType expr_type) {
   switch (term_lit->tok->t_type) {
   case T_NUMERIC_LIT:
-    if (!is_numerical_type(expr_type)) {
+    if (!is_integer_type(expr_type)) {
       fprintf(stderr, "Numeric literal %s used in non-numerical expression type: %s\n", term_lit->tok->item,
               d_type_to_string(expr_type));
       return INVALID_PROGRAM_CODE;
@@ -512,7 +528,7 @@ void free_sema_state(SemaState *state) {
   dyn_array_free(&state->scopes);
 }
 
-bool is_numerical_type(const DataType d_type) {
+bool is_integer_type(const DataType d_type) {
   switch (d_type) {
   case D_I32:
   case D_I64:

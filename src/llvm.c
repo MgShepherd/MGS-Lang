@@ -310,7 +310,6 @@ void build_assignment_statement(IRState *state, const AssignmentStatement *assig
   LLVMBuildStore(state->builder, expr_output, assign_var);
 }
 
-// TODO: Clean up repeated and messy code in this function
 unsigned char build_if_block(IRState *state, const IfBlock *if_block, const LLVMValueRef func) {
   assert(if_block != NULL);
 

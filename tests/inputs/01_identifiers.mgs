@@ -70,14 +70,14 @@ func main() -> i32 {
 }
 
 -- TEST expression type does not match identifier type
--- EXPECTED_COMPILATION_ERROR Boolean literal true used in non-boolean expression type: D_I32
+-- EXPECTED_COMPILATION_ERROR Boolean literal true used in non-boolean expression type: P_I32
 func main() -> i32 {
 	x: i32 = true;
 	return x;
 }
 
 -- TEST expression with variable of incorrect type
--- EXPECTED_COMPILATION_ERROR Variable y does not have expected type D_I32
+-- EXPECTED_COMPILATION_ERROR Variable y does not have expected type P_I32
 func main() -> i32 {
 	y: bool = true;
 	x: i32 = 10 + y;
@@ -85,7 +85,7 @@ func main() -> i32 {
 }
 
 -- TEST single expression statement with none-void type
--- EXPECTED_COMPILATION_ERROR Numeric literal 10 used in non-numerical expression type: D_VOID
+-- EXPECTED_COMPILATION_ERROR Numeric literal 10 used in non-numerical expression type: P_VOID
 func main() -> i32 {
 	10 + 12;
 	return x;

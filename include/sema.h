@@ -12,7 +12,7 @@ typedef struct {
 
 typedef struct {
   const char *name;
-  DataType d_type;
+  PrimitiveType p_type;
   IdentifierType i_type;
   const void *scope;
 } Identifier;

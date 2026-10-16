@@ -22,34 +22,34 @@ typedef struct {
 unsigned char analyse_func(SemaState *state, Function *func);
 unsigned char analyse_parameters(SemaState *state, Parameters *parameters);
 
-unsigned char analyse_statements(SemaState *state, const Statements *statements, DataType func_type);
-unsigned char analyse_statement(SemaState *state, Statement *statement, DataType func_type);
+unsigned char analyse_statements(SemaState *state, const Statements *statements, PrimitiveType func_type);
+unsigned char analyse_statement(SemaState *state, Statement *statement, PrimitiveType func_type);
 unsigned char analyse_dec_statement(SemaState *state, DeclarationStatement *dec);
 unsigned char analyse_assign_statement(SemaState *state, AssignmentStatement *assign);
-unsigned char analyse_ret_statement(SemaState *state, ReturnStatement *ret, DataType func_type);
-unsigned char analyse_if_block(SemaState *state, IfBlock *if_block, DataType func_type);
-unsigned char analyse_if_branch(SemaState *state, IfBranch *if_branch, DataType func_type);
+unsigned char analyse_ret_statement(SemaState *state, ReturnStatement *ret, PrimitiveType func_type);
+unsigned char analyse_if_block(SemaState *state, IfBlock *if_block, PrimitiveType func_type);
+unsigned char analyse_if_branch(SemaState *state, IfBranch *if_branch, PrimitiveType func_type);
 unsigned char analyse_void_statement(SemaState *state, VoidStatement *void_s);
 
-unsigned char analyse_expression(SemaState *state, Expression *expr, DataType expr_type);
-unsigned char analyse_term_expression(SemaState *state, TerminalExpr *term, DataType expr_type);
-unsigned char analyse_comp_expression(SemaState *state, CompoundExpr *comp, DataType expr_type);
-unsigned char analyse_operator_type(OperatorType op, DataType expr_type);
+unsigned char analyse_expression(SemaState *state, Expression *expr, PrimitiveType expr_type);
+unsigned char analyse_term_expression(SemaState *state, TerminalExpr *term, PrimitiveType expr_type);
+unsigned char analyse_comp_expression(SemaState *state, CompoundExpr *comp, PrimitiveType expr_type);
+unsigned char analyse_operator_type(OperatorType op, PrimitiveType expr_type);
 
-unsigned char analyse_terminal_token(SemaState *state, Literal *literal, const Token *tok, DataType expr_type);
-unsigned char analyse_terminal_func_call(SemaState *state, const FunctionCall *func_call, DataType expr_type);
-unsigned char analyse_terminal_identifier(SemaState *state, TerminalIdentifier *term_ident, DataType expr_type);
-unsigned char analyse_terminal_literal(TerminalLiteral *term_lit, const Token *sign, DataType expr_type);
+unsigned char analyse_terminal_token(SemaState *state, Literal *literal, const Token *tok, PrimitiveType expr_type);
+unsigned char analyse_terminal_func_call(SemaState *state, const FunctionCall *func_call, PrimitiveType expr_type);
+unsigned char analyse_terminal_identifier(SemaState *state, TerminalIdentifier *term_ident, PrimitiveType expr_type);
+unsigned char analyse_terminal_literal(TerminalLiteral *term_lit, const Token *sign, PrimitiveType expr_type);
 
-unsigned char analyse_numeric_literal(TerminalLiteral *term_lit, bool is_negative, DataType expr_type);
+unsigned char analyse_numeric_literal(TerminalLiteral *term_lit, bool is_negative, PrimitiveType expr_type);
 
-unsigned char analyse_block(SemaState *state, Block *block, DataType func_type);
+unsigned char analyse_block(SemaState *state, Block *block, PrimitiveType func_type);
 
-unsigned char insert_identifier(SemaState *state, const char *name, DataType d_type, IdentifierType i_type);
+unsigned char insert_identifier(SemaState *state, const char *name, PrimitiveType p_type, IdentifierType i_type);
 const Identifier *get_identifier(const SemaState *state, const char *name);
 const Function *get_function(const Functions *functions, const char *name);
 bool is_identifier_in_scope(const Scopes *scopes, const Identifier *identifier);
-bool is_integer_type(const DataType d_type);
+bool is_integer_type(const PrimitiveType p_type);
 bool is_number_in_range(long long input, long long min, long long max);
 
 void free_sema_state(SemaState *state);
@@ -109,7 +109,7 @@ unsigned char analyse_func(SemaState *state, Function *func) {
 unsigned char analyse_parameters(SemaState *state, Parameters *parameters) {
   for (size_t i = 0; i < parameters->count; i++) {
     Parameter *param = &parameters->elements[i];
-    if (insert_identifier(state, param->term_ident.name, param->d_type, I_CONST) != 0) {
+    if (insert_identifier(state, param->term_ident.name, param->p_type, I_CONST) != 0) {
       return 1;
     }
 
@@ -118,7 +118,7 @@ unsigned char analyse_parameters(SemaState *state, Parameters *parameters) {
   return 0;
 }
 
-unsigned char analyse_statements(SemaState *state, const Statements *statements, DataType func_type) {
+unsigned char analyse_statements(SemaState *state, const Statements *statements, PrimitiveType func_type) {
   unsigned char result = 0;
   for (size_t i = 0; i < statements->count; i++) {
     result = analyse_statement(state, &statements->elements[i], func_type);
@@ -129,7 +129,7 @@ unsigned char analyse_statements(SemaState *state, const Statements *statements,
   return 0;
 }
 
-unsigned char analyse_statement(SemaState *state, Statement *statement, DataType func_type) {
+unsigned char analyse_statement(SemaState *state, Statement *statement, PrimitiveType func_type) {
   switch (statement->s_type) {
   case S_DECLARATION:
     return analyse_dec_statement(state, &statement->s_union.dec);
@@ -149,18 +149,18 @@ unsigned char analyse_statement(SemaState *state, Statement *statement, DataType
 }
 
 unsigned char analyse_dec_statement(SemaState *state, DeclarationStatement *dec) {
-  if (dec->d_type == D_VOID) {
+  if (dec->p_type == P_VOID) {
     fprintf(stderr, "Cannot use void as datatype for variable\n");
     return INVALID_PROGRAM_CODE;
   }
 
-  unsigned char result = analyse_expression(state, &dec->expr, dec->d_type);
+  unsigned char result = analyse_expression(state, &dec->expr, dec->p_type);
   if (result != 0) {
     return result;
   }
 
   IdentifierType i_type = dec->variable ? I_VARIABLE : I_CONST;
-  result = insert_identifier(state, dec->term_ident.name, dec->d_type, i_type);
+  result = insert_identifier(state, dec->term_ident.name, dec->p_type, i_type);
   if (result != 0) {
     return result;
   }
@@ -182,16 +182,16 @@ unsigned char analyse_assign_statement(SemaState *state, AssignmentStatement *as
     return INVALID_PROGRAM_CODE;
   }
 
-  assign->d_type = ident->d_type;
+  assign->p_type = ident->p_type;
   assign->term_ident.scope = ident->scope;
-  return analyse_expression(state, &assign->expr, assign->d_type);
+  return analyse_expression(state, &assign->expr, assign->p_type);
 }
-unsigned char analyse_ret_statement(SemaState *state, ReturnStatement *ret, DataType func_type) {
-  ret->d_type = func_type;
-  return analyse_expression(state, &ret->expr, ret->d_type);
+unsigned char analyse_ret_statement(SemaState *state, ReturnStatement *ret, PrimitiveType func_type) {
+  ret->p_type = func_type;
+  return analyse_expression(state, &ret->expr, ret->p_type);
 }
 
-unsigned char analyse_if_block(SemaState *state, IfBlock *if_block, DataType func_type) {
+unsigned char analyse_if_block(SemaState *state, IfBlock *if_block, PrimitiveType func_type) {
   dyn_array_insert(&state->scopes, &if_block->if_branch);
   unsigned char result = analyse_if_branch(state, &if_block->if_branch, func_type);
   if (result != 0) {
@@ -220,10 +220,10 @@ unsigned char analyse_if_block(SemaState *state, IfBlock *if_block, DataType fun
   return 0;
 }
 
-unsigned char analyse_if_branch(SemaState *state, IfBranch *if_branch, DataType func_type) {
+unsigned char analyse_if_branch(SemaState *state, IfBranch *if_branch, PrimitiveType func_type) {
   unsigned char result;
   if (if_branch->expr.e_type != E_NONE) {
-    result = analyse_expression(state, &if_branch->expr, D_BOOL);
+    result = analyse_expression(state, &if_branch->expr, P_BOOL);
     if (result != 0) {
       return result;
     }
@@ -233,10 +233,10 @@ unsigned char analyse_if_branch(SemaState *state, IfBranch *if_branch, DataType 
 }
 
 unsigned char analyse_void_statement(SemaState *state, VoidStatement *void_s) {
-  return analyse_expression(state, &void_s->expr, D_VOID);
+  return analyse_expression(state, &void_s->expr, P_VOID);
 }
 
-unsigned char analyse_expression(SemaState *state, Expression *expr, DataType expr_type) {
+unsigned char analyse_expression(SemaState *state, Expression *expr, PrimitiveType expr_type) {
   assert(expr->e_type != E_NONE);
   switch (expr->e_type) {
   case E_TERMINAL:
@@ -248,7 +248,7 @@ unsigned char analyse_expression(SemaState *state, Expression *expr, DataType ex
   }
 }
 
-unsigned char analyse_term_expression(SemaState *state, TerminalExpr *term, DataType expr_type) {
+unsigned char analyse_term_expression(SemaState *state, TerminalExpr *term, PrimitiveType expr_type) {
   if (term->sign != NULL && !is_integer_type(expr_type)) {
     fprintf(stderr, "Invalid use of sign: %s, must only be used with integer values\n",
             t_type_to_string(term->sign->t_type));
@@ -267,7 +267,7 @@ unsigned char analyse_term_expression(SemaState *state, TerminalExpr *term, Data
   }
 }
 
-unsigned char analyse_terminal_func_call(SemaState *state, const FunctionCall *func_call, DataType expr_type) {
+unsigned char analyse_terminal_func_call(SemaState *state, const FunctionCall *func_call, PrimitiveType expr_type) {
   const Function *func = get_function(&state->functions, func_call->name->item);
   if (func == NULL) {
     fprintf(stderr, "Undefined function: %s\n", func_call->name->item);
@@ -281,28 +281,28 @@ unsigned char analyse_terminal_func_call(SemaState *state, const FunctionCall *f
   }
 
   for (size_t i = 0; i < func_call->parameters.count; i++) {
-    if (analyse_expression(state, &func_call->parameters.elements[i], func->parameters.elements[i].d_type) != 0) {
+    if (analyse_expression(state, &func_call->parameters.elements[i], func->parameters.elements[i].p_type) != 0) {
       fprintf(stderr, "Failed to analyse parameter expression\n");
       return INVALID_PROGRAM_CODE;
     }
   }
 
   if (func->return_type != expr_type) {
-    fprintf(stderr, "Function %s does not return expected type %s\n", func->name, d_type_to_string(expr_type));
+    fprintf(stderr, "Function %s does not return expected type %s\n", func->name, p_type_to_string(expr_type));
     return INVALID_PROGRAM_CODE;
   }
   return 0;
 }
 
-unsigned char analyse_terminal_identifier(SemaState *state, TerminalIdentifier *term_ident, DataType expr_type) {
+unsigned char analyse_terminal_identifier(SemaState *state, TerminalIdentifier *term_ident, PrimitiveType expr_type) {
   const Identifier *ident = get_identifier(state, term_ident->name);
   if (ident == NULL) {
     fprintf(stderr, "Undefined variable: %s\n", term_ident->name);
     return INVALID_PROGRAM_CODE;
   }
 
-  if (ident->d_type != expr_type) {
-    fprintf(stderr, "Variable %s does not have expected type %s\n", ident->name, d_type_to_string(expr_type));
+  if (ident->p_type != expr_type) {
+    fprintf(stderr, "Variable %s does not have expected type %s\n", ident->name, p_type_to_string(expr_type));
     return INVALID_PROGRAM_CODE;
   }
 
@@ -311,25 +311,25 @@ unsigned char analyse_terminal_identifier(SemaState *state, TerminalIdentifier *
   return 0;
 }
 
-unsigned char analyse_terminal_literal(TerminalLiteral *term_lit, const Token *sign, DataType expr_type) {
+unsigned char analyse_terminal_literal(TerminalLiteral *term_lit, const Token *sign, PrimitiveType expr_type) {
   switch (term_lit->tok->t_type) {
   case T_NUMERIC_LIT:
     if (!is_integer_type(expr_type)) {
       fprintf(stderr, "Numeric literal %s used in non-numerical expression type: %s\n", term_lit->tok->item,
-              d_type_to_string(expr_type));
+              p_type_to_string(expr_type));
       return INVALID_PROGRAM_CODE;
     }
     const bool is_negative = sign != NULL && sign->t_type == T_MINUS;
     return analyse_numeric_literal(term_lit, is_negative, expr_type);
   case T_TRUE:
   case T_FALSE:
-    if (expr_type != D_BOOL) {
+    if (expr_type != P_BOOL) {
       fprintf(stderr, "Boolean literal %s used in non-boolean expression type: %s\n", term_lit->tok->item,
-              d_type_to_string(expr_type));
+              p_type_to_string(expr_type));
       return INVALID_PROGRAM_CODE;
     }
 
-    term_lit->literal.d_type = D_BOOL;
+    term_lit->literal.p_type = P_BOOL;
     term_lit->literal.l_union.b = term_lit->tok->t_type == T_TRUE;
     return 0;
   default:
@@ -340,9 +340,9 @@ unsigned char analyse_terminal_literal(TerminalLiteral *term_lit, const Token *s
   return 0;
 }
 
-unsigned char analyse_numeric_literal(TerminalLiteral *term_lit, bool is_negative, DataType expr_type) {
+unsigned char analyse_numeric_literal(TerminalLiteral *term_lit, bool is_negative, PrimitiveType expr_type) {
   assert(term_lit->tok->t_type == T_NUMERIC_LIT && term_lit->tok->item != NULL);
-  term_lit->literal.d_type = expr_type;
+  term_lit->literal.p_type = expr_type;
 
   const size_t input_len = strlen(term_lit->tok->item);
   char num_buf[input_len + 2];
@@ -359,29 +359,29 @@ unsigned char analyse_numeric_literal(TerminalLiteral *term_lit, bool is_negativ
     return INVALID_PROGRAM_CODE;
   }
 
-  switch (term_lit->literal.d_type) {
-  case D_I8:
+  switch (term_lit->literal.p_type) {
+  case P_I8:
     if (!is_number_in_range(int_val, INT8_MIN, INT8_MAX)) {
       fprintf(stderr, "Value %lld does not fit in i8 integer\n", int_val);
       return INVALID_PROGRAM_CODE;
     }
     term_lit->literal.l_union.i8 = (int8_t)int_val;
     break;
-  case D_I16:
+  case P_I16:
     if (!is_number_in_range(int_val, INT16_MIN, INT16_MAX)) {
       fprintf(stderr, "Value %lld does not fit in i16 integer\n", int_val);
       return INVALID_PROGRAM_CODE;
     }
     term_lit->literal.l_union.i16 = (int16_t)int_val;
     break;
-  case D_I32:
+  case P_I32:
     if (!is_number_in_range(int_val, INT32_MIN, INT32_MAX)) {
       fprintf(stderr, "Value %lld does not fit in i32 integer\n", int_val);
       return INVALID_PROGRAM_CODE;
     }
     term_lit->literal.l_union.i32 = (int32_t)int_val;
     break;
-  case D_I64:
+  case P_I64:
     term_lit->literal.l_union.i64 = (int64_t)int_val;
     break;
   default:
@@ -391,10 +391,10 @@ unsigned char analyse_numeric_literal(TerminalLiteral *term_lit, bool is_negativ
   return 0;
 }
 
-unsigned char analyse_comp_expression(SemaState *state, CompoundExpr *comp, DataType expr_type) {
-  DataType term_type = expr_type;
-  if (expr_type == D_BOOL) {
-    term_type = D_I32;
+unsigned char analyse_comp_expression(SemaState *state, CompoundExpr *comp, PrimitiveType expr_type) {
+  PrimitiveType term_type = expr_type;
+  if (expr_type == P_BOOL) {
+    term_type = P_I32;
   }
 
   unsigned char result = analyse_term_expression(state, &comp->lhs, term_type);
@@ -418,38 +418,33 @@ unsigned char analyse_comp_expression(SemaState *state, CompoundExpr *comp, Data
   }
 }
 
-unsigned char analyse_operator_type(OperatorType op, DataType expr_type) {
+unsigned char analyse_operator_type(OperatorType op, PrimitiveType expr_type) {
   static const OperatorType BOOL_OPS[] = {O_GT, O_LT, O_GTE, O_LTE};
   static const size_t BOOL_OPS_LEN = sizeof(BOOL_OPS) / sizeof(OperatorType);
 
   static const OperatorType INT_OPS[] = {O_MINUS, O_PLUS};
   static const size_t INT_OPS_LEN = sizeof(INT_OPS) / sizeof(OperatorType);
 
-  switch (expr_type) {
-  case D_BOOL:
+  if (expr_type == P_BOOL) {
     for (size_t i = 0; i < BOOL_OPS_LEN; i++) {
       if (BOOL_OPS[i] == op) {
         return 0;
       }
     }
-    break;
-  case D_I32:
+  } else if (is_integer_type(expr_type)) {
     for (size_t i = 0; i < INT_OPS_LEN; i++) {
       if (INT_OPS[i] == op) {
         return 0;
       }
     }
-    break;
-  default:
-    assert(false);
   }
 
   fprintf(stderr, "Invalid operator type %s for expression type %s\n", o_type_to_string(op),
-          d_type_to_string(expr_type));
+          p_type_to_string(expr_type));
   return INVALID_PROGRAM_CODE;
 }
 
-unsigned char insert_identifier(SemaState *state, const char *name, DataType d_type, IdentifierType i_type) {
+unsigned char insert_identifier(SemaState *state, const char *name, PrimitiveType p_type, IdentifierType i_type) {
   const Identifier *existing = get_identifier(state, name);
   if (existing != NULL) {
     fprintf(stderr, "Variable %s shadows existing variable in scope\n", existing->name);
@@ -457,7 +452,7 @@ unsigned char insert_identifier(SemaState *state, const char *name, DataType d_t
   }
 
   Identifier new_ident = {
-      .d_type = d_type,
+      .p_type = p_type,
       .i_type = i_type,
       .name = name,
       .scope = state->scopes.elements[state->scopes.count - 1],
@@ -467,7 +462,7 @@ unsigned char insert_identifier(SemaState *state, const char *name, DataType d_t
   return 0;
 }
 
-unsigned char analyse_block(SemaState *state, Block *block, DataType func_type) {
+unsigned char analyse_block(SemaState *state, Block *block, PrimitiveType func_type) {
   unsigned char result = analyse_statements(state, &block->body, func_type);
   if (result != 0) {
     return result;
@@ -528,12 +523,12 @@ void free_sema_state(SemaState *state) {
   dyn_array_free(&state->scopes);
 }
 
-bool is_integer_type(const DataType d_type) {
-  switch (d_type) {
-  case D_I32:
-  case D_I64:
-  case D_I8:
-  case D_I16:
+bool is_integer_type(const PrimitiveType p_type) {
+  switch (p_type) {
+  case P_I32:
+  case P_I64:
+  case P_I8:
+  case P_I16:
     return true;
   default:
     return false;

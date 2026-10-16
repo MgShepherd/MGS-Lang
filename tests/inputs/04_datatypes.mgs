@@ -4,12 +4,12 @@ func main() -> i64 {
 	my_i32: i32 = 100;
 	my_i64: i64 = 101;
 	my_i8: i8 = 100;
-	my_i16: i16 = 100;
+	my_i16: i16 = 100 + 500;
 	return my_i64;
 }
 
 -- TEST cannot add integers of different types
--- EXPECTED_COMPILATION_ERROR Variable my_i32 does not have expected type D_I64
+-- EXPECTED_COMPILATION_ERROR Variable my_i32 does not have expected type P_I64
 func main() -> i32 {
 	my_i32: i32 = 100;
 	my_i64: i64 = 101;

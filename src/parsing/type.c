@@ -23,9 +23,9 @@ const char *e_type_to_string(ExpressionType e) {
   }
 }
 
-const char *d_type_to_string(DataType d) {
-  switch (d) {
-    DATA_TYPES
+const char *p_type_to_string(PrimitiveType p) {
+  switch (p) {
+    PRIMITIVE_TYPES
   default:
     return "unknown";
   }
@@ -64,22 +64,22 @@ const char *i_type_to_string(IdentifierType i) {
 }
 #undef X
 
-DataType tok_to_data_type(TokenType t_type) {
+PrimitiveType tok_to_primitive_type(TokenType t_type) {
   switch (t_type) {
   case T_I32:
-    return D_I32;
+    return P_I32;
   case T_I64:
-    return D_I64;
+    return P_I64;
   case T_I8:
-    return D_I8;
+    return P_I8;
   case T_I16:
-    return D_I16;
+    return P_I16;
   case T_BOOL:
-    return D_BOOL;
+    return P_BOOL;
   case T_VOID:
-    return D_VOID;
+    return P_VOID;
   default:
-    return D_NONE;
+    return P_NONE;
   }
 }
 

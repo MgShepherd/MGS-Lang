@@ -121,8 +121,8 @@ unsigned char parse_dec_statement(Statement *statement, const Tokens *tokens, si
 
   dec.variable = expect_next(T_VAR, tokens, idx) != NULL;
 
-  dec.d_type = tok_to_data_type(tokens->elements[(*idx)++].t_type);
-  if (dec.d_type == D_NONE) {
+  dec.p_type = tok_to_primitive_type(tokens->elements[(*idx)++].t_type);
+  if (dec.p_type == P_NONE) {
     fprintf(stderr, "Failed to parse keyword into datatype\n");
     return 1;
   }

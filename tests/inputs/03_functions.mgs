@@ -71,7 +71,7 @@ func main() -> i32 {
 }
 
 -- TEST void function used within typed expression
--- EXPECTED_COMPILATION_ERROR Function test1 does not return expected type D_I32
+-- EXPECTED_COMPILATION_ERROR Function test1 does not return expected type P_I32
 func test1() -> void {
 	x: i32 = 10;
 }

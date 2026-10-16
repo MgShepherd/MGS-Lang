@@ -7,7 +7,7 @@
 
 typedef struct {
   TerminalIdentifier term_ident;
-  DataType d_type;
+  PrimitiveType p_type;
 } Parameter;
 
 typedef struct {
@@ -18,7 +18,7 @@ typedef struct {
 
 typedef struct {
   const char *name;
-  DataType return_type;
+  PrimitiveType return_type;
   Parameters parameters;
   Block block;
 } Function;

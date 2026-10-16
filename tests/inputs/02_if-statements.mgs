@@ -126,7 +126,7 @@ func main() -> i32 {
 }
 
 -- TEST if with non-boolean terminal expression
--- EXPECTED_COMPILATION_ERROR Numeric literal 10 used in non-numerical expression type: D_BOOL
+-- EXPECTED_COMPILATION_ERROR Numeric literal 10 used in non-numerical expression type: P_BOOL
 func main() -> i32 {
 	x: var i32 = 10;
 
@@ -138,7 +138,7 @@ func main() -> i32 {
 }
 
 -- TEST if with non-boolean compound expression
--- EXPECTED_COMPILATION_ERROR Invalid operator type O_PLUS for expression type D_BOOL
+-- EXPECTED_COMPILATION_ERROR Invalid operator type O_PLUS for expression type P_BOOL
 func main() -> i32 {
 	x: var i32 = 10;
 

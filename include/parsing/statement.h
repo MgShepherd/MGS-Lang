@@ -16,21 +16,21 @@ typedef struct {
 typedef struct {
   TerminalIdentifier term_ident;
   bool variable;
-  DataType d_type;
+  PrimitiveType p_type;
   Expression expr;
 } DeclarationStatement;
 
 typedef struct {
   TerminalIdentifier term_ident;
   Expression expr;
-  // d_type will be populated as part of semantic analysis
-  DataType d_type;
+  // p_type will be populated as part of semantic analysis
+  PrimitiveType p_type;
 } AssignmentStatement;
 
 typedef struct {
   Expression expr;
-  // d_type will be populated as part of semantic analysis
-  DataType d_type;
+  // p_type will be populated as part of semantic analysis
+  PrimitiveType p_type;
 } ReturnStatement;
 
 typedef struct {

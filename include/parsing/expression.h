@@ -16,7 +16,7 @@ typedef union {
 } LiteralUnion;
 
 typedef struct {
-  DataType d_type;
+  PrimitiveType p_type;
   LiteralUnion l_union;
 } Literal;
 

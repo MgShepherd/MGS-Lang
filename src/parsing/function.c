@@ -75,8 +75,8 @@ unsigned char parse_function(Function *function, const Tokens *tokens, size_t *i
     return 1;
   }
 
-  function->return_type = tok_to_data_type(tokens->elements[(*idx)++].t_type);
-  if (function->return_type == D_NONE) {
+  function->return_type = tok_to_primitive_type(tokens->elements[(*idx)++].t_type);
+  if (function->return_type == P_NONE) {
     fprintf(stderr, "Expected return type for function to be valid data type\n");
     return 1;
   }
@@ -120,8 +120,8 @@ unsigned char parse_parameters(Parameters *parameters, const Tokens *tokens, siz
       return 1;
     }
 
-    parameter.d_type = tok_to_data_type(tokens->elements[(*idx)++].t_type);
-    if (parameter.d_type == D_NONE) {
+    parameter.p_type = tok_to_primitive_type(tokens->elements[(*idx)++].t_type);
+    if (parameter.p_type == P_NONE) {
       fprintf(stderr, "Expected datatype for parameter\n");
       return 1;
     }

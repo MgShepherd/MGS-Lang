@@ -57,7 +57,7 @@ typedef struct {
 unsigned char init_ir_state(IRState *state);
 
 unsigned char build_function(IRState *state, const Function *func);
-LLVMTypeRef get_type(const IRState *state, DataType d_type);
+LLVMTypeRef get_type(const IRState *state, PrimitiveType p_type);
 
 unsigned char build_statements(IRState *state, const Statements *statements, const LLVMValueRef func);
 unsigned char build_statement(IRState *state, const Statement *statement, const LLVMValueRef func);
@@ -149,7 +149,7 @@ unsigned char build_function(IRState *state, const Function *func) {
   }
 
   for (size_t i = 0; i < func->parameters.count; i++) {
-    param_types[i] = get_type(state, func->parameters.elements[i].d_type);
+    param_types[i] = get_type(state, func->parameters.elements[i].p_type);
   }
   LLVMTypeRef func_type = LLVMFunctionType(return_type, param_types, func->parameters.count, false);
   LLVMValueRef llvm_func = LLVMAddFunction(state->module, func->name, func_type);
@@ -185,7 +185,7 @@ unsigned char build_function(IRState *state, const Function *func) {
     }
   }
 
-  if (func->return_type == D_VOID) {
+  if (func->return_type == P_VOID) {
     LLVMBuildRetVoid(state->builder);
   }
 
@@ -207,21 +207,21 @@ unsigned char build_function(IRState *state, const Function *func) {
   return 0;
 }
 
-LLVMTypeRef get_type(const IRState *state, DataType d_type) {
-  assert(state != NULL && d_type != D_NONE);
+LLVMTypeRef get_type(const IRState *state, PrimitiveType p_type) {
+  assert(state != NULL && p_type != P_NONE);
 
-  switch (d_type) {
-  case D_I8:
+  switch (p_type) {
+  case P_I8:
     return LLVMInt8TypeInContext(state->context);
-  case D_I16:
+  case P_I16:
     return LLVMInt16TypeInContext(state->context);
-  case D_I32:
+  case P_I32:
     return LLVMInt32TypeInContext(state->context);
-  case D_I64:
+  case P_I64:
     return LLVMInt64TypeInContext(state->context);
-  case D_BOOL:
+  case P_BOOL:
     return LLVMInt1TypeInContext(state->context);
-  case D_VOID:
+  case P_VOID:
     return LLVMVoidTypeInContext(state->context);
   default:
     assert(false);
@@ -270,16 +270,16 @@ unsigned char build_statement(IRState *state, const Statement *statement, const 
 void build_return_statement(const IRState *state, const ReturnStatement *ret) {
   assert(ret != NULL);
 
-  const LLVMTypeRef statement_type = get_type(state, ret->d_type);
+  const LLVMTypeRef statement_type = get_type(state, ret->p_type);
   const LLVMValueRef expr_output = build_expression(state, &ret->expr, statement_type);
   assert(expr_output != NULL);
   LLVMBuildRet(state->builder, expr_output);
 }
 
 unsigned char build_declaration_statement(IRState *state, const DeclarationStatement *dec) {
-  assert(dec != NULL && dec->d_type != D_NONE);
+  assert(dec != NULL && dec->p_type != P_NONE);
 
-  const LLVMTypeRef statement_type = get_type(state, dec->d_type);
+  const LLVMTypeRef statement_type = get_type(state, dec->p_type);
   const LLVMValueRef var_ptr = LLVMBuildAlloca(state->builder, statement_type, dec->term_ident.name);
 
   const LLVMValueRef expr_output = build_expression(state, &dec->expr, statement_type);
@@ -299,9 +299,9 @@ unsigned char build_declaration_statement(IRState *state, const DeclarationState
 }
 
 void build_assignment_statement(IRState *state, const AssignmentStatement *assign) {
-  assert(assign != NULL && assign->d_type != D_NONE);
+  assert(assign != NULL && assign->p_type != P_NONE);
 
-  const LLVMTypeRef statement_type = get_type(state, assign->d_type);
+  const LLVMTypeRef statement_type = get_type(state, assign->p_type);
   const LLVMValueRef expr_output = build_expression(state, &assign->expr, statement_type);
   assert(expr_output != NULL);
   const LLVMValueRef assign_var = load_identifier(&state->values, &assign->term_ident);
@@ -313,7 +313,7 @@ void build_assignment_statement(IRState *state, const AssignmentStatement *assig
 unsigned char build_if_block(IRState *state, const IfBlock *if_block, const LLVMValueRef func) {
   assert(if_block != NULL);
 
-  const LLVMTypeRef bool_type = get_type(state, D_BOOL);
+  const LLVMTypeRef bool_type = get_type(state, P_BOOL);
 
   const LLVMBasicBlockRef exit_if_block = LLVMAppendBasicBlockInContext(state->context, func, "if-exit");
   const LLVMBasicBlockRef then_if_block = LLVMAppendBasicBlockInContext(state->context, func, "if-then");
@@ -369,7 +369,7 @@ unsigned char build_if_block(IRState *state, const IfBlock *if_block, const LLVM
 void build_void_statement(const IRState *state, const VoidStatement *void_s) {
   assert(void_s != NULL);
 
-  const LLVMTypeRef statement_type = get_type(state, D_VOID);
+  const LLVMTypeRef statement_type = get_type(state, P_VOID);
   const LLVMValueRef expr_output = build_expression(state, &void_s->expr, statement_type);
   assert(expr_output != NULL);
 }
@@ -438,29 +438,29 @@ LLVMValueRef build_identifier(const IRState *state, const TerminalIdentifier *te
   return LLVMBuildLoad2(state->builder, d_type, value_ref, term_ident->name);
 }
 
-LLVMValueRef build_literal(const Literal *literal, const LLVMTypeRef d_type) {
-  assert(literal->d_type != D_NONE);
+LLVMValueRef build_literal(const Literal *literal, const LLVMTypeRef p_type) {
+  assert(literal->p_type != P_NONE);
 
-  switch (literal->d_type) {
-  case D_I8:
-    return LLVMConstInt(d_type, literal->l_union.i8, false);
-  case D_I16:
-    return LLVMConstInt(d_type, literal->l_union.i16, false);
-  case D_I32:
-    return LLVMConstInt(d_type, literal->l_union.i32, false);
-  case D_I64:
-    return LLVMConstInt(d_type, literal->l_union.i64, false);
-  case D_BOOL:
-    return LLVMConstInt(d_type, literal->l_union.b, false);
+  switch (literal->p_type) {
+  case P_I8:
+    return LLVMConstInt(p_type, literal->l_union.i8, false);
+  case P_I16:
+    return LLVMConstInt(p_type, literal->l_union.i16, false);
+  case P_I32:
+    return LLVMConstInt(p_type, literal->l_union.i32, false);
+  case P_I64:
+    return LLVMConstInt(p_type, literal->l_union.i64, false);
+  case P_BOOL:
+    return LLVMConstInt(p_type, literal->l_union.b, false);
   default:
     assert(false);
   }
 }
 
-LLVMValueRef build_compound_expr(const IRState *state, const CompoundExpr *comp, const LLVMTypeRef d_type) {
+LLVMValueRef build_compound_expr(const IRState *state, const CompoundExpr *comp, const LLVMTypeRef p_type) {
   assert(comp != NULL && comp->op != O_NONE);
 
-  LLVMTypeRef term_type = d_type;
+  LLVMTypeRef term_type = p_type;
   if (term_type == LLVMInt1TypeInContext(state->context)) {
     term_type = LLVMInt32TypeInContext(state->context);
   }
@@ -471,7 +471,7 @@ LLVMValueRef build_compound_expr(const IRState *state, const CompoundExpr *comp,
   if (comp->rhs->e_type == E_TERMINAL) {
     rhs = build_terminal_expr(state, &comp->rhs->e_union.term, term_type);
   } else {
-    rhs = build_compound_expr(state, &comp->rhs->e_union.comp, d_type);
+    rhs = build_compound_expr(state, &comp->rhs->e_union.comp, p_type);
   }
   assert(rhs != NULL);
 

@@ -16,14 +16,14 @@
   X(E_COMPOUND)                                                                                                        \
   X(E_TERMINAL)
 
-#define DATA_TYPES                                                                                                     \
-  X(D_NONE)                                                                                                            \
-  X(D_BOOL)                                                                                                            \
-  X(D_VOID)                                                                                                            \
-  X(D_I8)                                                                                                              \
-  X(D_I16)                                                                                                             \
-  X(D_I32)                                                                                                             \
-  X(D_I64)
+#define PRIMITIVE_TYPES                                                                                                \
+  X(P_NONE)                                                                                                            \
+  X(P_BOOL)                                                                                                            \
+  X(P_VOID)                                                                                                            \
+  X(P_I8)                                                                                                              \
+  X(P_I16)                                                                                                             \
+  X(P_I32)                                                                                                             \
+  X(P_I64)
 
 #define OPERATOR_TYPES                                                                                                 \
   X(O_NONE)                                                                                                            \
@@ -53,7 +53,7 @@
 #define X(N) N,
 typedef enum { STATEMENT_TYPES } StatementType;
 typedef enum { EXPRESSION_TYPES } ExpressionType;
-typedef enum { DATA_TYPES } DataType;
+typedef enum { PRIMITIVE_TYPES } PrimitiveType;
 typedef enum { OPERATOR_TYPES } OperatorType;
 typedef enum { LITERAL_TYPES } LiteralType;
 typedef enum { TERMINAL_TYPES } TerminalType;
@@ -62,17 +62,17 @@ typedef enum { IDENTIFIER_TYPE } IdentifierType;
 
 const char *s_type_to_string(StatementType s);
 const char *e_type_to_string(ExpressionType e);
-const char *d_type_to_string(DataType d);
+const char *p_type_to_string(PrimitiveType p);
 const char *o_type_to_string(OperatorType o);
 const char *l_type_to_string(LiteralType l);
 const char *i_type_to_string(IdentifierType i);
 const char *term_type_to_string(TerminalType t);
 
 /*
- * Converts a provided token type into the matching datatype
- * Will return D_NONE if invalid datatype
+ * Converts a provided token type into the matching primitive type
+ * Will return P_NONE if invalid primitive
  */
-DataType tok_to_data_type(TokenType t_type);
+PrimitiveType tok_to_primitive_type(TokenType t_type);
 
 /*
  * Converts a provided token type into the matching operator type

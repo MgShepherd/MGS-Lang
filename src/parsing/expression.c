@@ -9,9 +9,15 @@
 #include <string.h>
 
 #define PARAMETER_LIST_LEN_ESTIMATE 5
+#define ARRAY_LEN_ESTIMATE 5
 
 unsigned char parse_terminal_expr(TerminalExpr *term, const Tokens *tokens, size_t *idx);
-unsigned char parse_func_call_parameters(CallParameters *params, const Tokens *tokens, size_t *idx);
+unsigned char parse_terminal_literal(TerminalLiteral *term_literal, const Tokens *tokens, size_t *idx);
+unsigned char parse_terminal_identifier(TerminalIdentifier *term_ident, const Tokens *tokens, size_t *idx);
+unsigned char parse_func_call(FunctionCall *func_call, const Tokens *tokens, size_t *idx);
+unsigned char parse_expression_list(Expressions *params, const Tokens *tokens, size_t *idx,
+                                    const TokenType list_end_type);
+unsigned char parse_array_literal(ArrayLiteral *arr_lit, const Tokens *tokens, size_t *idx);
 
 unsigned char parse_expression(Expression *expression, const Tokens *tokens, size_t *idx) {
   if (*idx >= tokens->count) {
@@ -75,10 +81,8 @@ void expression_free(Expression *expression) {
 }
 
 unsigned char parse_terminal_expr(TerminalExpr *term, const Tokens *tokens, size_t *idx) {
-  static const TokenType LITERAL_TOKEN_TYPES[] = {T_NUMERIC_LIT, T_TRUE, T_FALSE};
-  static const size_t LITERAL_TOKEN_LEN = sizeof(LITERAL_TOKEN_TYPES) / sizeof(TokenType);
-
-  const Token *next = &tokens->elements[(*idx)++];
+  const Token *next = &tokens->elements[*idx];
+  term->item.t_type = TERM_NONE;
 
   if (next->t_type == T_PLUS || next->t_type == T_MINUS) {
     term->sign = next;
@@ -88,48 +92,38 @@ unsigned char parse_terminal_expr(TerminalExpr *term, const Tokens *tokens, size
   }
 
   if (next->t_type == T_IDENTIFIER) {
-    const TokenType after_type = peek_index(tokens, *idx);
+    const TokenType after_type = peek_index(tokens, *idx + 1);
     if (after_type != T_LEFT_PAREN) {
+      if (parse_terminal_identifier(&term->item.t_union.ident, tokens, idx) != 0) {
+        return 1;
+      }
       term->item.t_type = TERM_IDENTIFIER;
-      term->item.t_union.ident.name = next->item;
-      term->item.t_union.ident.scope = NULL;
       return 0;
     }
-    *idx += 1;
 
-    FunctionCall func_call;
-    func_call.name = next;
-
-    dyn_array_init(&func_call.parameters, sizeof(Expression), PARAMETER_LIST_LEN_ESTIMATE);
-    if (parse_func_call_parameters(&func_call.parameters, tokens, idx) != 0) {
-      fprintf(stderr, "Failed to process parameter list for function\n");
+    if (parse_func_call(&term->item.t_union.func_call, tokens, idx) != 0) {
       return 1;
     }
-
-    if (expect_next(T_RIGHT_PAREN, tokens, idx) == NULL) {
-      fprintf(stderr, "Expected ')' for end of parameter list\n");
-      return 1;
-    }
-
-    term->item.t_union.func_call = func_call;
     term->item.t_type = TERM_FUNC_CALL;
+    return 0;
+  } else if (next->t_type == T_LEFT_SQUARE) {
+    if (parse_array_literal(&term->item.t_union.arr_literal, tokens, idx) != 0) {
+      return 1;
+    }
+    term->item.t_type = TERM_ARRAY_LITERAL;
     return 0;
   }
 
-  for (size_t i = 0; i < LITERAL_TOKEN_LEN; i++) {
-    if (next->t_type == LITERAL_TOKEN_TYPES[i]) {
-      term->item.t_type = TERM_LITERAL;
-      term->item.t_union.lit.tok = next;
-      return 0;
-    }
+  if (parse_terminal_literal(&term->item.t_union.lit, tokens, idx) != 0) {
+    return 1;
   }
-
-  fprintf(stderr, "Invalid token type for expression: %s\n", t_type_to_string(next->t_type));
-  return 1;
+  term->item.t_type = TERM_LITERAL;
+  return 0;
 }
 
-unsigned char parse_func_call_parameters(CallParameters *params, const Tokens *tokens, size_t *idx) {
-  if (peek_index(tokens, *idx) == T_RIGHT_PAREN) {
+unsigned char parse_expression_list(Expressions *params, const Tokens *tokens, size_t *idx,
+                                    const TokenType list_end_type) {
+  if (peek_index(tokens, *idx) == list_end_type) {
     return 0;
   }
 
@@ -146,6 +140,82 @@ unsigned char parse_func_call_parameters(CallParameters *params, const Tokens *t
       return 0;
     }
     *idx += 1;
+  }
+
+  return 0;
+}
+
+unsigned char parse_terminal_literal(TerminalLiteral *term_literal, const Tokens *tokens, size_t *idx) {
+  static const TokenType LITERAL_TOKEN_TYPES[] = {T_NUMERIC_LIT, T_TRUE, T_FALSE};
+  static const size_t LITERAL_TOKEN_LEN = sizeof(LITERAL_TOKEN_TYPES) / sizeof(TokenType);
+
+  const Token *next = &tokens->elements[(*idx)++];
+
+  for (size_t i = 0; i < LITERAL_TOKEN_LEN; i++) {
+    if (next->t_type == LITERAL_TOKEN_TYPES[i]) {
+      term_literal->tok = next;
+      return 0;
+    }
+  }
+
+  fprintf(stderr, "Token type %s is not a valid terminal literal\n", t_type_to_string(next->t_type));
+  return 1;
+}
+
+unsigned char parse_terminal_identifier(TerminalIdentifier *term_ident, const Tokens *tokens, size_t *idx) {
+  const Token *next = expect_next(T_IDENTIFIER, tokens, idx);
+  if (next == NULL) {
+    fprintf(stderr, "Expected identifier for terminal expression\n");
+    return 1;
+  }
+
+  term_ident->name = next->item;
+  term_ident->scope = NULL;
+  return 0;
+}
+
+unsigned char parse_func_call(FunctionCall *func_call, const Tokens *tokens, size_t *idx) {
+  func_call->name = expect_next(T_IDENTIFIER, tokens, idx);
+  if (func_call->name == NULL) {
+    fprintf(stderr, "Expected identifier for start of function call\n");
+    return 1;
+  }
+
+  if (expect_next(T_LEFT_PAREN, tokens, idx) == NULL) {
+    fprintf(stderr, "Expected '(' for start of parameter list\n");
+    return 1;
+  }
+
+  dyn_array_init(&func_call->parameters, sizeof(Expression), PARAMETER_LIST_LEN_ESTIMATE);
+  if (parse_expression_list(&func_call->parameters, tokens, idx, T_RIGHT_PAREN) != 0) {
+    fprintf(stderr, "Failed to process parameter list for function\n");
+    return 1;
+  }
+
+  if (expect_next(T_RIGHT_PAREN, tokens, idx) == NULL) {
+    fprintf(stderr, "Expected ')' for end of parameter list\n");
+    return 1;
+  }
+
+  return 0;
+}
+
+unsigned char parse_array_literal(ArrayLiteral *arr_lit, const Tokens *tokens, size_t *idx) {
+  if (expect_next(T_LEFT_SQUARE, tokens, idx) == NULL) {
+    fprintf(stderr, "Expected '[' for start of array literal, got %s\n",
+            t_type_to_string(tokens->elements[*idx].t_type));
+    return 1;
+  }
+
+  dyn_array_init(&arr_lit->items, sizeof(Expression), ARRAY_LEN_ESTIMATE);
+  if (parse_expression_list(&arr_lit->items, tokens, idx, T_RIGHT_SQUARE) != 0) {
+    fprintf(stderr, "Failed to process item list for array\n");
+    return 1;
+  }
+
+  if (expect_next(T_RIGHT_SQUARE, tokens, idx) == NULL) {
+    fprintf(stderr, "Expected '[' for start of array literal\n");
+    return 1;
   }
 
   return 0;

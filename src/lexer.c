@@ -197,6 +197,12 @@ unsigned char process_symbol_token(Token *token, const char *input, size_t input
   case ',':
     token->t_type = T_COMMA;
     break;
+  case '[':
+    token->t_type = T_LEFT_SQUARE;
+    break;
+  case ']':
+    token->t_type = T_RIGHT_SQUARE;
+    break;
   default:
     fprintf(stderr, "Unknown symbol token: %c\n", input[*idx]);
     return 1;

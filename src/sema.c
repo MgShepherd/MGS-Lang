@@ -37,11 +37,13 @@ unsigned char analyse_expression(SemaState *state, Expression *expr, const DataT
 unsigned char analyse_term_expression(SemaState *state, TerminalExpr *term, const DataType *expr_type);
 unsigned char analyse_comp_expression(SemaState *state, CompoundExpr *comp, const DataType *expr_type);
 unsigned char analyse_operator_type(OperatorType op, const DataType *expr_type);
+unsigned char analyse_data_type(DataType *d_type);
 
 unsigned char analyse_terminal_token(SemaState *state, Literal *literal, const Token *tok, const DataType *expr_type);
 unsigned char analyse_terminal_func_call(SemaState *state, const FunctionCall *func_call, const DataType *expr_type);
 unsigned char analyse_terminal_identifier(SemaState *state, TerminalIdentifier *term_ident, const DataType *expr_type);
 unsigned char analyse_terminal_literal(TerminalLiteral *term_lit, const Token *sign, const DataType *expr_type);
+unsigned char analyse_terminal_array_literal(SemaState *state, ArrayLiteral *arr_lit, const DataType *expr_type);
 
 unsigned char analyse_numeric_literal(TerminalLiteral *term_lit, bool is_negative, const DataType *expr_type);
 
@@ -53,6 +55,7 @@ const Function *get_function(const Functions *functions, const char *name);
 bool is_identifier_in_scope(const Scopes *scopes, const Identifier *identifier);
 bool is_integer_type(const DataType *d_type);
 bool is_number_in_range(long long input, long long min, long long max);
+unsigned char tok_to_number(long long *output_num, const Token *tok, bool is_negative);
 
 void free_sema_state(SemaState *state);
 
@@ -161,7 +164,12 @@ unsigned char analyse_dec_statement(SemaState *state, DeclarationStatement *dec)
     return INVALID_PROGRAM_CODE;
   }
 
-  unsigned char result = analyse_expression(state, &dec->expr, &dec->d_type);
+  unsigned char result = analyse_data_type(&dec->d_type);
+  if (result != 0) {
+    return result;
+  }
+
+  result = analyse_expression(state, &dec->expr, &dec->d_type);
   if (result != 0) {
     return result;
   }
@@ -269,6 +277,8 @@ unsigned char analyse_term_expression(SemaState *state, TerminalExpr *term, cons
     return analyse_terminal_literal(&term->item.t_union.lit, term->sign, expr_type);
   case TERM_FUNC_CALL:
     return analyse_terminal_func_call(state, &term->item.t_union.func_call, expr_type);
+  case TERM_ARRAY_LITERAL:
+    return analyse_terminal_array_literal(state, &term->item.t_union.arr_literal, expr_type);
   default:
     assert(false);
   }
@@ -347,22 +357,27 @@ unsigned char analyse_terminal_literal(TerminalLiteral *term_lit, const Token *s
   return 0;
 }
 
+unsigned char analyse_terminal_array_literal(SemaState *state, ArrayLiteral *arr_lit, const DataType *expr_type) {
+  assert(expr_type->d_kind == D_ARRAY);
+  arr_lit->d_type = expr_type;
+
+  // TODO: Check array length in type matches amount of elements provided - more error case handling needed in tests
+  for (size_t i = 0; i < arr_lit->items.count; i++) {
+    if (analyse_expression(state, &arr_lit->items.elements[i], arr_lit->d_type->d_union.a_type.element_type) != 0) {
+      fprintf(stderr, "Failed to analyse array item\n");
+      return INVALID_PROGRAM_CODE;
+    }
+  }
+
+  return 0;
+}
+
 unsigned char analyse_numeric_literal(TerminalLiteral *term_lit, bool is_negative, const DataType *expr_type) {
   assert(term_lit->tok->t_type == T_NUMERIC_LIT && term_lit->tok->item != NULL);
   term_lit->literal.d_type = expr_type;
 
-  const size_t input_len = strlen(term_lit->tok->item);
-  char num_buf[input_len + 2];
-  char sign = is_negative ? '-' : '+';
-  if (snprintf(num_buf, input_len + 2, "%c%s", sign, term_lit->tok->item) < 0) {
-    fprintf(stderr, "Failed to write numerical value to string buffer\n");
-    return INVALID_PROGRAM_CODE;
-  }
-
-  // TODO: Check what happens for i64 when provided value is LLONG_MIN or LLONG_MAX which is valid - shouldn't error
-  const long long int_val = strtoll(num_buf, NULL, INT_BASE);
-  if (int_val == LLONG_MIN || int_val == LLONG_MAX || (int_val == 0 && strcmp(term_lit->tok->item, "0") != 0)) {
-    fprintf(stderr, "Value %s does not fit in integer\n", num_buf);
+  long long int_val;
+  if (tok_to_number(&int_val, term_lit->tok, is_negative) != 0) {
     return INVALID_PROGRAM_CODE;
   }
 
@@ -456,6 +471,24 @@ unsigned char analyse_operator_type(OperatorType op, const DataType *expr_type) 
   return INVALID_PROGRAM_CODE;
 }
 
+unsigned char analyse_data_type(DataType *d_type) {
+  if (d_type->d_kind == D_ARRAY) {
+    ArrayType *arr_type = &d_type->d_union.a_type;
+    long long arr_len;
+    if (tok_to_number(&arr_len, arr_type->length_tok, false) != 0) {
+      return INVALID_PROGRAM_CODE;
+    }
+
+    if (arr_len < 0) {
+      fprintf(stderr, "Invalid array length: %lld\n", arr_len);
+      return INVALID_PROGRAM_CODE;
+    }
+
+    arr_type->length = (uint64_t)arr_len;
+  }
+  return 0;
+}
+
 unsigned char insert_identifier(SemaState *state, const char *name, const DataType *d_type, IdentifierType i_type) {
   const Identifier *existing = get_identifier(state, name);
   if (existing != NULL) {
@@ -538,7 +571,9 @@ void free_sema_state(SemaState *state) {
 bool is_integer_type(const DataType *d_type) {
   assert(d_type->d_kind != D_NONE);
 
-  assert(d_type->d_kind == D_PRIMITIVE);
+  if (d_type->d_kind != D_PRIMITIVE) {
+    return false;
+  }
 
   switch (d_type->d_union.p_type) {
   case P_I32:
@@ -552,3 +587,23 @@ bool is_integer_type(const DataType *d_type) {
 }
 
 bool is_number_in_range(long long input, long long min, long long max) { return input >= min && input <= max; }
+
+unsigned char tok_to_number(long long *output_num, const Token *tok, bool is_negative) {
+  const size_t input_len = strlen(tok->item);
+  char num_buf[input_len + 2];
+  char sign = is_negative ? '-' : '+';
+  if (snprintf(num_buf, input_len + 2, "%c%s", sign, tok->item) < 0) {
+    fprintf(stderr, "Failed to write numerical value to string buffer\n");
+    return INVALID_PROGRAM_CODE;
+  }
+
+  // TODO: Check what happens for i64 when provided value is LLONG_MIN or LLONG_MAX which is valid - shouldn't error
+  const long long int_val = strtoll(num_buf, NULL, INT_BASE);
+  if (int_val == LLONG_MIN || int_val == LLONG_MAX || (int_val == 0 && strcmp(tok->item, "0") != 0)) {
+    fprintf(stderr, "Value %s does not fit in integer\n", num_buf);
+    return INVALID_PROGRAM_CODE;
+  }
+
+  *output_num = int_val;
+  return 0;
+}

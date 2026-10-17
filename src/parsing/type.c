@@ -57,7 +57,7 @@ const char *term_type_to_string(TerminalType t) {
 
 const char *i_type_to_string(IdentifierType i) {
   switch (i) {
-    IDENTIFIER_TYPE
+    IDENTIFIER_TYPES
   default:
     return "unknown";
   }

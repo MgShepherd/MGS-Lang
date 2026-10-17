@@ -1,6 +1,7 @@
 #include "parsing/function.h"
 
 #include "dynamic_array.h"
+#include "parsing/data_type.h"
 #include "parsing/statement.h"
 #include "parsing/type.h"
 #include "parsing/utils.h"
@@ -75,9 +76,8 @@ unsigned char parse_function(Function *function, const Tokens *tokens, size_t *i
     return 1;
   }
 
-  function->return_type = tok_to_primitive_type(tokens->elements[(*idx)++].t_type);
-  if (function->return_type == P_NONE) {
-    fprintf(stderr, "Expected return type for function to be valid data type\n");
+  if (parse_data_type(&function->return_type, tokens, idx) != 0) {
+    fprintf(stderr, "Unable to parse return type for function\n");
     return 1;
   }
 
@@ -120,9 +120,8 @@ unsigned char parse_parameters(Parameters *parameters, const Tokens *tokens, siz
       return 1;
     }
 
-    parameter.p_type = tok_to_primitive_type(tokens->elements[(*idx)++].t_type);
-    if (parameter.p_type == P_NONE) {
-      fprintf(stderr, "Expected datatype for parameter\n");
+    if (parse_data_type(&parameter.d_type, tokens, idx) != 0) {
+      fprintf(stderr, "Failed to parse datatype for parameter\n");
       return 1;
     }
 

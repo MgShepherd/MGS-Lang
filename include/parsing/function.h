@@ -3,11 +3,10 @@
 
 #include "parsing/expression.h"
 #include "parsing/statement.h"
-#include "parsing/type.h"
 
 typedef struct {
   TerminalIdentifier term_ident;
-  PrimitiveType p_type;
+  DataType d_type;
 } Parameter;
 
 typedef struct {
@@ -18,7 +17,7 @@ typedef struct {
 
 typedef struct {
   const char *name;
-  PrimitiveType return_type;
+  DataType return_type;
   Parameters parameters;
   Block block;
 } Function;

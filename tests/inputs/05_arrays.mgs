@@ -1,0 +1,6 @@
+-- TEST integer fixed sized array
+-- EXPECTED_STATUS_CODE 101
+func main() -> i64 {
+	my_array: [3]i64 = [10, 12, 4];
+	return 101;
+}

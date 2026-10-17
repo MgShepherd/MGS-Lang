@@ -1,6 +1,7 @@
 #include "llvm.h"
 #include "dynamic_array.h"
 #include "lexer.h"
+#include "parsing/data_type.h"
 #include "parsing/type.h"
 #include "llvm-c/Types.h"
 
@@ -58,6 +59,7 @@ unsigned char init_ir_state(IRState *state);
 
 unsigned char build_function(IRState *state, const Function *func);
 LLVMTypeRef get_type(const IRState *state, const DataType *d_type);
+LLVMTypeRef get_primitive_type(const IRState *state, PrimitiveType p_type);
 
 unsigned char build_statements(IRState *state, const Statements *statements, const LLVMValueRef func);
 unsigned char build_statement(IRState *state, const Statement *statement, const LLVMValueRef func);
@@ -81,6 +83,7 @@ LLVMValueRef build_func_call(const IRState *state, const FunctionCall *func_call
 
 LLVMValueRef build_identifier(const IRState *state, const TerminalIdentifier *term_ident, const LLVMTypeRef d_type);
 LLVMValueRef build_literal(const Literal *literal, const LLVMTypeRef d_type);
+LLVMValueRef build_array_literal(const IRState *state, const ArrayLiteral *arr_lit);
 
 unsigned char generate_object_file(const IRState *state, const char *file_name);
 
@@ -211,9 +214,18 @@ unsigned char build_function(IRState *state, const Function *func) {
 LLVMTypeRef get_type(const IRState *state, const DataType *d_type) {
   assert(state != NULL && d_type->d_kind != D_NONE);
 
-  assert(d_type->d_kind == D_PRIMITIVE);
+  if (d_type->d_kind == D_PRIMITIVE) {
+    return get_primitive_type(state, d_type->d_union.p_type);
+  } else if (d_type->d_kind == D_ARRAY) {
+    const LLVMTypeRef element_type = get_type(state, d_type->d_union.a_type.element_type);
+    return LLVMArrayType2(element_type, d_type->d_union.a_type.length);
+  }
 
-  switch (d_type->d_union.p_type) {
+  assert(false);
+}
+
+LLVMTypeRef get_primitive_type(const IRState *state, PrimitiveType p_type) {
+  switch (p_type) {
   case P_I8:
     return LLVMInt8TypeInContext(state->context);
   case P_I16:
@@ -403,6 +415,9 @@ LLVMValueRef build_terminal_expr(const IRState *state, const TerminalExpr *term,
   case TERM_FUNC_CALL:
     processed = build_func_call(state, &term->item.t_union.func_call, d_type);
     break;
+  case TERM_ARRAY_LITERAL:
+    processed = build_array_literal(state, &term->item.t_union.arr_literal);
+    break;
   default:
     assert(false);
   }
@@ -460,6 +475,18 @@ LLVMValueRef build_literal(const Literal *literal, const LLVMTypeRef p_type) {
   default:
     assert(false);
   }
+}
+
+LLVMValueRef build_array_literal(const IRState *state, const ArrayLiteral *arr_lit) {
+  assert(arr_lit->d_type->d_kind == D_ARRAY);
+  LLVMValueRef arr_values[arr_lit->items.count];
+  const LLVMTypeRef element_type = get_type(state, arr_lit->d_type->d_union.a_type.element_type);
+
+  for (size_t i = 0; i < arr_lit->items.count; i++) {
+    arr_values[i] = build_expression(state, &arr_lit->items.elements[i], element_type);
+  }
+
+  return LLVMConstArray2(element_type, arr_values, arr_lit->items.count);
 }
 
 LLVMValueRef build_compound_expr(const IRState *state, const CompoundExpr *comp, const LLVMTypeRef p_type) {

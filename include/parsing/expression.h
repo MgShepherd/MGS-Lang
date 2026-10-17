@@ -26,11 +26,12 @@ typedef struct {
   Expression *elements;
   size_t count;
   size_t capacity;
-} CallParameters;
+} Expressions;
 
 typedef struct {
+  // TODO: Update this to use the char* rather than the actual token (same as TerminalIdentifier)
   const Token *name;
-  CallParameters parameters;
+  Expressions parameters;
 } FunctionCall;
 
 typedef struct {
@@ -46,9 +47,16 @@ typedef struct {
 } TerminalLiteral;
 
 typedef struct {
+  Expressions items;
+  // d_type will be populated as part of semantic analysis
+  const DataType *d_type;
+} ArrayLiteral;
+
+typedef struct {
   TerminalLiteral lit;
   TerminalIdentifier ident;
   FunctionCall func_call;
+  ArrayLiteral arr_literal;
 } TerminalUnion;
 
 typedef struct {

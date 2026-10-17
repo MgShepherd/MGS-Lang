@@ -63,7 +63,7 @@ func main() -> i32 {
 }
 
 -- TEST if with no condition
--- EXPECTED_COMPILATION_ERROR Invalid token type for expression: T_LEFT_CURLY
+-- EXPECTED_COMPILATION_ERROR Token type T_LEFT_CURLY is not a valid terminal literal
 func main() -> i32 {
 	x: var i32 = 10;
 
@@ -88,7 +88,7 @@ func main() -> i32 {
 }
 
 -- TEST else if with no condition
--- EXPECTED_COMPILATION_ERROR Invalid token type for expression: T_LEFT_CURLY
+-- EXPECTED_COMPILATION_ERROR Token type T_LEFT_CURLY is not a valid terminal literal
 func main() -> i32 {
 	x: var i32 = 10;
 
@@ -102,7 +102,7 @@ func main() -> i32 {
 }
 
 -- TEST else if without leading if
--- EXPECTED_COMPILATION_ERROR Invalid token type for expression: T_ELSE
+-- EXPECTED_COMPILATION_ERROR Token type T_ELSE is not a valid terminal literal
 func main() -> i32 {
 	x: var i32 = 10;
 
@@ -114,7 +114,7 @@ func main() -> i32 {
 }
 
 -- TEST else without leading if
--- EXPECTED_COMPILATION_ERROR Invalid token type for expression: T_ELSE
+-- EXPECTED_COMPILATION_ERROR Token type T_ELSE is not a valid terminal literal
 func main() -> i32 {
 	x: var i32 = 10;
 

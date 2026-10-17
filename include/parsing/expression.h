@@ -2,6 +2,7 @@
 #define _PARSING_EXPRESSION_H_
 
 #include "lexer.h"
+#include "parsing/data_type.h"
 #include "parsing/type.h"
 #include <stdint.h>
 
@@ -16,8 +17,9 @@ typedef union {
 } LiteralUnion;
 
 typedef struct {
-  PrimitiveType p_type;
   LiteralUnion l_union;
+  // d_type will be populated as part of semantic analysis
+  const DataType *d_type;
 } Literal;
 
 typedef struct {

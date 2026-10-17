@@ -1,6 +1,7 @@
 #ifndef _SEMA_H_
 #define _SEMA_H_
 
+#include "parsing/data_type.h"
 #include "parsing/program.h"
 #include "parsing/type.h"
 
@@ -12,9 +13,10 @@ typedef struct {
 
 typedef struct {
   const char *name;
-  PrimitiveType p_type;
   IdentifierType i_type;
   const void *scope;
+  // Identifiers only store a pointer to an already existing d_type so not freed when destroyed
+  const DataType *d_type;
 } Identifier;
 
 typedef struct {

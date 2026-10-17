@@ -1,7 +1,9 @@
 #include "parsing/statement.h"
 
 #include "dynamic_array.h"
+#include "lexer.h"
 #include "parsing/expression.h"
+#include "parsing/type.h"
 #include "parsing/utils.h"
 #include <stdio.h>
 
@@ -121,9 +123,8 @@ unsigned char parse_dec_statement(Statement *statement, const Tokens *tokens, si
 
   dec.variable = expect_next(T_VAR, tokens, idx) != NULL;
 
-  dec.p_type = tok_to_primitive_type(tokens->elements[(*idx)++].t_type);
-  if (dec.p_type == P_NONE) {
-    fprintf(stderr, "Failed to parse keyword into datatype\n");
+  if (parse_data_type(&dec.d_type, tokens, idx) != 0) {
+    fprintf(stderr, "Failed to parse datatype for declaration statement\n");
     return 1;
   }
 

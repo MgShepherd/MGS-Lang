@@ -2,6 +2,7 @@
 #define _PARSING_STATEMENT_H_
 
 #include "lexer.h"
+#include "parsing/data_type.h"
 #include "parsing/expression.h"
 #include <stdlib.h>
 
@@ -16,21 +17,21 @@ typedef struct {
 typedef struct {
   TerminalIdentifier term_ident;
   bool variable;
-  PrimitiveType p_type;
+  DataType d_type;
   Expression expr;
 } DeclarationStatement;
 
 typedef struct {
   TerminalIdentifier term_ident;
   Expression expr;
-  // p_type will be populated as part of semantic analysis
-  PrimitiveType p_type;
+  // d_type will be populated as part of semantic analysis
+  const DataType *d_type;
 } AssignmentStatement;
 
 typedef struct {
   Expression expr;
-  // p_type will be populated as part of semantic analysis
-  PrimitiveType p_type;
+  // d_type will be populated as part of semantic analysis
+  const DataType *d_type;
 } ReturnStatement;
 
 typedef struct {

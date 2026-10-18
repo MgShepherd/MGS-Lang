@@ -1,9 +1,9 @@
 -- TEST fixed sized arrays
--- EXPECTED_STATUS_CODE 101
+-- EXPECTED_STATUS_CODE 12
 func main() -> i64 {
 	my_array: []i64 = [10, 12, 4];
 	my_bool_arr: []bool = [true, false, true];
-	return 101;
+	return my_array[1];
 }
 
 -- TEST empty array
@@ -34,10 +34,9 @@ func main() -> i64 {
 	return 96;
 }
 
--- TEST Array used in compound expression
--- EXPECTED_COMPILATION_ERROR Variable my_array does not have expected type P_I32
+-- TEST Array Access used on not-array variable
+-- EXPECTED_COMPILATION_ERROR Expected variable: my_item to be an array type for array access
 func main() -> i64 {
-	my_array: []i32 = [10, 12];
-	my_element: i32 = 12 + my_array;
-	return 96;
+	my_item: i32 = 10;
+	return my_item[0];
 }

@@ -41,6 +41,13 @@ typedef struct {
 } TerminalIdentifier;
 
 typedef struct {
+  TerminalIdentifier term_ident;
+  const Token *index_tok;
+  // idx will be populated by sema
+  uint64_t idx;
+} ArrayAccess;
+
+typedef struct {
   const Token *tok;
   // Will be populated by sema
   Literal literal;
@@ -57,6 +64,7 @@ typedef struct {
   TerminalIdentifier ident;
   FunctionCall func_call;
   ArrayLiteral arr_literal;
+  ArrayAccess arr_access;
 } TerminalUnion;
 
 typedef struct {

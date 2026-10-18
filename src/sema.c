@@ -44,6 +44,7 @@ unsigned char analyse_terminal_func_call(SemaState *state, const FunctionCall *f
 unsigned char analyse_terminal_identifier(SemaState *state, TerminalIdentifier *term_ident, const DataType *expr_type);
 unsigned char analyse_terminal_literal(TerminalLiteral *term_lit, const Token *sign, const DataType *expr_type);
 unsigned char analyse_terminal_array_literal(SemaState *state, ArrayLiteral *arr_lit, const DataType *expr_type);
+unsigned char analyse_terminal_array_access(SemaState *state, ArrayAccess *arr_access, const DataType *expr_type);
 
 unsigned char analyse_numeric_literal(TerminalLiteral *term_lit, bool is_negative, const DataType *expr_type);
 
@@ -55,7 +56,7 @@ const Function *get_function(const Functions *functions, const char *name);
 bool is_identifier_in_scope(const Scopes *scopes, const Identifier *identifier);
 bool is_integer_type(const DataType *d_type);
 bool is_number_in_range(long long input, long long min, long long max);
-unsigned char tok_to_number(long long *output_num, const Token *tok, bool is_negative);
+unsigned char tok_to_integer(long long *output_num, const Token *tok, bool is_negative);
 bool is_void_type(const DataType *d_type);
 
 void free_sema_state(SemaState *state);
@@ -280,6 +281,8 @@ unsigned char analyse_term_expression(SemaState *state, TerminalExpr *term, cons
     return analyse_terminal_func_call(state, &term->item.t_union.func_call, expr_type);
   case TERM_ARRAY_LITERAL:
     return analyse_terminal_array_literal(state, &term->item.t_union.arr_literal, expr_type);
+  case TERM_ARRAY_ACCESS:
+    return analyse_terminal_array_access(state, &term->item.t_union.arr_access, expr_type);
   default:
     assert(false);
   }
@@ -309,6 +312,41 @@ unsigned char analyse_terminal_func_call(SemaState *state, const FunctionCall *f
     fprintf(stderr, "Function %s does not return expected type %s\n", func->name, d_type_to_string(expr_type));
     return INVALID_PROGRAM_CODE;
   }
+  return 0;
+}
+
+unsigned char analyse_terminal_array_access(SemaState *state, ArrayAccess *arr_access, const DataType *expr_type) {
+  const Identifier *ident = get_identifier(state, arr_access->term_ident.name);
+  if (ident == NULL) {
+    fprintf(stderr, "Undefined variable: %s\n", arr_access->term_ident.name);
+    return INVALID_PROGRAM_CODE;
+  }
+
+  if (ident->d_type->d_kind != D_ARRAY) {
+    fprintf(stderr, "Expected variable: %s to be an array type for array access\n", arr_access->term_ident.name);
+    return INVALID_PROGRAM_CODE;
+  }
+
+  const ArrayType *array_type = &ident->d_type->d_union.a_type;
+  if (!do_data_types_match(array_type->element_type, expr_type)) {
+    fprintf(stderr, "Element type of array %s does not match expected expression type: %s\n",
+            arr_access->term_ident.name, d_type_to_string(expr_type));
+    return INVALID_PROGRAM_CODE;
+  }
+  long long arr_index;
+  if (tok_to_integer(&arr_index, arr_access->index_tok, false) != 0) {
+    fprintf(stderr, "Expected integer value for array index\n");
+    return INVALID_PROGRAM_CODE;
+  }
+
+  arr_access->term_ident.scope = ident->scope;
+  arr_access->idx = (uint64_t)arr_index;
+
+  if (arr_access->idx >= array_type->length) {
+    fprintf(stderr, "Array index %lld out of bounds for array %s\n", arr_access->idx, arr_access->term_ident.name);
+    return INVALID_PROGRAM_CODE;
+  }
+
   return 0;
 }
 
@@ -378,7 +416,7 @@ unsigned char analyse_numeric_literal(TerminalLiteral *term_lit, bool is_negativ
   term_lit->literal.d_type = expr_type;
 
   long long int_val;
-  if (tok_to_number(&int_val, term_lit->tok, is_negative) != 0) {
+  if (tok_to_integer(&int_val, term_lit->tok, is_negative) != 0) {
     return INVALID_PROGRAM_CODE;
   }
 
@@ -589,7 +627,7 @@ bool is_integer_type(const DataType *d_type) {
 
 bool is_number_in_range(long long input, long long min, long long max) { return input >= min && input <= max; }
 
-unsigned char tok_to_number(long long *output_num, const Token *tok, bool is_negative) {
+unsigned char tok_to_integer(long long *output_num, const Token *tok, bool is_negative) {
   const size_t input_len = strlen(tok->item);
   char num_buf[input_len + 2];
   char sign = is_negative ? '-' : '+';

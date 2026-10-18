@@ -1,6 +1,43 @@
--- TEST integer fixed sized array
+-- TEST fixed sized arrays
 -- EXPECTED_STATUS_CODE 101
 func main() -> i64 {
-	my_array: [3]i64 = [10, 12, 4];
+	my_array: []i64 = [10, 12, 4];
+	my_bool_arr: []bool = [true, false, true];
 	return 101;
+}
+
+-- TEST empty array
+-- EXPECTED_STATUS_CODE 96
+func main() -> i64 {
+	my_array: []i64 = [];
+	return 96;
+}
+
+-- TEST Array with incorrect element type
+-- EXPECTED_COMPILATION_ERROR Boolean literal false used in non-boolean expression type: P_I64
+func main() -> i64 {
+	my_array: []i64 = [10, false];
+	return 96;
+}
+
+-- TEST Array with void type
+-- EXPECTED_COMPILATION_ERROR Cannot use void as datatype for variable
+func main() -> i64 {
+	my_array: []void = [];
+	return 96;
+}
+
+-- TEST Array with no initialisation
+-- EXPECTED_COMPILATION_ERROR Failed to read equals for declaration statement
+func main() -> i64 {
+	my_array: []i32;
+	return 96;
+}
+
+-- TEST Array used in compound expression
+-- EXPECTED_COMPILATION_ERROR Variable my_array does not have expected type P_I32
+func main() -> i64 {
+	my_array: []i32 = [10, 12];
+	my_element: i32 = 12 + my_array;
+	return 96;
 }

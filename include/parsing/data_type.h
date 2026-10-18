@@ -7,7 +7,6 @@
 typedef struct DataType DataType;
 
 typedef struct {
-  const Token *length_tok;
   DataType *element_type;
   // length will be populated as part of sema
   uint64_t length;

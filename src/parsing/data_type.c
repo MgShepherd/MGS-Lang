@@ -85,12 +85,6 @@ unsigned char parse_array(ArrayType *array_type, const Tokens *tokens, size_t *i
     return 1;
   }
 
-  array_type->length_tok = expect_next(T_NUMERIC_LIT, tokens, idx);
-  if (array_type->length_tok == NULL) {
-    fprintf(stderr, "Expected numeric literal within [] for array length\n");
-    return 1;
-  }
-
   if (expect_next(T_RIGHT_SQUARE, tokens, idx) == NULL) {
     fprintf(stderr, "Expected ']' after size in array type\n");
     return 1;

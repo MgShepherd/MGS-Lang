@@ -37,7 +37,7 @@ unsigned char analyse_expression(SemaState *state, Expression *expr, const DataT
 unsigned char analyse_term_expression(SemaState *state, TerminalExpr *term, const DataType *expr_type);
 unsigned char analyse_comp_expression(SemaState *state, CompoundExpr *comp, const DataType *expr_type);
 unsigned char analyse_operator_type(OperatorType op, const DataType *expr_type);
-unsigned char analyse_data_type(DataType *d_type);
+unsigned char analyse_data_type(DataType *d_type, const Expression *expr);
 
 unsigned char analyse_terminal_token(SemaState *state, Literal *literal, const Token *tok, const DataType *expr_type);
 unsigned char analyse_terminal_func_call(SemaState *state, const FunctionCall *func_call, const DataType *expr_type);
@@ -56,6 +56,7 @@ bool is_identifier_in_scope(const Scopes *scopes, const Identifier *identifier);
 bool is_integer_type(const DataType *d_type);
 bool is_number_in_range(long long input, long long min, long long max);
 unsigned char tok_to_number(long long *output_num, const Token *tok, bool is_negative);
+bool is_void_type(const DataType *d_type);
 
 void free_sema_state(SemaState *state);
 
@@ -159,17 +160,17 @@ unsigned char analyse_statement(SemaState *state, Statement *statement, const Da
 
 unsigned char analyse_dec_statement(SemaState *state, DeclarationStatement *dec) {
   assert(dec->d_type.d_kind != D_NONE);
-  if (dec->d_type.d_kind == D_PRIMITIVE && dec->d_type.d_union.p_type == P_VOID) {
+  if (is_void_type(&dec->d_type)) {
     fprintf(stderr, "Cannot use void as datatype for variable\n");
     return INVALID_PROGRAM_CODE;
   }
 
-  unsigned char result = analyse_data_type(&dec->d_type);
+  unsigned char result = analyse_expression(state, &dec->expr, &dec->d_type);
   if (result != 0) {
     return result;
   }
 
-  result = analyse_expression(state, &dec->expr, &dec->d_type);
+  result = analyse_data_type(&dec->d_type, &dec->expr);
   if (result != 0) {
     return result;
   }
@@ -471,20 +472,20 @@ unsigned char analyse_operator_type(OperatorType op, const DataType *expr_type) 
   return INVALID_PROGRAM_CODE;
 }
 
-unsigned char analyse_data_type(DataType *d_type) {
+unsigned char analyse_data_type(DataType *d_type, const Expression *expr) {
   if (d_type->d_kind == D_ARRAY) {
-    ArrayType *arr_type = &d_type->d_union.a_type;
-    long long arr_len;
-    if (tok_to_number(&arr_len, arr_type->length_tok, false) != 0) {
-      return INVALID_PROGRAM_CODE;
+    if (expr->e_type != E_TERMINAL) {
+      fprintf(stderr, "Can perform compound operations on arrays\n");
+      return 1;
     }
 
-    if (arr_len < 0) {
-      fprintf(stderr, "Invalid array length: %lld\n", arr_len);
-      return INVALID_PROGRAM_CODE;
+    Terminal term = expr->e_union.term.item;
+    if (term.t_type != TERM_ARRAY_LITERAL) {
+      fprintf(stderr, "Expected array literal, got type %s\n", term_type_to_string(term.t_type));
+      return 1;
     }
 
-    arr_type->length = (uint64_t)arr_len;
+    d_type->d_union.a_type.length = (uint64_t)term.t_union.arr_literal.items.count;
   }
   return 0;
 }
@@ -606,4 +607,14 @@ unsigned char tok_to_number(long long *output_num, const Token *tok, bool is_neg
 
   *output_num = int_val;
   return 0;
+}
+
+bool is_void_type(const DataType *d_type) {
+  if (d_type->d_kind == D_PRIMITIVE) {
+    return d_type->d_union.p_type == P_VOID;
+  } else if (d_type->d_kind == D_ARRAY) {
+    return is_void_type(d_type->d_union.a_type.element_type);
+  }
+
+  assert(false);
 }

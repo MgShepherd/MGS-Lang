@@ -87,6 +87,8 @@ LLVMValueRef build_literal(const Literal *literal, const LLVMTypeRef d_type);
 LLVMValueRef build_array_literal(const IRState *state, const ArrayLiteral *arr_lit);
 LLVMValueRef build_array_access(const IRState *state, const ArrayAccess *arr_access);
 
+LLVMValueRef build_get_array_element_ptr(const IRState *state, const ArrayAccess *arr_access);
+
 unsigned char generate_object_file(const IRState *state, const char *file_name);
 
 void dispose_ir_state(IRState *state);
@@ -304,7 +306,7 @@ unsigned char build_declaration_statement(IRState *state, const DeclarationState
   assert(expr_output != NULL);
   LLVMBuildStore(state->builder, expr_output, var_ptr);
 
-  const IdentifierType i_type = dec->variable ? I_VARIABLE : I_CONST;
+  const IdentifierType i_type = dec->d_type.variable ? I_VARIABLE : I_CONST;
   ValueRef var = {
       .name = dec->term_ident.name,
       .ptr = var_ptr,
@@ -323,10 +325,20 @@ void build_assignment_statement(IRState *state, const AssignmentStatement *assig
   const LLVMTypeRef statement_type = get_type(state, assign->d_type);
   const LLVMValueRef expr_output = build_expression(state, &assign->expr, statement_type);
   assert(expr_output != NULL);
-  const ValueRef *assign_var = load_identifier(&state->values, &assign->term_ident);
-  assert(assign_var != NULL);
 
-  LLVMBuildStore(state->builder, expr_output, assign_var->ptr);
+  switch (assign->a_output.a_type) {
+  case A_IDENTIFIER:
+    const ValueRef *assign_var = load_identifier(&state->values, &assign->a_output.a_union.term_ident);
+    assert(assign_var != NULL);
+    LLVMBuildStore(state->builder, expr_output, assign_var->ptr);
+    break;
+  case A_ARRAY_ELEMENT:
+    const LLVMValueRef element_ptr = build_get_array_element_ptr(state, &assign->a_output.a_union.arr_element);
+    LLVMBuildStore(state->builder, expr_output, element_ptr);
+    break;
+  default:
+    assert(false);
+  }
 }
 
 unsigned char build_if_block(IRState *state, const IfBlock *if_block, const LLVMValueRef func) {
@@ -496,11 +508,10 @@ LLVMValueRef build_array_literal(const IRState *state, const ArrayLiteral *arr_l
   return LLVMConstArray2(element_type, arr_values, arr_lit->items.count);
 }
 
-LLVMValueRef build_array_access(const IRState *state, const ArrayAccess *arr_access) {
+LLVMValueRef build_get_array_element_ptr(const IRState *state, const ArrayAccess *arr_access) {
   const ValueRef *arr = load_identifier(&state->values, &arr_access->term_ident);
   assert(arr != NULL && arr->d_type->d_kind == D_ARRAY);
   const LLVMTypeRef arr_type = get_type(state, arr->d_type);
-  const LLVMTypeRef element_type = get_type(state, arr->d_type->d_union.a_type.element_type);
 
   LLVMValueRef indices[] = {
       // First index ensures that we are stepping into the array itself
@@ -511,8 +522,14 @@ LLVMValueRef build_array_access(const IRState *state, const ArrayAccess *arr_acc
   const uint64_t num_indices = sizeof(indices) / sizeof(indices[0]);
 
   // TODO: Improve how we create LLVM names in order to make IR easier to read/understand
-  const LLVMValueRef element_ptr =
-      LLVMBuildInBoundsGEP2(state->builder, arr_type, arr->ptr, indices, num_indices, "access_element");
+  return LLVMBuildInBoundsGEP2(state->builder, arr_type, arr->ptr, indices, num_indices, "access_element");
+}
+
+LLVMValueRef build_array_access(const IRState *state, const ArrayAccess *arr_access) {
+  const ValueRef *arr = load_identifier(&state->values, &arr_access->term_ident);
+  const LLVMTypeRef element_type = get_type(state, arr->d_type->d_union.a_type.element_type);
+
+  const LLVMValueRef element_ptr = build_get_array_element_ptr(state, arr_access);
   return LLVMBuildLoad2(state->builder, element_type, element_ptr, "load_element");
 }
 

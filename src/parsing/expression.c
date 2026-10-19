@@ -13,9 +13,7 @@
 
 unsigned char parse_terminal_expr(TerminalExpr *term, const Tokens *tokens, size_t *idx);
 unsigned char parse_terminal_literal(TerminalLiteral *term_literal, const Tokens *tokens, size_t *idx);
-unsigned char parse_terminal_identifier(TerminalIdentifier *term_ident, const Tokens *tokens, size_t *idx);
 unsigned char parse_func_call(FunctionCall *func_call, const Tokens *tokens, size_t *idx);
-unsigned char parse_array_access(ArrayAccess *arr_access, const Tokens *tokens, size_t *idx);
 unsigned char parse_expression_list(Expressions *params, const Tokens *tokens, size_t *idx,
                                     const TokenType list_end_type);
 unsigned char parse_array_literal(ArrayLiteral *arr_lit, const Tokens *tokens, size_t *idx);
@@ -59,6 +57,46 @@ unsigned char parse_expression(Expression *expression, const Tokens *tokens, siz
 
   expression->e_type = E_COMPOUND;
   expression->e_union.comp = comp;
+  return 0;
+}
+
+unsigned char parse_array_access(ArrayAccess *arr_access, const Tokens *tokens, size_t *idx) {
+  const Token *ident_tok = expect_next(T_IDENTIFIER, tokens, idx);
+  if (ident_tok == NULL) {
+    fprintf(stderr, "Expected identifier for array access\n");
+    return 1;
+  }
+  assert(ident_tok->item != NULL);
+  arr_access->term_ident.name = ident_tok->item;
+
+  if (expect_next(T_LEFT_SQUARE, tokens, idx) == NULL) {
+    fprintf(stderr, "Expected '[' for accessing array element\n");
+    return 1;
+  }
+
+  arr_access->index_tok = expect_next(T_NUMERIC_LIT, tokens, idx);
+  if (arr_access->index_tok == NULL) {
+    fprintf(stderr, "Expected index for accessing array element\n");
+    return 1;
+  }
+
+  if (expect_next(T_RIGHT_SQUARE, tokens, idx) == NULL) {
+    fprintf(stderr, "Expected ']' for accessing array element\n");
+    return 1;
+  }
+
+  return 0;
+}
+
+unsigned char parse_terminal_identifier(TerminalIdentifier *term_ident, const Tokens *tokens, size_t *idx) {
+  const Token *next = expect_next(T_IDENTIFIER, tokens, idx);
+  if (next == NULL) {
+    fprintf(stderr, "Expected identifier for terminal expression\n");
+    return 1;
+  }
+
+  term_ident->name = next->item;
+  term_ident->scope = NULL;
   return 0;
 }
 
@@ -171,18 +209,6 @@ unsigned char parse_terminal_literal(TerminalLiteral *term_literal, const Tokens
   return 1;
 }
 
-unsigned char parse_terminal_identifier(TerminalIdentifier *term_ident, const Tokens *tokens, size_t *idx) {
-  const Token *next = expect_next(T_IDENTIFIER, tokens, idx);
-  if (next == NULL) {
-    fprintf(stderr, "Expected identifier for terminal expression\n");
-    return 1;
-  }
-
-  term_ident->name = next->item;
-  term_ident->scope = NULL;
-  return 0;
-}
-
 unsigned char parse_func_call(FunctionCall *func_call, const Tokens *tokens, size_t *idx) {
   func_call->name = expect_next(T_IDENTIFIER, tokens, idx);
   if (func_call->name == NULL) {
@@ -203,34 +229,6 @@ unsigned char parse_func_call(FunctionCall *func_call, const Tokens *tokens, siz
 
   if (expect_next(T_RIGHT_PAREN, tokens, idx) == NULL) {
     fprintf(stderr, "Expected ')' for end of parameter list\n");
-    return 1;
-  }
-
-  return 0;
-}
-
-unsigned char parse_array_access(ArrayAccess *arr_access, const Tokens *tokens, size_t *idx) {
-  const Token *ident_tok = expect_next(T_IDENTIFIER, tokens, idx);
-  if (ident_tok == NULL) {
-    fprintf(stderr, "Expected identifier for array access\n");
-    return 1;
-  }
-  assert(ident_tok->item != NULL);
-  arr_access->term_ident.name = ident_tok->item;
-
-  if (expect_next(T_LEFT_SQUARE, tokens, idx) == NULL) {
-    fprintf(stderr, "Expected '[' for accessing array element\n");
-    return 1;
-  }
-
-  arr_access->index_tok = expect_next(T_NUMERIC_LIT, tokens, idx);
-  if (arr_access->index_tok == NULL) {
-    fprintf(stderr, "Expected index for accessing array element\n");
-    return 1;
-  }
-
-  if (expect_next(T_RIGHT_SQUARE, tokens, idx) == NULL) {
-    fprintf(stderr, "Expected ']' for accessing array element\n");
     return 1;
   }
 

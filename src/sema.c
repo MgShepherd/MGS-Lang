@@ -2,6 +2,7 @@
 #include "dynamic_array.h"
 #include "lexer.h"
 #include "parsing/data_type.h"
+#include "parsing/expression.h"
 #include "parsing/type.h"
 
 #include <assert.h>
@@ -176,7 +177,7 @@ unsigned char analyse_dec_statement(SemaState *state, DeclarationStatement *dec)
     return result;
   }
 
-  IdentifierType i_type = dec->variable ? I_VARIABLE : I_CONST;
+  IdentifierType i_type = dec->d_type.variable ? I_VARIABLE : I_CONST;
   result = insert_identifier(state, dec->term_ident.name, &dec->d_type, i_type);
   if (result != 0) {
     return result;
@@ -188,19 +189,42 @@ unsigned char analyse_dec_statement(SemaState *state, DeclarationStatement *dec)
 }
 
 unsigned char analyse_assign_statement(SemaState *state, AssignmentStatement *assign) {
-  const Identifier *ident = get_identifier(state, assign->term_ident.name);
-  if (ident == NULL) {
-    fprintf(stderr, "Undefined variable: %s\n", assign->term_ident.name);
+  const Identifier *ident = NULL;
+  switch (assign->a_output.a_type) {
+  case A_IDENTIFIER:
+    TerminalIdentifier *term_ident = &assign->a_output.a_union.term_ident;
+    ident = get_identifier(state, term_ident->name);
+
+    if (ident == NULL) {
+      fprintf(stderr, "Undefined variable: %s\n", term_ident->name);
+      return INVALID_PROGRAM_CODE;
+    }
+
+    assign->d_type = ident->d_type;
+    term_ident->scope = ident->scope;
+    break;
+  case A_ARRAY_ELEMENT:
+    ArrayAccess *arr_element = &assign->a_output.a_union.arr_element;
+    if (analyse_terminal_array_access(state, arr_element, NULL) != 0) {
+      fprintf(stderr, "Failed to analyse array access for assignment statement\n");
+      return INVALID_PROGRAM_CODE;
+    }
+
+    // TODO: We are re-fetching the identifier here even though already fetched for analyse_terminal_array_access
+    ident = get_identifier(state, arr_element->term_ident.name);
+    assert(ident != NULL && ident->d_type->d_kind == D_ARRAY);
+
+    assign->d_type = ident->d_type->d_union.a_type.element_type;
+    break;
+  default:
+    assert(false);
+  }
+
+  if (!assign->d_type->variable) {
+    fprintf(stderr, "Attempted to modify constant: %s\n", ident->name);
     return INVALID_PROGRAM_CODE;
   }
 
-  if (ident->i_type != I_VARIABLE) {
-    fprintf(stderr, "Attempted to modify constant: %s\n", assign->term_ident.name);
-    return INVALID_PROGRAM_CODE;
-  }
-
-  assign->d_type = ident->d_type;
-  assign->term_ident.scope = ident->scope;
   return analyse_expression(state, &assign->expr, assign->d_type);
 }
 unsigned char analyse_ret_statement(SemaState *state, ReturnStatement *ret, const DataType *func_type) {
@@ -328,7 +352,7 @@ unsigned char analyse_terminal_array_access(SemaState *state, ArrayAccess *arr_a
   }
 
   const ArrayType *array_type = &ident->d_type->d_union.a_type;
-  if (!do_data_types_match(array_type->element_type, expr_type)) {
+  if (expr_type != NULL && !do_data_types_match(array_type->element_type, expr_type)) {
     fprintf(stderr, "Element type of array %s does not match expected expression type: %s\n",
             arr_access->term_ident.name, d_type_to_string(expr_type));
     return INVALID_PROGRAM_CODE;
@@ -459,6 +483,11 @@ unsigned char analyse_comp_expression(SemaState *state, CompoundExpr *comp, cons
   const DataType *term_type = expr_type;
   if (expr_type->d_kind == D_PRIMITIVE && expr_type->d_union.p_type == P_BOOL) {
     term_type = &I32_TYPE;
+  }
+
+  if (expr_type->d_kind == D_ARRAY) {
+    fprintf(stderr, "Using arrays as part of compound expressions is not supported\n");
+    return 1;
   }
 
   unsigned char result = analyse_term_expression(state, &comp->lhs, term_type);

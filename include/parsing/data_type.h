@@ -20,6 +20,7 @@ typedef struct {
 struct DataType {
   DataTypeUnion d_union;
   DataTypeKind d_kind;
+  bool variable;
 };
 
 unsigned char parse_data_type(DataType *data_type, const Tokens *tokens, size_t *idx);

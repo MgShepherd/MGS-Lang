@@ -4,6 +4,7 @@
 #include "lexer.h"
 #include "parsing/data_type.h"
 #include "parsing/expression.h"
+#include "parsing/type.h"
 #include <stdlib.h>
 
 typedef struct Statement Statement;
@@ -16,13 +17,22 @@ typedef struct {
 
 typedef struct {
   TerminalIdentifier term_ident;
-  bool variable;
   DataType d_type;
   Expression expr;
 } DeclarationStatement;
 
-typedef struct {
+typedef union {
   TerminalIdentifier term_ident;
+  ArrayAccess arr_element;
+} AssignmentOutputUnion;
+
+typedef struct {
+  AssignmentType a_type;
+  AssignmentOutputUnion a_union;
+} AssignmentOutput;
+
+typedef struct {
+  AssignmentOutput a_output;
   Expression expr;
   // d_type will be populated as part of semantic analysis
   const DataType *d_type;

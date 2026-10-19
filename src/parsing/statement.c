@@ -34,7 +34,7 @@ unsigned char parse_statements(Statements *statements, const Tokens *tokens, siz
       }
       if (tokens->elements[*idx + 1].t_type == T_COLON) {
         result = parse_dec_statement(&statement, tokens, idx);
-      } else if (tokens->elements[*idx + 1].t_type == T_EQUALS) {
+      } else if (tokens->elements[*idx + 1].t_type == T_EQUALS || tokens->elements[*idx + 1].t_type == T_LEFT_SQUARE) {
         result = parse_assign_statement(&statement, tokens, idx);
       } else {
         result = parse_void_statement(&statement, tokens, idx);
@@ -123,8 +123,6 @@ unsigned char parse_dec_statement(Statement *statement, const Tokens *tokens, si
     return 1;
   }
 
-  dec.variable = expect_next(T_VAR, tokens, idx) != NULL;
-
   if (parse_data_type(&dec.d_type, tokens, idx) != 0) {
     fprintf(stderr, "Failed to parse datatype for declaration statement\n");
     return 1;
@@ -154,14 +152,24 @@ unsigned char parse_dec_statement(Statement *statement, const Tokens *tokens, si
 unsigned char parse_assign_statement(Statement *statement, const Tokens *tokens, size_t *idx) {
   statement->s_type = S_NONE;
   AssignmentStatement assign;
+  assign.a_output.a_type = A_NONE;
 
-  const Token *ident = expect_next(T_IDENTIFIER, tokens, idx);
-  if (ident == NULL) {
-    fprintf(stderr, "Failed to read identifier for assignment statement\n");
-    return 1;
+  const TokenType next_type = peek_index(tokens, *idx + 1);
+  if (next_type == T_EQUALS) {
+    assign.a_output.a_type = A_IDENTIFIER;
+    if (parse_terminal_identifier(&assign.a_output.a_union.term_ident, tokens, idx) != 0) {
+      fprintf(stderr, "Failed to read identifier for assignment statement\n");
+      return 1;
+    }
+  } else if (next_type == T_LEFT_SQUARE) {
+    assign.a_output.a_type = A_ARRAY_ELEMENT;
+    if (parse_array_access(&assign.a_output.a_union.arr_element, tokens, idx) != 0) {
+      fprintf(stderr, "Failed to read array access for assignment statement\n");
+      return 1;
+    }
+  } else {
+    assert(false);
   }
-  assert(ident->item != NULL);
-  assign.term_ident.name = ident->item;
 
   if (expect_next(T_EQUALS, tokens, idx) == NULL) {
     fprintf(stderr, "Failed to read equals for assignment statement\n");

@@ -13,6 +13,7 @@ typedef struct {
 
 typedef struct {
   const char *name;
+  // TODO: Do we need i_type anymore now that is variable stored within datatype?
   IdentifierType i_type;
   const void *scope;
   // Identifiers only store a pointer to an already existing d_type so not freed when destroyed

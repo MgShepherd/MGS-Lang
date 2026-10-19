@@ -16,6 +16,8 @@ unsigned char parse_data_type(DataType *data_type, const Tokens *tokens, size_t 
     return 1;
   }
 
+  data_type->variable = expect_next(T_VAR, tokens, idx) != NULL;
+
   const TokenType next = peek_index(tokens, *idx);
   if (next == T_LEFT_SQUARE) {
     data_type->d_kind = D_ARRAY;

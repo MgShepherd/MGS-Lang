@@ -57,6 +57,11 @@
   X(D_ARRAY)                                                                                                           \
   X(D_PRIMITIVE)
 
+#define ASSIGNMENT_TYPES                                                                                               \
+  X(A_NONE)                                                                                                            \
+  X(A_IDENTIFIER)                                                                                                      \
+  X(A_ARRAY_ELEMENT)
+
 #define X(N) N,
 typedef enum { STATEMENT_TYPES } StatementType;
 typedef enum { EXPRESSION_TYPES } ExpressionType;
@@ -66,6 +71,7 @@ typedef enum { LITERAL_TYPES } LiteralType;
 typedef enum { TERMINAL_TYPES } TerminalType;
 typedef enum { IDENTIFIER_TYPES } IdentifierType;
 typedef enum { DATATYPE_KINDS } DataTypeKind;
+typedef enum { ASSIGNMENT_TYPES } AssignmentType;
 #undef X
 
 const char *s_type_to_string(StatementType s);

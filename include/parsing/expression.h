@@ -93,6 +93,9 @@ struct Expression {
   ExpressionType e_type;
 };
 
+unsigned char parse_terminal_identifier(TerminalIdentifier *term_ident, const Tokens *tokens, size_t *idx);
+unsigned char parse_array_access(ArrayAccess *arr_access, const Tokens *tokens, size_t *idx);
+
 /*
  * parse_expression will attempt to convert the next tokens into an expression and output to provided expression
  * Will update the idx pointer to point at the next token when valid

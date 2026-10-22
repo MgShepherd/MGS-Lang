@@ -1,6 +1,6 @@
 -- TEST fixed sized arrays
 -- EXPECTED_STATUS_CODE 12
-func main() -> i64 {
+main: func() -> i64 {
 	my_array: []i64 = [10, 12, 4];
 	my_bool_arr: []bool = [true, false, true];
 	return my_array[1];
@@ -8,14 +8,14 @@ func main() -> i64 {
 
 -- TEST empty array
 -- EXPECTED_STATUS_CODE 96
-func main() -> i64 {
+main: func() -> i64 {
 	my_array: []i64 = [];
 	return 96;
 }
 
 -- TEST updating array element
 -- EXPECTED_STATUS_CODE 100
-func main() -> i64 {
+main: func() -> i64 {
 	my_array: []var i64 = [10, 11, 12];
 	my_array[0] = 100;
 	return my_array[0];
@@ -24,49 +24,49 @@ func main() -> i64 {
 
 -- TEST Array with incorrect element type
 -- EXPECTED_COMPILATION_ERROR Boolean literal false used in non-boolean expression type: P_I64
-func main() -> i64 {
+main: func() -> i64 {
 	my_array: []i64 = [10, false];
 	return 96;
 }
 
 -- TEST Array with void type
 -- EXPECTED_COMPILATION_ERROR Cannot use void as datatype for variable
-func main() -> i64 {
+main: func() -> i64 {
 	my_array: []void = [];
 	return 96;
 }
 
 -- TEST Array with no initialisation
 -- EXPECTED_COMPILATION_ERROR Failed to read equals for declaration statement
-func main() -> i64 {
+main: func() -> i64 {
 	my_array: []i32;
 	return 96;
 }
 
 -- TEST Array used in compound expression
 -- EXPECTED_COMPILATION_ERROR Using arrays as part of compound expressions is not supported
-func main() -> i64 {
+main: func() -> i64 {
 	my_array: []i32 = [10, 12] + [12, 11];
 	return 96;
 }
 
 -- TEST Array Access used on not-array variable
 -- EXPECTED_COMPILATION_ERROR Expected variable: my_item to be an array type for array access
-func main() -> i64 {
+main: func() -> i64 {
 	my_item: i32 = 10;
 	return my_item[0];
 }
 
 -- TEST Out of bounds array access
 -- EXPECTED_COMPILATION_ERROR Array index 3 out of bounds for array my_item
-func main() -> i64 {
+main: func() -> i64 {
 	my_item: []i64 = [10, 11, 12];
 	return my_item[3];
 }
 
 -- TEST Assigning to out of bounds index
 -- EXPECTED_COMPILATION_ERROR Array index 4 out of bounds for array my_item
-func main() -> i64 {
+main: func() -> i64 {
 	my_item: []var i64 = [10, 11, 12];
 	my_item[4] = 10;
 	return my_item[0];
@@ -74,7 +74,7 @@ func main() -> i64 {
 
 -- TEST Assigning to const array element
 -- EXPECTED_COMPILATION_ERROR Attempted to modify constant: my_item
-func main() -> i64 {
+main: func() -> i64 {
 	my_item: []i64 = [10, 11, 12];
 	my_item[1] = 10;
 	return my_item[1];

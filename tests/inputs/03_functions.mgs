@@ -1,50 +1,50 @@
 -- TEST function call from main
 -- EXPECTED_STATUS_CODE 12
-func test1() -> i32 {
+test1: func() -> i32 {
 	return 12;
 }
 
-func main() -> i32 {
+main: func() -> i32 {
 	result: i32 = test1();
 	return result;
 }
 
 -- TEST function call within compound expression
 -- EXPECTED_STATUS_CODE 42
-func test1() -> i32 {
+test1: func() -> i32 {
 	return 22;
 }
 
-func main() -> i32 {
+main: func() -> i32 {
 	result: i32 = 20 + test1();
 	return result;
 }
 
 -- TEST void function
 -- EXPECTED_STATUS_CODE 12
-func test1() -> void {
+test1: func() -> void {
 	x: i32 = 10;
 }
 
-func main() -> i32 {
+main: func() -> i32 {
 	test1();
 	return 12;
 }
 
 -- TEST function with parameters
 -- EXPECTED_STATUS_CODE 27
-func add10(x: i32) -> i32 {
+add10: func(x: i32) -> i32 {
 	return x + 10;
 }
 
-func main() -> i32 {
+main: func() -> i32 {
 	y: i32 = add10(12) + 5;
 	return y;
 }
 
 -- TEST function with multiple parameters of different types
 -- EXPECTED_STATUS_CODE 17
-func my_func(x: i32, my_bool: bool) -> i32 {
+my_func: func(x: i32, my_bool: bool) -> i32 {
 	y: var i32 = x;
 	if my_bool {
 		y = y + 5;
@@ -54,36 +54,36 @@ func my_func(x: i32, my_bool: bool) -> i32 {
 	return y;
 }
 
-func main() -> i32 {
+main: func() -> i32 {
 	z: i32 = my_func(12, true);
 	return z;
 }
 
 -- TEST function call without parentheseses
 -- EXPECTED_COMPILATION_ERROR Undefined variable: test1
-func test1() -> void {
+test1: func() -> void {
 	x: i32 = 10;
 }
 
-func main() -> i32 {
+main: func() -> i32 {
 	test1;
 	return 12;
 }
 
 -- TEST void function used within typed expression
 -- EXPECTED_COMPILATION_ERROR Function test1 does not return expected type P_I32
-func test1() -> void {
+test1: func() -> void {
 	x: i32 = 10;
 }
 
-func main() -> i32 {
+main: func() -> i32 {
 	x: i32 = test1();
 	return 12;
 }
 
 -- TEST function call with incorrect number of parameters
 -- EXPECTED_COMPILATION_ERROR Mismatched number of parameters in function call, expected 2, got 1
-func my_func(x: i32, my_bool: bool) -> i32 {
+my_func: func(x: i32, my_bool: bool) -> i32 {
 	y: var i32 = x;
 	if my_bool {
 		y = y + 5;
@@ -93,14 +93,14 @@ func my_func(x: i32, my_bool: bool) -> i32 {
 	return y;
 }
 
-func main() -> i32 {
+main: func() -> i32 {
 	z: i32 = my_func(12);
 	return z;
 }
 
 -- TEST function with statements after return expression
 -- EXPECTED_COMPILATION_ERROR Dead code after return statement
-func main() -> i32 {
+main: func() -> i32 {
 	x: var i32 = 20;
 	return x;
 	x = 10;
@@ -108,12 +108,12 @@ func main() -> i32 {
 
 -- TEST no main function
 -- EXPECTED_COMPILATION_ERROR All programs must have a main function defined
-func example() -> i32 {
+example: func() -> i32 {
 	return 10;
 }
 
 -- TEST main function with invalid signature
 -- EXPECTED_COMPILATION_ERROR Return type from main function must be an integer type (i8, i16, i32, i64)
-func main() -> bool {
+main: func() -> bool {
 	return true;
 }

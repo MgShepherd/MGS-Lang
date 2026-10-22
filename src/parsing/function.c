@@ -1,9 +1,9 @@
 #include "parsing/function.h"
 
 #include "dynamic_array.h"
+#include "lexer.h"
 #include "parsing/data_type.h"
 #include "parsing/statement.h"
-#include "parsing/type.h"
 #include "parsing/utils.h"
 #include <stdio.h>
 
@@ -16,12 +16,6 @@ unsigned char parse_parameters(Parameters *parameters, const Tokens *tokens, siz
 unsigned char parse_functions(Functions *functions, const Tokens *tokens) {
   size_t idx = 0;
   while (idx < tokens->count) {
-    if (tokens->elements[idx].t_type != T_FUNCTION) {
-      fprintf(stderr, "Expected func token for function begin, got %s\n",
-              t_type_to_string(tokens->elements[idx].t_type));
-      return 1;
-    }
-
     Function func;
     if (parse_function(&func, tokens, &idx) != 0) {
       fprintf(stderr, "Failed to parse function\n");
@@ -43,17 +37,22 @@ void functions_free(Functions *functions) {
 }
 
 unsigned char parse_function(Function *function, const Tokens *tokens, size_t *idx) {
-  if (expect_next(T_FUNCTION, tokens, idx) == NULL) {
-    fprintf(stderr, "Expected keyword token for function\n");
-    return 1;
-  }
-
   const Token *ident_tok = expect_next(T_IDENTIFIER, tokens, idx);
   if (ident_tok == NULL) {
     fprintf(stderr, "Failed to get identifier for function\n");
     return 1;
   }
   function->name = ident_tok->item;
+
+  if (expect_next(T_COLON, tokens, idx) == NULL) {
+    fprintf(stderr, "Expected colon after function identifier\n");
+    return 1;
+  }
+
+  if (expect_next(T_FUNCTION, tokens, idx) == NULL) {
+    fprintf(stderr, "Expected keyword token for function\n");
+    return 1;
+  }
 
   if (expect_next(T_LEFT_PAREN, tokens, idx) == NULL) {
     fprintf(stderr, "Expected opening parenthesis in function\n");

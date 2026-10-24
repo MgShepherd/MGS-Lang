@@ -1,0 +1,14 @@
+-- TEST user defined struct type
+-- EXPECTED_STATUS_CODE 12
+Person: struct {
+	age: i64,
+	is_programmer: bool
+};
+
+main: func() -> i64 {
+	my_person: Person = {
+		age = 100,
+		is_programmer = true
+	};
+	return 100;
+}

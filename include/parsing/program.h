@@ -2,10 +2,24 @@
 #define _PARSING_PROGRAM_H_
 
 #include "lexer.h"
+#include "parsing/data_type.h"
 #include "parsing/function.h"
 
 typedef struct {
+  Function *elements;
+  size_t count;
+  size_t capacity;
+} Functions;
+
+typedef struct {
+  UserType *elements;
+  size_t count;
+  size_t capacity;
+} UserTypes;
+
+typedef struct {
   Functions functions;
+  UserTypes user_types;
 } Program;
 
 /*

@@ -69,7 +69,6 @@ typedef enum { PRIMITIVE_TYPES } PrimitiveType;
 typedef enum { OPERATOR_TYPES } OperatorType;
 typedef enum { LITERAL_TYPES } LiteralType;
 typedef enum { TERMINAL_TYPES } TerminalType;
-typedef enum { IDENTIFIER_TYPES } IdentifierType;
 typedef enum { DATATYPE_KINDS } DataTypeKind;
 typedef enum { ASSIGNMENT_TYPES } AssignmentType;
 #undef X
@@ -79,7 +78,6 @@ const char *e_type_to_string(ExpressionType e);
 const char *p_type_to_string(PrimitiveType p);
 const char *o_type_to_string(OperatorType o);
 const char *l_type_to_string(LiteralType l);
-const char *i_type_to_string(IdentifierType i);
 const char *term_type_to_string(TerminalType t);
 
 /*

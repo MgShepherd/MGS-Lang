@@ -54,14 +54,6 @@ const char *term_type_to_string(TerminalType t) {
     return "unknown";
   }
 }
-
-const char *i_type_to_string(IdentifierType i) {
-  switch (i) {
-    IDENTIFIER_TYPES
-  default:
-    return "unknown";
-  }
-}
 #undef X
 
 PrimitiveType tok_to_primitive_type(TokenType t_type) {

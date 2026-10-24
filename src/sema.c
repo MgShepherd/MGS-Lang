@@ -51,7 +51,7 @@ unsigned char analyse_numeric_literal(TerminalLiteral *term_lit, bool is_negativ
 
 unsigned char analyse_block(SemaState *state, Block *block, const DataType *func_type);
 
-unsigned char insert_identifier(SemaState *state, const char *name, const DataType *d_type, IdentifierType i_type);
+unsigned char insert_identifier(SemaState *state, const char *name, const DataType *d_type);
 const Identifier *get_identifier(const SemaState *state, const char *name);
 const Function *get_function(const Functions *functions, const char *name);
 bool is_identifier_in_scope(const Scopes *scopes, const Identifier *identifier);
@@ -121,7 +121,7 @@ unsigned char analyse_func(SemaState *state, Function *func) {
 unsigned char analyse_parameters(SemaState *state, Parameters *parameters) {
   for (size_t i = 0; i < parameters->count; i++) {
     Parameter *param = &parameters->elements[i];
-    if (insert_identifier(state, param->term_ident.name, &param->d_type, I_CONST) != 0) {
+    if (insert_identifier(state, param->term_ident.name, &param->d_type) != 0) {
       return 1;
     }
 
@@ -177,8 +177,7 @@ unsigned char analyse_dec_statement(SemaState *state, DeclarationStatement *dec)
     return result;
   }
 
-  IdentifierType i_type = dec->d_type.variable ? I_VARIABLE : I_CONST;
-  result = insert_identifier(state, dec->term_ident.name, &dec->d_type, i_type);
+  result = insert_identifier(state, dec->term_ident.name, &dec->d_type);
   if (result != 0) {
     return result;
   }
@@ -557,7 +556,7 @@ unsigned char analyse_data_type(DataType *d_type, const Expression *expr) {
   return 0;
 }
 
-unsigned char insert_identifier(SemaState *state, const char *name, const DataType *d_type, IdentifierType i_type) {
+unsigned char insert_identifier(SemaState *state, const char *name, const DataType *d_type) {
   const Identifier *existing = get_identifier(state, name);
   if (existing != NULL) {
     fprintf(stderr, "Variable %s shadows existing variable in scope\n", existing->name);
@@ -566,7 +565,6 @@ unsigned char insert_identifier(SemaState *state, const char *name, const DataTy
 
   Identifier new_ident = {
       .d_type = d_type,
-      .i_type = i_type,
       .name = name,
       .scope = state->scopes.elements[state->scopes.count - 1],
   };

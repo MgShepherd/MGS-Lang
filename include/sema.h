@@ -3,7 +3,6 @@
 
 #include "parsing/data_type.h"
 #include "parsing/program.h"
-#include "parsing/type.h"
 
 typedef struct {
   const void **elements;
@@ -13,8 +12,6 @@ typedef struct {
 
 typedef struct {
   const char *name;
-  // TODO: Do we need i_type anymore now that is variable stored within datatype?
-  IdentifierType i_type;
   const void *scope;
   // Identifiers only store a pointer to an already existing d_type so not freed when destroyed
   const DataType *d_type;

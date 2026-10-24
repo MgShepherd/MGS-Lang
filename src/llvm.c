@@ -23,7 +23,6 @@
 typedef struct {
   const char *name;
   LLVMValueRef ptr;
-  IdentifierType i_type;
   const void *scope;
   const DataType *d_type;
 } ValueRef;
@@ -178,7 +177,6 @@ unsigned char build_function(IRState *state, const Function *func) {
       ValueRef param_val = {
           .name = param->term_ident.name,
           .ptr = param_ptr,
-          .i_type = I_CONST,
           .scope = param->term_ident.scope,
           .d_type = &param->d_type,
       };
@@ -306,11 +304,9 @@ unsigned char build_declaration_statement(IRState *state, const DeclarationState
   assert(expr_output != NULL);
   LLVMBuildStore(state->builder, expr_output, var_ptr);
 
-  const IdentifierType i_type = dec->d_type.variable ? I_VARIABLE : I_CONST;
   ValueRef var = {
       .name = dec->term_ident.name,
       .ptr = var_ptr,
-      .i_type = i_type,
       .scope = dec->term_ident.scope,
       .d_type = &dec->d_type,
   };

@@ -23,7 +23,9 @@ typedef struct {
 } SemaState;
 
 unsigned char analyse_func(SemaState *state, Function *func);
-unsigned char analyse_parameters(SemaState *state, Parameters *parameters);
+unsigned char analyse_parameters(SemaState *state, Fields *parameters);
+
+unsigned char analyse_user_type(SemaState *state, UserType *user_type);
 
 unsigned char analyse_statements(SemaState *state, const Statements *statements, const DataType *func_type);
 unsigned char analyse_statement(SemaState *state, Statement *statement, const DataType *func_type);
@@ -118,9 +120,9 @@ unsigned char analyse_func(SemaState *state, Function *func) {
   return analyse_block(state, &func->block, &func->return_type);
 }
 
-unsigned char analyse_parameters(SemaState *state, Parameters *parameters) {
+unsigned char analyse_parameters(SemaState *state, Fields *parameters) {
   for (size_t i = 0; i < parameters->count; i++) {
-    Parameter *param = &parameters->elements[i];
+    Field *param = &parameters->elements[i];
     if (insert_identifier(state, param->term_ident.name, &param->d_type) != 0) {
       return 1;
     }

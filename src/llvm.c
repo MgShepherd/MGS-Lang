@@ -61,6 +61,8 @@ unsigned char build_function(IRState *state, const Function *func);
 LLVMTypeRef get_type(const IRState *state, const DataType *d_type);
 LLVMTypeRef get_primitive_type(const IRState *state, PrimitiveType p_type);
 
+unsigned char build_user_type(IRState *state, const UserType *user_type);
+
 unsigned char build_statements(IRState *state, const Statements *statements, const LLVMValueRef func);
 unsigned char build_statement(IRState *state, const Statement *statement, const LLVMValueRef func);
 // Statements which return unsigned char can only error due to failing to add ValueRef into array
@@ -102,6 +104,13 @@ unsigned char program_to_object_file(const Program *program, const char *file_na
   if (init_ir_state(&state) != 0) {
     fprintf(stderr, "Failed to initialise IR state\n");
     return 1;
+  }
+
+  for (size_t i = 0; i < program->user_types.count; i++) {
+    if (build_user_type(&state, &program->user_types.elements[i]) != 0) {
+      dispose_ir_state(&state);
+      return 1;
+    }
   }
 
   for (size_t i = 0; i < program->functions.count; i++) {
@@ -168,7 +177,7 @@ unsigned char build_function(IRState *state, const Function *func) {
     LLVMGetParams(llvm_func, params);
 
     for (size_t i = 0; i < func->parameters.count; i++) {
-      const Parameter *param = &func->parameters.elements[i];
+      const Field *param = &func->parameters.elements[i];
       const LLVMValueRef param_ptr = LLVMBuildAlloca(state->builder, param_types[i], param->term_ident.name);
       assert(param_ptr != NULL);
       LLVMBuildStore(state->builder, params[i], param_ptr);
@@ -213,6 +222,8 @@ unsigned char build_function(IRState *state, const Function *func) {
 
   return 0;
 }
+
+unsigned char build_user_type(IRState *state, const UserType *user_type) {}
 
 LLVMTypeRef get_type(const IRState *state, const DataType *d_type) {
   assert(state != NULL && d_type->d_kind != D_NONE);

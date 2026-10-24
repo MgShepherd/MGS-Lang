@@ -1,45 +1,18 @@
 #ifndef _PARSING_FUNCTION_H_
 #define _PARSING_FUNCTION_H_
 
-#include "parsing/expression.h"
 #include "parsing/statement.h"
-
-typedef struct {
-  TerminalIdentifier term_ident;
-  DataType d_type;
-} Parameter;
-
-typedef struct {
-  Parameter *elements;
-  size_t count;
-  size_t capacity;
-} Parameters;
+#include "parsing/user_type.h"
 
 typedef struct {
   const char *name;
   DataType return_type;
-  Parameters parameters;
+  Fields parameters;
   Block block;
 } Function;
 
-typedef struct {
-  Function *elements;
-  size_t count;
-  size_t capacity;
-} Functions;
+unsigned char parse_function(Function *function, const Tokens *tokens, size_t *idx);
 
-/*
- * Will parse a series of functions either until end of input to build a program
- * Starts processing from the first element in elements
- * Will output the parsed statements into the functions parameter
- * Assumes functions already has an allocated element array, with a count and capacity
- * Returns 0 on success, 1 if there was a failure
- */
-unsigned char parse_functions(Functions *functions, const Tokens *tokens);
-
-/*
- * Frees functions array as well as nested statement arrays
- */
-void functions_free(Functions *functions);
+void function_free(Function *function);
 
 #endif // _PARSING_FUNCTION_H_

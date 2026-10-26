@@ -18,7 +18,7 @@ unsigned char parse_program(Program *program, const Tokens *tokens) {
   }
 
   dyn_array_init(&program->functions, sizeof(Function), capacity);
-  dyn_array_init(&program->user_types, sizeof(UserType), USER_TYPES_ARRAY_LEN);
+  dyn_array_init(&program->type_defs, sizeof(TypeDefinition), USER_TYPES_ARRAY_LEN);
 
   size_t idx = 0;
   while (idx < tokens->count) {
@@ -38,12 +38,12 @@ unsigned char parse_program(Program *program, const Tokens *tokens) {
       dyn_array_insert(&program->functions, func);
       break;
     case T_STRUCT:
-      UserType user_type;
-      if (parse_user_type(&user_type, tokens, &idx) != 0) {
-        fprintf(stderr, "Failed to parse function\n");
+      TypeDefinition type_def;
+      if (parse_type_definition(&type_def, tokens, &idx) != 0) {
+        fprintf(stderr, "Failed to parse type definition\n");
         return 1;
       }
-      dyn_array_insert(&program->user_types, user_type);
+      dyn_array_insert(&program->type_defs, type_def);
       break;
     default:
       fprintf(stderr, "Unexpected token type: %s for global construct\n",
@@ -67,5 +67,5 @@ void program_free(Program *program) {
     dyn_array_free(&program->functions);
   }
 
-  dyn_array_free(&program->user_types);
+  dyn_array_free(&program->type_defs);
 }

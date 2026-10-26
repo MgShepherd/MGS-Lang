@@ -25,8 +25,6 @@ typedef struct {
 unsigned char analyse_func(SemaState *state, Function *func);
 unsigned char analyse_parameters(SemaState *state, Fields *parameters);
 
-unsigned char analyse_user_type(SemaState *state, UserType *user_type);
-
 unsigned char analyse_statements(SemaState *state, const Statements *statements, const DataType *func_type);
 unsigned char analyse_statement(SemaState *state, Statement *statement, const DataType *func_type);
 unsigned char analyse_dec_statement(SemaState *state, DeclarationStatement *dec);
@@ -47,6 +45,7 @@ unsigned char analyse_terminal_func_call(SemaState *state, const FunctionCall *f
 unsigned char analyse_terminal_identifier(SemaState *state, TerminalIdentifier *term_ident, const DataType *expr_type);
 unsigned char analyse_terminal_literal(TerminalLiteral *term_lit, const Token *sign, const DataType *expr_type);
 unsigned char analyse_terminal_array_literal(SemaState *state, ArrayLiteral *arr_lit, const DataType *expr_type);
+unsigned char analyse_terminal_struct_literal(SemaState *state, StructLiteral *struct_lit, const DataType *expr_type);
 unsigned char analyse_terminal_array_access(SemaState *state, ArrayAccess *arr_access, const DataType *expr_type);
 
 unsigned char analyse_numeric_literal(TerminalLiteral *term_lit, bool is_negative, const DataType *expr_type);
@@ -308,6 +307,9 @@ unsigned char analyse_term_expression(SemaState *state, TerminalExpr *term, cons
     return analyse_terminal_array_literal(state, &term->item.t_union.arr_literal, expr_type);
   case TERM_ARRAY_ACCESS:
     return analyse_terminal_array_access(state, &term->item.t_union.arr_access, expr_type);
+  case TERM_STRUCT_LITERAL:
+    return analyse_terminal_struct_literal(state, &term->item.t_union.struct_literal, expr_type);
+    return 0;
   default:
     assert(false);
   }
@@ -433,6 +435,12 @@ unsigned char analyse_terminal_array_literal(SemaState *state, ArrayLiteral *arr
     }
   }
 
+  return 0;
+}
+
+unsigned char analyse_terminal_struct_literal(SemaState *state, StructLiteral *struct_lit, const DataType *expr_type) {
+  assert(expr_type->d_kind == D_STRUCT);
+  struct_lit->d_type = expr_type;
   return 0;
 }
 
@@ -681,6 +689,8 @@ bool is_void_type(const DataType *d_type) {
     return d_type->d_union.p_type == P_VOID;
   } else if (d_type->d_kind == D_ARRAY) {
     return is_void_type(d_type->d_union.a_type.element_type);
+  } else if (d_type->d_kind == D_STRUCT) {
+    return false;
   }
 
   assert(false);

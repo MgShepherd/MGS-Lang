@@ -18,6 +18,7 @@
 #define MODULE_NAME "main"
 #define VARIBLE_LEN_ESTIMATE 20
 #define FUNC_LEN_ESTIMATE 5
+#define TYPE_DEFINITIONS_LEN_ESTIMATE 5
 #define ARRAY_REALLOC_FACTOR 2
 
 typedef struct {
@@ -32,6 +33,17 @@ typedef struct {
   size_t count;
   size_t capacity;
 } ValueRefs;
+
+typedef struct {
+  const char *name;
+  LLVMTypeRef ref;
+} TypeDefinitionRef;
+
+typedef struct {
+  TypeDefinitionRef *elements;
+  size_t count;
+  size_t capacity;
+} TypeDefinitionRefs;
 
 typedef struct {
   LLVMTypeRef *param_types;
@@ -53,6 +65,7 @@ typedef struct {
   LLVMBuilderRef builder;
   ValueRefs values;
   FuncRefs funcs;
+  TypeDefinitionRefs type_refs;
 } IRState;
 
 unsigned char init_ir_state(IRState *state);
@@ -61,7 +74,7 @@ unsigned char build_function(IRState *state, const Function *func);
 LLVMTypeRef get_type(const IRState *state, const DataType *d_type);
 LLVMTypeRef get_primitive_type(const IRState *state, PrimitiveType p_type);
 
-unsigned char build_user_type(IRState *state, const UserType *user_type);
+unsigned char build_type_definition(IRState *state, const TypeDefinition *type_def);
 
 unsigned char build_statements(IRState *state, const Statements *statements, const LLVMValueRef func);
 unsigned char build_statement(IRState *state, const Statement *statement, const LLVMValueRef func);
@@ -86,6 +99,7 @@ LLVMValueRef build_func_call(const IRState *state, const FunctionCall *func_call
 LLVMValueRef build_identifier(const IRState *state, const TerminalIdentifier *term_ident, const LLVMTypeRef d_type);
 LLVMValueRef build_literal(const Literal *literal, const LLVMTypeRef d_type);
 LLVMValueRef build_array_literal(const IRState *state, const ArrayLiteral *arr_lit);
+LLVMValueRef build_struct_literal(const IRState *state, const StructLiteral *struct_lit);
 LLVMValueRef build_array_access(const IRState *state, const ArrayAccess *arr_access);
 
 LLVMValueRef build_get_array_element_ptr(const IRState *state, const ArrayAccess *arr_access);
@@ -96,6 +110,7 @@ void dispose_ir_state(IRState *state);
 
 const ValueRef *load_identifier(const ValueRefs *values, const TerminalIdentifier *term_ident);
 const LlvmFunc *load_function(const FuncRefs *funcs, const char *identifier);
+const TypeDefinitionRef *load_type_definition(const TypeDefinitionRefs *type_refs, const char *identifier);
 
 unsigned char program_to_object_file(const Program *program, const char *file_name, bool llvm_debug) {
   assert(program != NULL);
@@ -106,8 +121,8 @@ unsigned char program_to_object_file(const Program *program, const char *file_na
     return 1;
   }
 
-  for (size_t i = 0; i < program->user_types.count; i++) {
-    if (build_user_type(&state, &program->user_types.elements[i]) != 0) {
+  for (size_t i = 0; i < program->type_defs.count; i++) {
+    if (build_type_definition(&state, &program->type_defs.elements[i]) != 0) {
       dispose_ir_state(&state);
       return 1;
     }
@@ -145,6 +160,7 @@ unsigned char program_to_object_file(const Program *program, const char *file_na
 unsigned char init_ir_state(IRState *state) {
   dyn_array_init(&state->values, sizeof(ValueRef), VARIBLE_LEN_ESTIMATE);
   dyn_array_init(&state->funcs, sizeof(LlvmFunc), FUNC_LEN_ESTIMATE);
+  dyn_array_init(&state->type_refs, sizeof(TypeDefinitionRef), TYPE_DEFINITIONS_LEN_ESTIMATE);
 
   // TODO: This creation logic will need updating when supporting multiple source files
   state->context = LLVMContextCreate();
@@ -223,7 +239,24 @@ unsigned char build_function(IRState *state, const Function *func) {
   return 0;
 }
 
-unsigned char build_user_type(IRState *state, const UserType *user_type) {}
+unsigned char build_type_definition(IRState *state, const TypeDefinition *type_definition) {
+  TypeDefinitionRef type_ref;
+
+  assert(type_definition->td_kind == TD_STRUCT);
+  const StructDefinition *struct_definition = &type_definition->td_union.s_def;
+
+  LLVMTypeRef field_types[struct_definition->fields.count];
+  for (size_t i = 0; i < struct_definition->fields.count; i++) {
+    field_types[i] = get_type(state, &struct_definition->fields.elements[i].d_type);
+  }
+
+  type_ref.name = struct_definition->name;
+  type_ref.ref = LLVMStructTypeInContext(state->context, field_types, struct_definition->fields.count, false);
+
+  dyn_array_insert(&state->type_refs, type_ref);
+
+  return 0;
+}
 
 LLVMTypeRef get_type(const IRState *state, const DataType *d_type) {
   assert(state != NULL && d_type->d_kind != D_NONE);
@@ -233,6 +266,9 @@ LLVMTypeRef get_type(const IRState *state, const DataType *d_type) {
   } else if (d_type->d_kind == D_ARRAY) {
     const LLVMTypeRef element_type = get_type(state, d_type->d_union.a_type.element_type);
     return LLVMArrayType2(element_type, d_type->d_union.a_type.length);
+  } else if (d_type->d_kind == D_STRUCT) {
+    const TypeDefinitionRef *type_def = load_type_definition(&state->type_refs, d_type->d_union.s_type.name);
+    return type_def->ref;
   }
 
   assert(false);
@@ -444,6 +480,9 @@ LLVMValueRef build_terminal_expr(const IRState *state, const TerminalExpr *term,
   case TERM_ARRAY_ACCESS:
     processed = build_array_access(state, &term->item.t_union.arr_access);
     break;
+  case TERM_STRUCT_LITERAL:
+    processed = build_struct_literal(state, &term->item.t_union.struct_literal);
+    break;
   default:
     assert(false);
   }
@@ -513,6 +552,13 @@ LLVMValueRef build_array_literal(const IRState *state, const ArrayLiteral *arr_l
   }
 
   return LLVMConstArray2(element_type, arr_values, arr_lit->items.count);
+}
+
+LLVMValueRef build_struct_literal(const IRState *state, const StructLiteral *struct_lit) {
+  assert(struct_lit->d_type->d_kind == D_STRUCT);
+  const LLVMTypeRef struct_type = get_type(state, struct_lit->d_type);
+
+  return LLVMConstNamedStruct(struct_type, NULL, 0);
 }
 
 LLVMValueRef build_get_array_element_ptr(const IRState *state, const ArrayAccess *arr_access) {
@@ -616,6 +662,7 @@ void dispose_ir_state(IRState *state) {
     free(state->funcs.elements[i].param_types);
   }
   dyn_array_free(&state->funcs);
+  dyn_array_free(&state->type_refs);
 
   LLVMDisposeBuilder(state->builder);
   LLVMDisposeModule(state->module);
@@ -642,6 +689,16 @@ const LlvmFunc *load_function(const FuncRefs *funcs, const char *identifier) {
   for (size_t i = 0; i < funcs->count; i++) {
     if (strcmp(funcs->elements[i].name, identifier) == 0) {
       return &funcs->elements[i];
+    }
+  }
+
+  return NULL;
+}
+
+const TypeDefinitionRef *load_type_definition(const TypeDefinitionRefs *type_refs, const char *identifier) {
+  for (size_t i = 0; i < type_refs->count; i++) {
+    if (strcmp(type_refs->elements[i].name, identifier) == 0) {
+      return &type_refs->elements[i];
     }
   }
 

@@ -13,8 +13,13 @@ typedef struct {
 } ArrayType;
 
 typedef struct {
+  const char *name;
+} StructType;
+
+typedef struct {
   PrimitiveType p_type;
   ArrayType a_type;
+  StructType s_type;
 } DataTypeUnion;
 
 struct DataType {

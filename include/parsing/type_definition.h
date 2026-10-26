@@ -1,5 +1,5 @@
-#ifndef _PARSING_USER_TYPE_H_
-#define _PARSING_USER_TYPE_H_
+#ifndef _PARSING_TYPE_DEFINITION_H_
+#define _PARSING_TYPE_DEFINITION_H_
 
 #include "parsing/expression.h"
 
@@ -17,19 +17,19 @@ typedef struct {
 typedef struct {
   const char *name;
   Fields fields;
-} StructType;
+} StructDefinition;
 
 typedef struct {
-  StructType s_type;
-} UserTypeUnion;
+  StructDefinition s_def;
+} TypeDefinitionUnion;
 
 typedef struct {
-  UserTypeKind u_kind;
-  UserTypeUnion u_union;
-} UserType;
+  TypeDefinitionKind td_kind;
+  TypeDefinitionUnion td_union;
+} TypeDefinition;
 
-unsigned char parse_user_type(UserType *user_type, const Tokens *tokens, size_t *idx);
+unsigned char parse_type_definition(TypeDefinition *type_def, const Tokens *tokens, size_t *idx);
 
 unsigned char parse_fields(Fields *fields, const Tokens *tokens, size_t *idx);
 
-#endif // _PARSING_USER_TYPE_H_
+#endif // _PARSING_TYPE_DEFINITION_H_

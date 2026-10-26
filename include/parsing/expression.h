@@ -60,11 +60,17 @@ typedef struct {
 } ArrayLiteral;
 
 typedef struct {
+  // d_type will be populated as part of semantic analysis
+  const DataType *d_type;
+} StructLiteral;
+
+typedef struct {
   TerminalLiteral lit;
   TerminalIdentifier ident;
   FunctionCall func_call;
   ArrayLiteral arr_literal;
   ArrayAccess arr_access;
+  StructLiteral struct_literal;
 } TerminalUnion;
 
 typedef struct {

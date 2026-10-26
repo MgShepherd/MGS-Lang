@@ -17,6 +17,7 @@ unsigned char parse_func_call(FunctionCall *func_call, const Tokens *tokens, siz
 unsigned char parse_expression_list(Expressions *params, const Tokens *tokens, size_t *idx,
                                     const TokenType list_end_type);
 unsigned char parse_array_literal(ArrayLiteral *arr_lit, const Tokens *tokens, size_t *idx);
+unsigned char parse_struct_literal(StructLiteral *struct_lit, const Tokens *tokens, size_t *idx);
 
 unsigned char parse_expression(Expression *expression, const Tokens *tokens, size_t *idx) {
   if (*idx >= tokens->count) {
@@ -159,6 +160,12 @@ unsigned char parse_terminal_expr(TerminalExpr *term, const Tokens *tokens, size
     }
     term->item.t_type = TERM_ARRAY_LITERAL;
     return 0;
+  } else if (next->t_type == T_LEFT_CURLY) {
+    if (parse_struct_literal(&term->item.t_union.struct_literal, tokens, idx) != 0) {
+      return 1;
+    }
+    term->item.t_type = TERM_STRUCT_LITERAL;
+    return 0;
   }
 
   if (parse_terminal_literal(&term->item.t_union.lit, tokens, idx) != 0) {
@@ -250,6 +257,22 @@ unsigned char parse_array_literal(ArrayLiteral *arr_lit, const Tokens *tokens, s
 
   if (expect_next(T_RIGHT_SQUARE, tokens, idx) == NULL) {
     fprintf(stderr, "Expected '[' for start of array literal\n");
+    return 1;
+  }
+
+  return 0;
+}
+
+unsigned char parse_struct_literal(StructLiteral *struct_lit, const Tokens *tokens, size_t *idx) {
+  if (expect_next(T_LEFT_CURLY, tokens, idx) == NULL) {
+    fprintf(stderr, "Expected '{' for start of struct literal, got %s\n",
+            t_type_to_string(tokens->elements[*idx].t_type));
+    return 1;
+  }
+
+  if (expect_next(T_RIGHT_CURLY, tokens, idx) == NULL) {
+    fprintf(stderr, "Expected '}' for end of struct literal, got %s\n",
+            t_type_to_string(tokens->elements[*idx].t_type));
     return 1;
   }
 

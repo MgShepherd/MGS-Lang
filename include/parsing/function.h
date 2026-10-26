@@ -2,7 +2,7 @@
 #define _PARSING_FUNCTION_H_
 
 #include "parsing/statement.h"
-#include "parsing/user_type.h"
+#include "parsing/type_definition.h"
 
 typedef struct {
   const char *name;

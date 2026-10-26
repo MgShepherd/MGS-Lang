@@ -6,9 +6,6 @@ Person: struct {
 };
 
 main: func() -> i64 {
-	my_person: Person = {
-		age = 100,
-		is_programmer = true
-	};
-	return 100;
+	michael: Person = {};
+	return 12;
 }

@@ -1,4 +1,4 @@
-#include "parsing/user_type.h"
+#include "parsing/type_definition.h"
 #include "dynamic_array.h"
 #include "parsing/utils.h"
 #include <assert.h>
@@ -6,33 +6,33 @@
 
 #define STRUCT_FIELD_LEN_ESTIMATE 10
 
-unsigned char parse_struct_definition(StructType *struct_type, const Tokens *tokens, size_t *idx);
+unsigned char parse_struct_definition(StructDefinition *struct_def, const Tokens *tokens, size_t *idx);
 
-unsigned char parse_user_type(UserType *user_type, const Tokens *tokens, size_t *idx) {
+unsigned char parse_type_definition(TypeDefinition *type_def, const Tokens *tokens, size_t *idx) {
   const Token *ident_tok = expect_next(T_IDENTIFIER, tokens, idx);
   if (ident_tok == NULL) {
-    fprintf(stderr, "Expected identifier token for user defined type\n");
+    fprintf(stderr, "Expected identifier token for type definition\n");
     return 1;
   }
   assert(ident_tok->item != NULL);
 
   if (expect_next(T_COLON, tokens, idx) == NULL) {
-    fprintf(stderr, "Expected ':' after identifier for user defined type\n");
+    fprintf(stderr, "Expected ':' after identifier for type definition\n");
     return 1;
   }
 
   const TokenType kind = peek_index(tokens, *idx);
   if (kind == T_STRUCT) {
-    user_type->u_kind = U_STRUCT;
+    type_def->td_kind = TD_STRUCT;
 
-    StructType s_type;
-    s_type.name = ident_tok->item;
-    if (parse_struct_definition(&s_type, tokens, idx) != 0) {
+    StructDefinition s_def;
+    s_def.name = ident_tok->item;
+    if (parse_struct_definition(&s_def, tokens, idx) != 0) {
       return 1;
     }
-    user_type->u_union.s_type = s_type;
+    type_def->td_union.s_def = s_def;
   } else {
-    fprintf(stderr, "Unexpected token type %s for user defined type\n", t_type_to_string(kind));
+    fprintf(stderr, "Unexpected token type %s for type definition\n", t_type_to_string(kind));
     return 1;
   }
 
@@ -69,7 +69,7 @@ unsigned char parse_fields(Fields *fields, const Tokens *tokens, size_t *idx) {
   }
 }
 
-unsigned char parse_struct_definition(StructType *struct_type, const Tokens *tokens, size_t *idx) {
+unsigned char parse_struct_definition(StructDefinition *struct_def, const Tokens *tokens, size_t *idx) {
   if (expect_next(T_STRUCT, tokens, idx) == NULL) {
     fprintf(stderr, "Expected 'struct' keyword for struct type\n");
     return 1;
@@ -80,8 +80,8 @@ unsigned char parse_struct_definition(StructType *struct_type, const Tokens *tok
     return 1;
   }
 
-  dyn_array_init(&struct_type->fields, sizeof(Field), STRUCT_FIELD_LEN_ESTIMATE);
-  if (parse_fields(&struct_type->fields, tokens, idx) != 0) {
+  dyn_array_init(&struct_def->fields, sizeof(Field), STRUCT_FIELD_LEN_ESTIMATE);
+  if (parse_fields(&struct_def->fields, tokens, idx) != 0) {
     fprintf(stderr, "Faield to parse struct fields\n");
     return 1;
   }

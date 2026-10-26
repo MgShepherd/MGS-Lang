@@ -45,6 +45,7 @@
   X(TERM_IDENTIFIER)                                                                                                   \
   X(TERM_ARRAY_LITERAL)                                                                                                \
   X(TERM_ARRAY_ACCESS)                                                                                                 \
+  X(TERM_STRUCT_LITERAL)                                                                                               \
   X(TERM_FUNC_CALL)
 
 #define IDENTIFIER_TYPES                                                                                               \
@@ -55,12 +56,17 @@
 #define DATATYPE_KINDS                                                                                                 \
   X(D_NONE)                                                                                                            \
   X(D_ARRAY)                                                                                                           \
+  X(D_STRUCT)                                                                                                          \
   X(D_PRIMITIVE)
 
 #define ASSIGNMENT_TYPES                                                                                               \
   X(A_NONE)                                                                                                            \
   X(A_IDENTIFIER)                                                                                                      \
   X(A_ARRAY_ELEMENT)
+
+#define TYPE_DEFINITION_KINDS                                                                                          \
+  X(TD_NONE)                                                                                                           \
+  X(TD_STRUCT)
 
 #define X(N) N,
 typedef enum { STATEMENT_TYPES } StatementType;
@@ -71,6 +77,7 @@ typedef enum { LITERAL_TYPES } LiteralType;
 typedef enum { TERMINAL_TYPES } TerminalType;
 typedef enum { DATATYPE_KINDS } DataTypeKind;
 typedef enum { ASSIGNMENT_TYPES } AssignmentType;
+typedef enum { TYPE_DEFINITION_KINDS } TypeDefinitionKind;
 #undef X
 
 const char *s_type_to_string(StatementType s);

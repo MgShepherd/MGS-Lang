@@ -3,9 +3,23 @@
 
 #include "lexer.h"
 #include "parsing/function.h"
+#include "parsing/type_definition.h"
+
+typedef struct {
+  Function *elements;
+  size_t count;
+  size_t capacity;
+} Functions;
+
+typedef struct {
+  TypeDefinition *elements;
+  size_t count;
+  size_t capacity;
+} TypeDefinitions;
 
 typedef struct {
   Functions functions;
+  TypeDefinitions type_defs;
 } Program;
 
 /*

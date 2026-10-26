@@ -63,7 +63,7 @@ main: func() -> i32 {
 }
 
 -- TEST if with no condition
--- EXPECTED_COMPILATION_ERROR Token type T_LEFT_CURLY is not a valid terminal literal
+-- EXPECTED_COMPILATION_ERROR Expected '}' for end of struct literal
 main: func() -> i32 {
 	x: var i32 = 10;
 
@@ -88,7 +88,7 @@ main: func() -> i32 {
 }
 
 -- TEST else if with no condition
--- EXPECTED_COMPILATION_ERROR Token type T_LEFT_CURLY is not a valid terminal literal
+-- EXPECTED_COMPILATION_ERROR Expected '}' for end of struct literal
 main: func() -> i32 {
 	x: var i32 = 10;
 

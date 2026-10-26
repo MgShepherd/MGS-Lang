@@ -11,29 +11,10 @@
 #define PARAMETERS_LEN_ESTIMATE 5
 
 unsigned char parse_function(Function *function, const Tokens *tokens, size_t *idx);
-unsigned char parse_parameters(Parameters *parameters, const Tokens *tokens, size_t *idx);
 
-unsigned char parse_functions(Functions *functions, const Tokens *tokens) {
-  size_t idx = 0;
-  while (idx < tokens->count) {
-    Function func;
-    if (parse_function(&func, tokens, &idx) != 0) {
-      fprintf(stderr, "Failed to parse function\n");
-      return 1;
-    }
-
-    dyn_array_insert(functions, func);
-  }
-
-  return 0;
-}
-
-void functions_free(Functions *functions) {
-  for (size_t i = 0; i < functions->count; i++) {
-    statements_free(&functions->elements[i].block.body);
-    dyn_array_free(&functions->elements[i].parameters);
-  }
-  dyn_array_free(functions);
+void function_free(Function *function) {
+  statements_free(&function->block.body);
+  dyn_array_free(&function->parameters);
 }
 
 unsigned char parse_function(Function *function, const Tokens *tokens, size_t *idx) {
@@ -59,8 +40,8 @@ unsigned char parse_function(Function *function, const Tokens *tokens, size_t *i
     return 1;
   }
 
-  dyn_array_init(&function->parameters, sizeof(Parameter), PARAMETERS_LEN_ESTIMATE);
-  if (parse_parameters(&function->parameters, tokens, idx) != 0) {
+  dyn_array_init(&function->parameters, sizeof(Field), PARAMETERS_LEN_ESTIMATE);
+  if (peek_index(tokens, *idx) != T_RIGHT_PAREN && parse_fields(&function->parameters, tokens, idx) != 0) {
     fprintf(stderr, "Failed to parse parameters\n");
     return 1;
   }
@@ -97,38 +78,4 @@ unsigned char parse_function(Function *function, const Tokens *tokens, size_t *i
   }
 
   return 0;
-}
-
-unsigned char parse_parameters(Parameters *parameters, const Tokens *tokens, size_t *idx) {
-  if (peek_index(tokens, *idx) == T_RIGHT_PAREN) {
-    return 0;
-  }
-
-  while (true) {
-    Parameter parameter;
-    const Token *ident = expect_next(T_IDENTIFIER, tokens, idx);
-    if (ident == NULL) {
-      fprintf(stderr, "Expected identifier for parameter value\n");
-      return 1;
-    }
-    assert(ident->item != NULL);
-    parameter.term_ident.name = ident->item;
-
-    if (expect_next(T_COLON, tokens, idx) == NULL) {
-      fprintf(stderr, "Expected colon after parameter value\n");
-      return 1;
-    }
-
-    if (parse_data_type(&parameter.d_type, tokens, idx) != 0) {
-      fprintf(stderr, "Failed to parse datatype for parameter\n");
-      return 1;
-    }
-
-    dyn_array_insert(parameters, parameter);
-
-    if (peek_index(tokens, *idx) != T_COMMA) {
-      return 0;
-    }
-    *idx += 1;
-  }
 }

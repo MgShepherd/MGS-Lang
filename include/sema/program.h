@@ -1,5 +1,7 @@
-#ifndef _SEMA_H_
-#define _SEMA_H_
+#ifndef _SEMA_PROGRAM_H_
+#define _SEMA_PROGRAM_H_
+
+#include <stdlib.h>
 
 #include "parsing/data_type.h"
 #include "parsing/program.h"
@@ -23,10 +25,16 @@ typedef struct {
   size_t capacity;
 } Identifiers;
 
-/*
- * analyse_program takes in a parsed AST program and will analyse to ensure this is a valid program
- * Will return 0 for a valid program, 1 on unexpected error, and 2 for an invalid program
- */
+typedef struct {
+  Identifiers identifiers;
+  const Functions functions;
+  Scopes scopes;
+} SemaState;
+
 unsigned char analyse_program(const Program *program);
 
-#endif // _SEMA_H_
+unsigned char analyse_block(SemaState *state, Block *block, const DataType *func_type);
+
+void free_sema_state(SemaState *state);
+
+#endif // _SEMA_PROGRAM_H_

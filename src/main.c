@@ -3,7 +3,7 @@
 #include "lexer.h"
 #include "llvm.h"
 #include "parsing/program.h"
-#include "sema.h"
+#include "sema/program.h"
 #include "utils.h"
 
 #include <stdio.h>

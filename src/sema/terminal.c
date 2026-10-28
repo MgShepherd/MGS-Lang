@@ -1,10 +1,15 @@
 #include "sema/terminal.h"
 
+#include "parsing/data_type.h"
+#include "parsing/type_definition.h"
 #include "sema/expression.h"
 #include "sema/utils.h"
 
 #include <assert.h>
 #include <stdio.h>
+#include <string.h>
+
+unsigned char analyse_field_assignment(SemaState *state, FieldAssignment *assign, const TypeDefinition *object_type);
 
 unsigned char analyse_func_call(SemaState *state, const FunctionCall *func_call, const DataType *expr_type) {
   const Function *func = get_function(&state->functions, func_call->name->item);
@@ -97,6 +102,21 @@ unsigned char analyse_array_literal(SemaState *state, ArrayLiteral *arr_lit, con
 unsigned char analyse_struct_literal(SemaState *state, StructLiteral *struct_lit, const DataType *expr_type) {
   assert(expr_type->d_kind == D_STRUCT);
   struct_lit->d_type = expr_type;
+
+  const TypeDefinition *object_type = get_type_def(&state->type_defs, expr_type->d_union.s_type.name);
+  if (object_type == NULL) {
+    fprintf(stderr, "Unable to find type definition for provided data type: %s\n", d_type_to_string(expr_type));
+    return 1;
+  }
+
+  // TODO: Check that all fields are assigned
+  for (size_t i = 0; i < struct_lit->field_assignments.count; i++) {
+    if (analyse_field_assignment(state, &struct_lit->field_assignments.elements[i], object_type) != 0) {
+      fprintf(stderr, "Failed to analyse field assignment\n");
+      return 1;
+    }
+  }
+
   return 0;
 }
 
@@ -173,6 +193,30 @@ unsigned char analyse_numeric_literal(TerminalLiteral *term_lit, bool is_negativ
     break;
   default:
     assert(false);
+  }
+
+  return 0;
+}
+
+unsigned char analyse_field_assignment(SemaState *state, FieldAssignment *assign, const TypeDefinition *object_type) {
+  assert(object_type->td_kind == TD_STRUCT);
+  const StructDefinition *struct_def = &object_type->td_union.s_def;
+
+  const Field *field = NULL;
+  for (size_t i = 0; i < struct_def->fields.count; i++) {
+    if (strcmp(struct_def->fields.elements[i].term_ident.name, assign->name) == 0) {
+      field = &struct_def->fields.elements[i];
+    }
+  }
+
+  if (field == NULL) {
+    fprintf(stderr, "Field %s is not present in struct %s\n", assign->name, struct_def->name);
+    return 1;
+  }
+
+  if (analyse_expression(state, &assign->expression, &field->d_type) != 0) {
+    fprintf(stderr, "Failed to analyse expression for field: %s\n", assign->name);
+    return 1;
   }
 
   return 0;

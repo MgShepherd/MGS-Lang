@@ -9,6 +9,8 @@ const Identifier *get_identifier(const SemaState *state, const char *name);
 
 const Function *get_function(const Functions *functions, const char *name);
 
+const TypeDefinition *get_type_def(const TypeDefinitions *type_defs, const char *name);
+
 bool is_identifier_in_scope(const Scopes *scopes, const Identifier *identifier);
 
 bool is_integer_type(const DataType *d_type);

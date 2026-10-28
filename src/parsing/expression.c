@@ -10,12 +10,14 @@
 
 #define PARAMETER_LIST_LEN_ESTIMATE 5
 #define ARRAY_LEN_ESTIMATE 5
+#define STRUCT_FIELDS_ESTIMATE 5
 
 unsigned char parse_terminal_expr(TerminalExpr *term, const Tokens *tokens, size_t *idx);
 unsigned char parse_terminal_literal(TerminalLiteral *term_literal, const Tokens *tokens, size_t *idx);
 unsigned char parse_func_call(FunctionCall *func_call, const Tokens *tokens, size_t *idx);
 unsigned char parse_expression_list(Expressions *params, const Tokens *tokens, size_t *idx,
                                     const TokenType list_end_type);
+unsigned char parse_field_assignments(FieldAssignments *field_assignments, const Tokens *tokens, size_t *idx);
 unsigned char parse_array_literal(ArrayLiteral *arr_lit, const Tokens *tokens, size_t *idx);
 unsigned char parse_struct_literal(StructLiteral *struct_lit, const Tokens *tokens, size_t *idx);
 
@@ -199,6 +201,42 @@ unsigned char parse_expression_list(Expressions *params, const Tokens *tokens, s
   return 0;
 }
 
+unsigned char parse_field_assignments(FieldAssignments *field_assignments, const Tokens *tokens, size_t *idx) {
+  if (peek_index(tokens, *idx) == T_RIGHT_CURLY) {
+    return 0;
+  }
+
+  while (true) {
+    FieldAssignment assignment;
+    const Token *ident_tok = expect_next(T_IDENTIFIER, tokens, idx);
+    if (ident_tok == NULL) {
+      fprintf(stderr, "Expected identifier for field name\n");
+      return 1;
+    }
+    assert(ident_tok->item != NULL);
+    assignment.name = ident_tok->item;
+
+    if (expect_next(T_EQUALS, tokens, idx) == NULL) {
+      fprintf(stderr, "Expected '=' for field assignment\n");
+      return 1;
+    }
+
+    if (parse_expression(&assignment.expression, tokens, idx) != 0) {
+      fprintf(stderr, "Failed to parse expression for field assignment\n");
+      return 1;
+    }
+
+    dyn_array_insert(field_assignments, assignment);
+
+    if (peek_index(tokens, *idx) != T_COMMA) {
+      return 0;
+    }
+    *idx += 1;
+  }
+
+  return 0;
+}
+
 unsigned char parse_terminal_literal(TerminalLiteral *term_literal, const Tokens *tokens, size_t *idx) {
   static const TokenType LITERAL_TOKEN_TYPES[] = {T_NUMERIC_LIT, T_TRUE, T_FALSE};
   static const size_t LITERAL_TOKEN_LEN = sizeof(LITERAL_TOKEN_TYPES) / sizeof(TokenType);
@@ -267,6 +305,12 @@ unsigned char parse_struct_literal(StructLiteral *struct_lit, const Tokens *toke
   if (expect_next(T_LEFT_CURLY, tokens, idx) == NULL) {
     fprintf(stderr, "Expected '{' for start of struct literal, got %s\n",
             t_type_to_string(tokens->elements[*idx].t_type));
+    return 1;
+  }
+
+  dyn_array_init(&struct_lit->field_assignments, sizeof(FieldAssignment), STRUCT_FIELDS_ESTIMATE);
+  if (parse_field_assignments(&struct_lit->field_assignments, tokens, idx) != 0) {
+    fprintf(stderr, "Failed to process field assignments for struct\n");
     return 1;
   }
 

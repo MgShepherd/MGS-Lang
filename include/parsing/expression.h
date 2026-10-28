@@ -7,6 +7,7 @@
 #include <stdint.h>
 
 typedef struct Expression Expression;
+typedef struct FieldAssignment FieldAssignment;
 
 typedef union {
   int8_t i8;
@@ -60,6 +61,13 @@ typedef struct {
 } ArrayLiteral;
 
 typedef struct {
+  FieldAssignment *elements;
+  size_t count;
+  size_t capacity;
+} FieldAssignments;
+
+typedef struct {
+  FieldAssignments field_assignments;
   // d_type will be populated as part of semantic analysis
   const DataType *d_type;
 } StructLiteral;
@@ -97,6 +105,11 @@ typedef union {
 struct Expression {
   ExpressionUnion e_union;
   ExpressionType e_type;
+};
+
+struct FieldAssignment {
+  const char *name;
+  Expression expression;
 };
 
 unsigned char parse_terminal_identifier(TerminalIdentifier *term_ident, const Tokens *tokens, size_t *idx);

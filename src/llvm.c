@@ -37,6 +37,8 @@ typedef struct {
 typedef struct {
   const char *name;
   LLVMTypeRef ref;
+  LLVMTypeRef *field_types;
+  size_t num_fields;
 } TypeDefinitionRef;
 
 typedef struct {
@@ -245,13 +247,19 @@ unsigned char build_type_definition(IRState *state, const TypeDefinition *type_d
   assert(type_definition->td_kind == TD_STRUCT);
   const StructDefinition *struct_definition = &type_definition->td_union.s_def;
 
-  LLVMTypeRef field_types[struct_definition->fields.count];
+  LLVMTypeRef *field_types = malloc(sizeof(LLVMTypeRef) * struct_definition->fields.count);
+  assert(field_types != NULL);
+
   for (size_t i = 0; i < struct_definition->fields.count; i++) {
     field_types[i] = get_type(state, &struct_definition->fields.elements[i].d_type);
   }
 
+  type_ref.ref = LLVMStructCreateNamed(state->context, struct_definition->name);
+  LLVMStructSetBody(type_ref.ref, field_types, struct_definition->fields.count, false);
+
   type_ref.name = struct_definition->name;
-  type_ref.ref = LLVMStructTypeInContext(state->context, field_types, struct_definition->fields.count, false);
+  type_ref.field_types = field_types;
+  type_ref.num_fields = struct_definition->fields.count;
 
   dyn_array_insert(&state->type_refs, type_ref);
 
@@ -557,8 +565,18 @@ LLVMValueRef build_array_literal(const IRState *state, const ArrayLiteral *arr_l
 LLVMValueRef build_struct_literal(const IRState *state, const StructLiteral *struct_lit) {
   assert(struct_lit->d_type->d_kind == D_STRUCT);
   const LLVMTypeRef struct_type = get_type(state, struct_lit->d_type);
+  const TypeDefinitionRef *type_def = load_type_definition(&state->type_refs, struct_lit->d_type->d_union.s_type.name);
+  // TODO: Test breaking this assertion - should be caught in sema stage
+  assert(struct_lit->field_assignments.count == type_def->num_fields);
 
-  return LLVMConstNamedStruct(struct_type, NULL, 0);
+  // TODO: Test what happens if struct literal defines fields in a different order to the type definition
+  LLVMValueRef field_vals[struct_lit->field_assignments.count];
+  for (size_t i = 0; i < struct_lit->field_assignments.count; i++) {
+    field_vals[i] =
+        build_expression(state, &struct_lit->field_assignments.elements[i].expression, type_def->field_types[i]);
+  }
+
+  return LLVMConstNamedStruct(struct_type, field_vals, struct_lit->field_assignments.count);
 }
 
 LLVMValueRef build_get_array_element_ptr(const IRState *state, const ArrayAccess *arr_access) {
@@ -662,6 +680,9 @@ void dispose_ir_state(IRState *state) {
     free(state->funcs.elements[i].param_types);
   }
   dyn_array_free(&state->funcs);
+  for (size_t i = 0; i < state->type_refs.count; i++) {
+    free(state->type_refs.elements[i].field_types);
+  }
   dyn_array_free(&state->type_refs);
 
   LLVMDisposeBuilder(state->builder);

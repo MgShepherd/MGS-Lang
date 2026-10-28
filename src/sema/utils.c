@@ -48,6 +48,17 @@ const Function *get_function(const Functions *functions, const char *name) {
   return NULL;
 }
 
+const TypeDefinition *get_type_def(const TypeDefinitions *type_defs, const char *name) {
+  for (size_t i = 0; i < type_defs->count; i++) {
+    assert(type_defs->elements[i].td_kind == TD_STRUCT);
+    const StructDefinition *struct_def = &type_defs->elements[i].td_union.s_def;
+    if (strcmp(struct_def->name, name) == 0) {
+      return &type_defs->elements[i];
+    }
+  }
+  return NULL;
+}
+
 bool is_identifier_in_scope(const Scopes *scopes, const Identifier *identifier) {
   for (size_t i = 0; i < scopes->count; i++) {
     if (scopes->elements[i] == identifier->scope) {

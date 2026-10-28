@@ -23,6 +23,7 @@ unsigned char analyse_program(const Program *program) {
   SemaState state = {
       .identifiers = identifiers,
       .functions = program->functions,
+      .type_defs = program->type_defs,
       .scopes = scopes,
   };
 

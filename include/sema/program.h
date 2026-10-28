@@ -28,6 +28,7 @@ typedef struct {
 typedef struct {
   Identifiers identifiers;
   const Functions functions;
+  const TypeDefinitions type_defs;
   Scopes scopes;
 } SemaState;
 

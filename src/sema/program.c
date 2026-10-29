@@ -2,6 +2,7 @@
 
 #include "dynamic_array.h"
 #include "sema/statement.h"
+#include "sema/type_definition.h"
 #include "sema/utils.h"
 #include <stdio.h>
 #include <string.h>
@@ -26,6 +27,13 @@ unsigned char analyse_program(const Program *program) {
       .type_defs = program->type_defs,
       .scopes = scopes,
   };
+
+  for (size_t i = 0; i < program->type_defs.count; i++) {
+    if (analyse_type_definition(&program->type_defs.elements[i]) != 0) {
+      free_sema_state(&state);
+      return 1;
+    }
+  }
 
   bool has_valid_main = false;
   for (size_t i = 0; i < program->functions.count; i++) {

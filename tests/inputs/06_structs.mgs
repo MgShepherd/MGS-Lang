@@ -12,3 +12,74 @@ main: func() -> i64 {
 	};
 	return 12;
 }
+
+-- TEST struct literal with missing fields
+-- EXPECTED_COMPILATION_ERROR Expected 2 fields in struct literal, got 1
+Person: struct {
+	age: i64,
+	is_programmer: bool
+};
+
+main: func() -> i64 {
+	michael: Person = {
+		age = 26
+	};
+	return 12;
+}
+
+-- TEST struct literal with same field defined multiple times
+-- EXPECTED_COMPILATION_ERROR Field is_programmer provided multiple times in struct literal
+Person: struct {
+	age: i64,
+	is_programmer: bool
+};
+
+main: func() -> i64 {
+	michael: Person = {
+		is_programmer = true,
+		is_programmer = false
+	};
+	return 12;
+}
+
+-- TEST struct literal with that is not present in struct definition
+-- EXPECTED_COMPILATION_ERROR Field invalid is not present in struct Person
+Person: struct {
+	age: i64,
+	is_programmer: bool
+};
+
+main: func() -> i64 {
+	michael: Person = {
+		invalid = 100,
+		is_programmer = false
+	};
+	return 12;
+}
+
+-- TEST struct literal with invalid type for struct field
+-- EXPECTED_COMPILATION_ERROR Boolean literal false used in non-boolean expression type: P_I64
+Person: struct {
+	age: i64,
+	is_programmer: bool
+};
+
+main: func() -> i64 {
+	michael: Person = {
+		age = false,
+		is_programmer = false
+	};
+	return 12;
+}
+
+-- TEST struct definition with the same field provided multiple times
+-- EXPECTED_COMPILATION_ERROR Field age provided multiple times in struct definition
+Person: struct {
+	age: i64,
+	age: bool,
+	is_programmer: bool
+};
+
+main: func() -> i64 {
+	return 12;
+}

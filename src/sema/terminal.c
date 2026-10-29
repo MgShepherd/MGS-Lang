@@ -9,8 +9,6 @@
 #include <stdio.h>
 #include <string.h>
 
-unsigned char analyse_field_assignment(SemaState *state, FieldAssignment *assign, const TypeDefinition *object_type);
-
 unsigned char analyse_func_call(SemaState *state, const FunctionCall *func_call, const DataType *expr_type) {
   const Function *func = get_function(&state->functions, func_call->name->item);
   if (func == NULL) {
@@ -109,10 +107,42 @@ unsigned char analyse_struct_literal(SemaState *state, StructLiteral *struct_lit
     return 1;
   }
 
-  // TODO: Check that all fields are assigned
+  const StructDefinition *struct_def = &object_type->td_union.s_def;
+
+  if (struct_def->fields.count != struct_lit->field_assignments.count) {
+    fprintf(stderr, "Expected %zu fields in struct literal, got %zu\n", struct_def->fields.count,
+            struct_lit->field_assignments.count);
+    return 1;
+  }
+
+  const char *provided_fields[struct_def->fields.count];
+  size_t num_provided_fields = 0;
+
   for (size_t i = 0; i < struct_lit->field_assignments.count; i++) {
-    if (analyse_field_assignment(state, &struct_lit->field_assignments.elements[i], object_type) != 0) {
-      fprintf(stderr, "Failed to analyse field assignment\n");
+    const Field *field_def = NULL;
+    FieldAssignment *current_field = &struct_lit->field_assignments.elements[i];
+
+    for (size_t i = 0; i < struct_def->fields.count; i++) {
+      if (strcmp(struct_def->fields.elements[i].term_ident.name, current_field->name) == 0) {
+        field_def = &struct_def->fields.elements[i];
+      }
+    }
+
+    if (field_def == NULL) {
+      fprintf(stderr, "Field %s is not present in struct %s\n", current_field->name, struct_def->name);
+      return 1;
+    }
+
+    for (size_t i = 0; i < num_provided_fields; i++) {
+      if (strcmp(provided_fields[i], current_field->name) == 0) {
+        fprintf(stderr, "Field %s provided multiple times in struct literal\n", current_field->name);
+        return 1;
+      }
+    }
+    provided_fields[num_provided_fields++] = current_field->name;
+
+    if (analyse_expression(state, &current_field->expression, &field_def->d_type) != 0) {
+      fprintf(stderr, "Failed to analyse expression for field: %s\n", current_field->name);
       return 1;
     }
   }
@@ -193,30 +223,6 @@ unsigned char analyse_numeric_literal(TerminalLiteral *term_lit, bool is_negativ
     break;
   default:
     assert(false);
-  }
-
-  return 0;
-}
-
-unsigned char analyse_field_assignment(SemaState *state, FieldAssignment *assign, const TypeDefinition *object_type) {
-  assert(object_type->td_kind == TD_STRUCT);
-  const StructDefinition *struct_def = &object_type->td_union.s_def;
-
-  const Field *field = NULL;
-  for (size_t i = 0; i < struct_def->fields.count; i++) {
-    if (strcmp(struct_def->fields.elements[i].term_ident.name, assign->name) == 0) {
-      field = &struct_def->fields.elements[i];
-    }
-  }
-
-  if (field == NULL) {
-    fprintf(stderr, "Field %s is not present in struct %s\n", assign->name, struct_def->name);
-    return 1;
-  }
-
-  if (analyse_expression(state, &assign->expression, &field->d_type) != 0) {
-    fprintf(stderr, "Failed to analyse expression for field: %s\n", assign->name);
-    return 1;
   }
 
   return 0;

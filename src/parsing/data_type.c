@@ -5,6 +5,7 @@
 
 #include <assert.h>
 #include <stdio.h>
+#include <string.h>
 
 unsigned char parse_primitive(PrimitiveType *primitive_type, const Tokens *tokens, size_t *idx);
 unsigned char parse_array(ArrayType *array_type, const Tokens *tokens, size_t *idx);
@@ -65,6 +66,10 @@ bool do_data_types_match(const DataType *d_type_1, const DataType *d_type_2) {
   switch (d_type_1->d_kind) {
   case D_PRIMITIVE:
     return d_type_1->d_union.p_type == d_type_2->d_union.p_type;
+  case D_STRUCT:
+    const StructType *s1_type = &d_type_1->d_union.s_type;
+    const StructType *s2_type = &d_type_2->d_union.s_type;
+    return strcmp(s1_type->name, s2_type->name) == 0;
   default:
     assert(false);
   }

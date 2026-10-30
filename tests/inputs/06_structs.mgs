@@ -13,6 +13,42 @@ main: func() -> i64 {
 	return 12;
 }
 
+-- TEST struct literal with fields in different order to definition
+-- EXPECTED_STATUS_CODE 12
+Person: struct {
+	age: i64,
+	is_programmer: bool
+};
+
+main: func() -> i64 {
+	michael: Person = {
+		is_programmer = true,
+		age = 26
+	};
+	return 12;
+}
+
+-- TEST returning struct from function
+-- EXPECTED_STATUS_CODE 70
+Person: struct {
+	age: i64,
+	is_programmer: bool
+};
+
+get_person: func() -> Person {
+	my_person: Person = {
+		is_programmer = true,
+		age = 26
+	};
+
+	return my_person;
+}
+
+main: func() -> i64 {
+	my_person: Person = get_person();
+	return 70;
+}
+
 -- TEST struct literal with missing fields
 -- EXPECTED_COMPILATION_ERROR Expected 2 fields in struct literal, got 1
 Person: struct {
@@ -42,7 +78,7 @@ main: func() -> i64 {
 	return 12;
 }
 
--- TEST struct literal with that is not present in struct definition
+-- TEST struct literal with field that is not present in struct definition
 -- EXPECTED_COMPILATION_ERROR Field invalid is not present in struct Person
 Person: struct {
 	age: i64,
@@ -77,6 +113,17 @@ main: func() -> i64 {
 Person: struct {
 	age: i64,
 	age: bool,
+	is_programmer: bool
+};
+
+main: func() -> i64 {
+	return 12;
+}
+
+-- TEST struct definition with void type as one of the fields
+-- EXPECTED_COMPILATION_ERROR Cannot use void as type for field in type definition
+Person: struct {
+	age: void,
 	is_programmer: bool
 };
 

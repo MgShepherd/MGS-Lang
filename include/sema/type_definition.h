@@ -3,6 +3,6 @@
 
 #include "parsing/type_definition.h"
 
-unsigned char analyse_type_definition(const TypeDefinition *type_def);
+unsigned char analyse_type_definition(TypeDefinition *type_def);
 
 #endif // _SEMA_TYPE_DEFINITION_H_

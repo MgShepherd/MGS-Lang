@@ -9,6 +9,8 @@
 #include <stdio.h>
 #include <string.h>
 
+int field_assignment_compare(const void *item1, const void *item2);
+
 unsigned char analyse_func_call(SemaState *state, const FunctionCall *func_call, const DataType *expr_type) {
   const Function *func = get_function(&state->functions, func_call->name->item);
   if (func == NULL) {
@@ -118,6 +120,9 @@ unsigned char analyse_struct_literal(SemaState *state, StructLiteral *struct_lit
   const char *provided_fields[struct_def->fields.count];
   size_t num_provided_fields = 0;
 
+  qsort(struct_lit->field_assignments.elements, struct_lit->field_assignments.count, sizeof(FieldAssignment),
+        field_assignment_compare);
+
   for (size_t i = 0; i < struct_lit->field_assignments.count; i++) {
     const Field *field_def = NULL;
     FieldAssignment *current_field = &struct_lit->field_assignments.elements[i];
@@ -226,4 +231,10 @@ unsigned char analyse_numeric_literal(TerminalLiteral *term_lit, bool is_negativ
   }
 
   return 0;
+}
+
+int field_assignment_compare(const void *item1, const void *item2) {
+  const FieldAssignment *field_assign1 = (FieldAssignment *)item1;
+  const FieldAssignment *field_assign2 = (FieldAssignment *)item2;
+  return strcmp(field_assign1->name, field_assign2->name);
 }

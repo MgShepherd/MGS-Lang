@@ -566,7 +566,6 @@ LLVMValueRef build_struct_literal(const IRState *state, const StructLiteral *str
   assert(struct_lit->d_type->d_kind == D_STRUCT);
   const LLVMTypeRef struct_type = get_type(state, struct_lit->d_type);
   const TypeDefinitionRef *type_def = load_type_definition(&state->type_refs, struct_lit->d_type->d_union.s_type.name);
-  // TODO: Test breaking this assertion - should be caught in sema stage
   assert(struct_lit->field_assignments.count == type_def->num_fields);
 
   // TODO: Test what happens if struct literal defines fields in a different order to the type definition

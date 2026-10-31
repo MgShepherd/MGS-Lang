@@ -20,6 +20,7 @@ unsigned char parse_expression_list(Expressions *params, const Tokens *tokens, s
 unsigned char parse_field_assignments(FieldAssignments *field_assignments, const Tokens *tokens, size_t *idx);
 unsigned char parse_array_literal(ArrayLiteral *arr_lit, const Tokens *tokens, size_t *idx);
 unsigned char parse_struct_literal(StructLiteral *struct_lit, const Tokens *tokens, size_t *idx);
+unsigned char parse_struct_access(StructAccess *struct_acc, const Tokens *tokens, size_t *idx);
 
 unsigned char parse_expression(Expression *expression, const Tokens *tokens, size_t *idx) {
   if (*idx >= tokens->count) {
@@ -122,6 +123,7 @@ void expression_free(Expression *expression) {
   }
 }
 
+// TODO: We end up parsing the same tokens multiple times when checking ahead for the terminal type, can we improve this
 unsigned char parse_terminal_expr(TerminalExpr *term, const Tokens *tokens, size_t *idx) {
   const Token *next = &tokens->elements[*idx];
   term->item.t_type = TERM_NONE;
@@ -148,6 +150,14 @@ unsigned char parse_terminal_expr(TerminalExpr *term, const Tokens *tokens, size
         return 1;
       }
       term->item.t_type = TERM_ARRAY_ACCESS;
+      return 0;
+    }
+
+    if (after_type == T_DOT) {
+      if (parse_struct_access(&term->item.t_union.struct_access, tokens, idx) != 0) {
+        return 1;
+      }
+      term->item.t_type = TERM_STRUCT_ACCESS;
       return 0;
     }
 
@@ -319,6 +329,30 @@ unsigned char parse_struct_literal(StructLiteral *struct_lit, const Tokens *toke
             t_type_to_string(tokens->elements[*idx].t_type));
     return 1;
   }
+
+  return 0;
+}
+
+unsigned char parse_struct_access(StructAccess *struct_acc, const Tokens *tokens, size_t *idx) {
+  const Token *ident_tok = expect_next(T_IDENTIFIER, tokens, idx);
+  if (ident_tok == NULL) {
+    fprintf(stderr, "Expected identifier for struct field access\n");
+    return 1;
+  }
+  assert(ident_tok->item != NULL);
+  struct_acc->term_ident.name = ident_tok->item;
+
+  if (expect_next(T_DOT, tokens, idx) == NULL) {
+    fprintf(stderr, "Expected '.' separator for struct field access\n");
+    return 1;
+  }
+
+  const Token *field_name_tok = expect_next(T_IDENTIFIER, tokens, idx);
+  if (field_name_tok == NULL) {
+    fprintf(stderr, "Expected identifier for struct field access\n");
+    return 1;
+  }
+  struct_acc->field_name = field_name_tok->item;
 
   return 0;
 }

@@ -8,6 +8,7 @@
 
 typedef struct Expression Expression;
 typedef struct FieldAssignment FieldAssignment;
+typedef struct TypeDefinition TypeDefinition;
 
 typedef union {
   int8_t i8;
@@ -61,6 +62,15 @@ typedef struct {
 } ArrayLiteral;
 
 typedef struct {
+  TerminalIdentifier term_ident;
+  const char *field_name;
+  // type_def, field_idx and d_type will be populated as part of semantic analysis
+  const TypeDefinition *type_def;
+  size_t field_idx;
+  const DataType *d_type;
+} StructAccess;
+
+typedef struct {
   FieldAssignment *elements;
   size_t count;
   size_t capacity;
@@ -79,6 +89,7 @@ typedef struct {
   ArrayLiteral arr_literal;
   ArrayAccess arr_access;
   StructLiteral struct_literal;
+  StructAccess struct_access;
 } TerminalUnion;
 
 typedef struct {

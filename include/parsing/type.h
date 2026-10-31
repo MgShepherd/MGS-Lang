@@ -46,6 +46,7 @@
   X(TERM_ARRAY_LITERAL)                                                                                                \
   X(TERM_ARRAY_ACCESS)                                                                                                 \
   X(TERM_STRUCT_LITERAL)                                                                                               \
+  X(TERM_STRUCT_ACCESS)                                                                                                \
   X(TERM_FUNC_CALL)
 
 #define IDENTIFIER_TYPES                                                                                               \

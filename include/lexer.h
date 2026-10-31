@@ -38,6 +38,7 @@
   X(T_ELSE)                                                                                                            \
   X(T_COMMA)                                                                                                           \
   X(T_STRUCT)                                                                                                          \
+  X(T_DOT)                                                                                                             \
   X(T_SEMI)
 
 // TODO: Should work out where we want type definitions to live in future

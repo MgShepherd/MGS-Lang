@@ -155,6 +155,44 @@ unsigned char analyse_struct_literal(SemaState *state, StructLiteral *struct_lit
   return 0;
 }
 
+unsigned char analyse_struct_access(SemaState *state, StructAccess *struct_access, const DataType *expr_type) {
+  const Identifier *ident = get_identifier(state, struct_access->term_ident.name);
+  if (ident == NULL) {
+    fprintf(stderr, "Undefined variable: %s\n", struct_access->field_name);
+    return 1;
+  }
+  assert(ident->d_type != NULL && ident->d_type->d_kind == D_STRUCT);
+
+  const TypeDefinition *type_def = get_type_def(&state->type_defs, ident->d_type->d_union.s_type.name);
+  assert(type_def != NULL && type_def->td_kind == TD_STRUCT);
+  const StructDefinition *struct_def = &type_def->td_union.s_def;
+
+  const Field *field = NULL;
+  for (size_t i = 0; i < struct_def->fields.count; i++) {
+    if (strcmp(struct_def->fields.elements[i].term_ident.name, struct_access->field_name) == 0) {
+      field = &struct_def->fields.elements[i];
+      struct_access->field_idx = i;
+      break;
+    }
+  }
+
+  if (field == NULL) {
+    fprintf(stderr, "Undefined field %s for struct %s\n", struct_access->field_name, struct_access->term_ident.name);
+    return 1;
+  }
+
+  if (!do_data_types_match(&field->d_type, expr_type)) {
+    fprintf(stderr, "Field %s does not have expected type %s\n", struct_access->field_name,
+            d_type_to_string(expr_type));
+    return 1;
+  }
+
+  struct_access->d_type = &field->d_type;
+  struct_access->term_ident.scope = ident->scope;
+  struct_access->type_def = type_def;
+  return 0;
+}
+
 unsigned char analyse_array_access(SemaState *state, ArrayAccess *arr_access, const DataType *expr_type) {
   const Identifier *ident = get_identifier(state, arr_access->term_ident.name);
   if (ident == NULL) {

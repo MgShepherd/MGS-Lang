@@ -102,6 +102,7 @@ LLVMValueRef build_identifier(const IRState *state, const TerminalIdentifier *te
 LLVMValueRef build_literal(const Literal *literal, const LLVMTypeRef d_type);
 LLVMValueRef build_array_literal(const IRState *state, const ArrayLiteral *arr_lit);
 LLVMValueRef build_struct_literal(const IRState *state, const StructLiteral *struct_lit);
+LLVMValueRef build_struct_access(const IRState *state, const StructAccess *struct_access);
 LLVMValueRef build_array_access(const IRState *state, const ArrayAccess *arr_access);
 
 LLVMValueRef build_get_array_element_ptr(const IRState *state, const ArrayAccess *arr_access);
@@ -491,6 +492,9 @@ LLVMValueRef build_terminal_expr(const IRState *state, const TerminalExpr *term,
   case TERM_STRUCT_LITERAL:
     processed = build_struct_literal(state, &term->item.t_union.struct_literal);
     break;
+  case TERM_STRUCT_ACCESS:
+    processed = build_struct_access(state, &term->item.t_union.struct_access);
+    break;
   default:
     assert(false);
   }
@@ -568,7 +572,6 @@ LLVMValueRef build_struct_literal(const IRState *state, const StructLiteral *str
   const TypeDefinitionRef *type_def = load_type_definition(&state->type_refs, struct_lit->d_type->d_union.s_type.name);
   assert(struct_lit->field_assignments.count == type_def->num_fields);
 
-  // TODO: Test what happens if struct literal defines fields in a different order to the type definition
   LLVMValueRef field_vals[struct_lit->field_assignments.count];
   for (size_t i = 0; i < struct_lit->field_assignments.count; i++) {
     field_vals[i] =
@@ -576,6 +579,30 @@ LLVMValueRef build_struct_literal(const IRState *state, const StructLiteral *str
   }
 
   return LLVMConstNamedStruct(struct_type, field_vals, struct_lit->field_assignments.count);
+}
+
+LLVMValueRef build_struct_access(const IRState *state, const StructAccess *struct_access) {
+  assert(struct_access->type_def != NULL && struct_access->type_def->td_kind == TD_STRUCT);
+  const StructDefinition *struct_def = &struct_access->type_def->td_union.s_def;
+  assert(struct_def != NULL);
+
+  const TypeDefinitionRef *type_def = load_type_definition(&state->type_refs, struct_def->name);
+  const ValueRef *ident_val = load_identifier(&state->values, &struct_access->term_ident);
+  const LLVMTypeRef field_type = get_type(state, struct_access->d_type);
+  assert(type_def != NULL && ident_val != NULL && field_type != NULL);
+
+  // TODO: Can we combine this logic with the logic for accessing array elements
+  LLVMValueRef indices[] = {
+      // First index ensures that we are stepping into the struct itself
+      LLVMConstInt(LLVMInt32TypeInContext(state->context), 0, false),
+      // Second index points to the field index in the struct that we want to access
+      LLVMConstInt(LLVMInt32TypeInContext(state->context), struct_access->field_idx, false),
+  };
+  const uint64_t num_indices = sizeof(indices) / sizeof(indices[0]);
+
+  LLVMValueRef field_ptr =
+      LLVMBuildInBoundsGEP2(state->builder, type_def->ref, ident_val->ptr, indices, num_indices, "access_struct");
+  return LLVMBuildLoad2(state->builder, field_type, field_ptr, "load_struct_field");
 }
 
 LLVMValueRef build_get_array_element_ptr(const IRState *state, const ArrayAccess *arr_access) {

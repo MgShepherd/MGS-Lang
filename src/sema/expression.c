@@ -42,7 +42,8 @@ unsigned char analyse_term_expression(SemaState *state, TerminalExpr *term, cons
     return analyse_array_access(state, &term->item.t_union.arr_access, expr_type);
   case TERM_STRUCT_LITERAL:
     return analyse_struct_literal(state, &term->item.t_union.struct_literal, expr_type);
-    return 0;
+  case TERM_STRUCT_ACCESS:
+    return analyse_struct_access(state, &term->item.t_union.struct_access, expr_type);
   default:
     assert(false);
   }

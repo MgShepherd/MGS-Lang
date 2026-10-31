@@ -3,6 +3,8 @@
 
 #include "parsing/expression.h"
 
+typedef struct TypeDefinition TypeDefinition;
+
 typedef struct {
   TerminalIdentifier term_ident;
   DataType d_type;
@@ -23,10 +25,10 @@ typedef struct {
   StructDefinition s_def;
 } TypeDefinitionUnion;
 
-typedef struct {
+struct TypeDefinition {
   TypeDefinitionKind td_kind;
   TypeDefinitionUnion td_union;
-} TypeDefinition;
+};
 
 unsigned char parse_type_definition(TypeDefinition *type_def, const Tokens *tokens, size_t *idx);
 

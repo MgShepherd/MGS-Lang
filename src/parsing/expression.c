@@ -20,7 +20,6 @@ unsigned char parse_expression_list(Expressions *params, const Tokens *tokens, s
 unsigned char parse_field_assignments(FieldAssignments *field_assignments, const Tokens *tokens, size_t *idx);
 unsigned char parse_array_literal(ArrayLiteral *arr_lit, const Tokens *tokens, size_t *idx);
 unsigned char parse_struct_literal(StructLiteral *struct_lit, const Tokens *tokens, size_t *idx);
-unsigned char parse_struct_access(StructAccess *struct_acc, const Tokens *tokens, size_t *idx);
 
 unsigned char parse_expression(Expression *expression, const Tokens *tokens, size_t *idx) {
   if (*idx >= tokens->count) {

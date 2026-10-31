@@ -105,7 +105,7 @@ LLVMValueRef build_struct_literal(const IRState *state, const StructLiteral *str
 LLVMValueRef build_struct_access(const IRState *state, const StructAccess *struct_access);
 LLVMValueRef build_array_access(const IRState *state, const ArrayAccess *arr_access);
 
-LLVMValueRef build_get_array_element_ptr(const IRState *state, const ArrayAccess *arr_access);
+LLVMValueRef build_get_element_ptr(const IRState *state, const TerminalIdentifier *term_ident, size_t element_idx);
 
 unsigned char generate_object_file(const IRState *state, const char *file_name);
 
@@ -385,8 +385,14 @@ void build_assignment_statement(IRState *state, const AssignmentStatement *assig
     LLVMBuildStore(state->builder, expr_output, assign_var->ptr);
     break;
   case A_ARRAY_ELEMENT:
-    const LLVMValueRef element_ptr = build_get_array_element_ptr(state, &assign->a_output.a_union.arr_element);
+    const ArrayAccess *arr_access = &assign->a_output.a_union.arr_element;
+    const LLVMValueRef element_ptr = build_get_element_ptr(state, &arr_access->term_ident, arr_access->idx);
     LLVMBuildStore(state->builder, expr_output, element_ptr);
+    break;
+  case A_STRUCT_FIELD:
+    const StructAccess *struct_field = &assign->a_output.a_union.struct_field;
+    const LLVMValueRef field_ptr = build_get_element_ptr(state, &struct_field->term_ident, struct_field->field_idx);
+    LLVMBuildStore(state->builder, expr_output, field_ptr);
     break;
   default:
     assert(false);
@@ -587,34 +593,23 @@ LLVMValueRef build_struct_access(const IRState *state, const StructAccess *struc
   assert(struct_def != NULL);
 
   const TypeDefinitionRef *type_def = load_type_definition(&state->type_refs, struct_def->name);
-  const ValueRef *ident_val = load_identifier(&state->values, &struct_access->term_ident);
   const LLVMTypeRef field_type = get_type(state, struct_access->d_type);
-  assert(type_def != NULL && ident_val != NULL && field_type != NULL);
+  assert(type_def != NULL && field_type != NULL);
 
-  // TODO: Can we combine this logic with the logic for accessing array elements
-  LLVMValueRef indices[] = {
-      // First index ensures that we are stepping into the struct itself
-      LLVMConstInt(LLVMInt32TypeInContext(state->context), 0, false),
-      // Second index points to the field index in the struct that we want to access
-      LLVMConstInt(LLVMInt32TypeInContext(state->context), struct_access->field_idx, false),
-  };
-  const uint64_t num_indices = sizeof(indices) / sizeof(indices[0]);
-
-  LLVMValueRef field_ptr =
-      LLVMBuildInBoundsGEP2(state->builder, type_def->ref, ident_val->ptr, indices, num_indices, "access_struct");
-  return LLVMBuildLoad2(state->builder, field_type, field_ptr, "load_struct_field");
+  const LLVMValueRef element_ptr = build_get_element_ptr(state, &struct_access->term_ident, struct_access->field_idx);
+  return LLVMBuildLoad2(state->builder, field_type, element_ptr, "load_struct_field");
 }
 
-LLVMValueRef build_get_array_element_ptr(const IRState *state, const ArrayAccess *arr_access) {
-  const ValueRef *arr = load_identifier(&state->values, &arr_access->term_ident);
-  assert(arr != NULL && arr->d_type->d_kind == D_ARRAY);
+LLVMValueRef build_get_element_ptr(const IRState *state, const TerminalIdentifier *term_ident, size_t element_idx) {
+  const ValueRef *arr = load_identifier(&state->values, term_ident);
+  assert(arr != NULL);
   const LLVMTypeRef arr_type = get_type(state, arr->d_type);
 
   LLVMValueRef indices[] = {
       // First index ensures that we are stepping into the array itself
       LLVMConstInt(LLVMInt32TypeInContext(state->context), 0, false),
       // Second index points to the element in the array that we want to access
-      LLVMConstInt(LLVMInt32TypeInContext(state->context), arr_access->idx, false),
+      LLVMConstInt(LLVMInt32TypeInContext(state->context), element_idx, false),
   };
   const uint64_t num_indices = sizeof(indices) / sizeof(indices[0]);
 
@@ -626,7 +621,7 @@ LLVMValueRef build_array_access(const IRState *state, const ArrayAccess *arr_acc
   const ValueRef *arr = load_identifier(&state->values, &arr_access->term_ident);
   const LLVMTypeRef element_type = get_type(state, arr->d_type->d_union.a_type.element_type);
 
-  const LLVMValueRef element_ptr = build_get_array_element_ptr(state, arr_access);
+  const LLVMValueRef element_ptr = build_get_element_ptr(state, &arr_access->term_ident, arr_access->idx);
   return LLVMBuildLoad2(state->builder, element_type, element_ptr, "load_element");
 }
 

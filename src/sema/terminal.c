@@ -181,7 +181,7 @@ unsigned char analyse_struct_access(SemaState *state, StructAccess *struct_acces
     return 1;
   }
 
-  if (!do_data_types_match(&field->d_type, expr_type)) {
+  if (expr_type != NULL && !do_data_types_match(&field->d_type, expr_type)) {
     fprintf(stderr, "Field %s does not have expected type %s\n", struct_access->field_name,
             d_type_to_string(expr_type));
     return 1;
@@ -190,6 +190,7 @@ unsigned char analyse_struct_access(SemaState *state, StructAccess *struct_acces
   struct_access->d_type = &field->d_type;
   struct_access->term_ident.scope = ident->scope;
   struct_access->type_def = type_def;
+  struct_access->variable = ident->d_type->variable;
   return 0;
 }
 

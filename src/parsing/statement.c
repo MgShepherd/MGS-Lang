@@ -34,7 +34,8 @@ unsigned char parse_statements(Statements *statements, const Tokens *tokens, siz
       }
       if (tokens->elements[*idx + 1].t_type == T_COLON) {
         result = parse_dec_statement(&statement, tokens, idx);
-      } else if (tokens->elements[*idx + 1].t_type == T_EQUALS || tokens->elements[*idx + 1].t_type == T_LEFT_SQUARE) {
+      } else if (tokens->elements[*idx + 1].t_type == T_EQUALS || tokens->elements[*idx + 1].t_type == T_LEFT_SQUARE ||
+                 tokens->elements[*idx + 1].t_type == T_DOT) {
         result = parse_assign_statement(&statement, tokens, idx);
       } else {
         result = parse_void_statement(&statement, tokens, idx);
@@ -165,6 +166,12 @@ unsigned char parse_assign_statement(Statement *statement, const Tokens *tokens,
     assign.a_output.a_type = A_ARRAY_ELEMENT;
     if (parse_array_access(&assign.a_output.a_union.arr_element, tokens, idx) != 0) {
       fprintf(stderr, "Failed to read array access for assignment statement\n");
+      return 1;
+    }
+  } else if (next_type == T_DOT) {
+    assign.a_output.a_type = A_STRUCT_FIELD;
+    if (parse_struct_access(&assign.a_output.a_union.struct_field, tokens, idx) != 0) {
+      fprintf(stderr, "Failed to read struct access for assignment statement\n");
       return 1;
     }
   } else {

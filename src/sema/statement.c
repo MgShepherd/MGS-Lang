@@ -89,6 +89,11 @@ unsigned char analyse_assign_statement(SemaState *state, AssignmentStatement *as
 
     assign->d_type = ident->d_type;
     term_ident->scope = ident->scope;
+
+    if (!assign->d_type->variable) {
+      fprintf(stderr, "Attempted to modify constant: %s\n", ident->name);
+      return 1;
+    }
     break;
   case A_ARRAY_ELEMENT:
     ArrayAccess *arr_element = &assign->a_output.a_union.arr_element;
@@ -102,14 +107,27 @@ unsigned char analyse_assign_statement(SemaState *state, AssignmentStatement *as
     assert(ident != NULL && ident->d_type->d_kind == D_ARRAY);
 
     assign->d_type = ident->d_type->d_union.a_type.element_type;
+
+    if (!assign->d_type->variable) {
+      fprintf(stderr, "Attempted to modify constant: %s\n", ident->name);
+      return 1;
+    }
+    break;
+  case A_STRUCT_FIELD:
+    StructAccess *struct_field = &assign->a_output.a_union.struct_field;
+    if (analyse_struct_access(state, struct_field, NULL) != 0) {
+      fprintf(stderr, "Failed to analyse struct field for assignment statement\n");
+      return 1;
+    }
+
+    assign->d_type = struct_field->d_type;
+    if (!struct_field->variable) {
+      fprintf(stderr, "Attempted to modify constant: %s\n", struct_field->term_ident.name);
+      return 1;
+    }
     break;
   default:
     assert(false);
-  }
-
-  if (!assign->d_type->variable) {
-    fprintf(stderr, "Attempted to modify constant: %s\n", ident->name);
-    return 1;
   }
 
   return analyse_expression(state, &assign->expr, assign->d_type);

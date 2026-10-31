@@ -64,10 +64,12 @@ typedef struct {
 typedef struct {
   TerminalIdentifier term_ident;
   const char *field_name;
-  // type_def, field_idx and d_type will be populated as part of semantic analysis
+  // type_def, field_idx, variable and d_type will be populated as part of semantic analysis
   const TypeDefinition *type_def;
   size_t field_idx;
   const DataType *d_type;
+  // TODO: Is there a better way to handle variable for StructAccess - current solution a bit hacky
+  bool variable;
 } StructAccess;
 
 typedef struct {
@@ -125,6 +127,7 @@ struct FieldAssignment {
 
 unsigned char parse_terminal_identifier(TerminalIdentifier *term_ident, const Tokens *tokens, size_t *idx);
 unsigned char parse_array_access(ArrayAccess *arr_access, const Tokens *tokens, size_t *idx);
+unsigned char parse_struct_access(StructAccess *struct_acc, const Tokens *tokens, size_t *idx);
 
 /*
  * parse_expression will attempt to convert the next tokens into an expression and output to provided expression

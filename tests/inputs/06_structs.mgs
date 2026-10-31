@@ -13,6 +13,23 @@ main: func() -> i64 {
 	return michael.age;
 }
 
+-- TEST modifying struct field
+-- EXPECTED_STATUS_CODE 27
+Person: struct {
+	age: i64,
+	is_programmer: bool
+};
+
+main: func() -> i64 {
+	michael: var Person = {
+		age = 26,
+		is_programmer = true
+	};
+
+	michael.age = 27;
+	return michael.age;
+}
+
 -- TEST struct literal with fields in different order to definition
 -- EXPECTED_STATUS_CODE 30
 Person: struct {
@@ -64,6 +81,31 @@ main: func() -> i64 {
 	my_person: Person = get_person();
 	return my_person.age;
 }
+
+-- TEST modifying struct
+-- EXPECTED_STATUS_CODE 30
+Person: struct {
+	age: i64,
+	is_programmer: bool
+};
+
+main: func() -> i64 {
+	person_1: var Person = {
+		age = 30,
+		is_programmer = false
+	};
+
+	person_2: Person = {
+		age = 25,
+		is_programmer = true
+	};
+
+	person_3: Person = person_1;
+	person_1 = { age = 25, is_programmer = true };
+
+	return person_3.age;
+}
+
 
 -- TEST variable name with same name as struct field
 -- EXPECTED_STATUS_CODE 26
@@ -188,4 +230,30 @@ main: func() -> i64 {
 	me: Person = { age = 26, is_programmer = true };
 	my_age: i64 = me.is_programmer;
 	return my_age;
+}
+
+-- TEST attempting to modify const struct field
+-- EXPECTED_COMPILATION_ERROR Attempted to modify constant: me
+Person: struct {
+	age: i8,
+	is_programmer: bool
+};
+
+main: func() -> i64 {
+	me: Person = { age = 26, is_programmer = true };
+	me.age = 27;
+	return me.age;
+}
+
+-- TEST attempting to modify non-existant struct field
+-- EXPECTED_COMPILATION_ERROR Undefined field other for struct Person
+Person: struct {
+	age: i8,
+	is_programmer: bool
+};
+
+main: func() -> i64 {
+	me: Person = { age = 26, is_programmer = true };
+	me.other = 27;
+	return me.age;
 }

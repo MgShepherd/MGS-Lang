@@ -49,6 +49,40 @@ main: func() -> i64 {
 	return my_person.age;
 }
 
+-- TEST returning struct literal directly from function
+-- EXPECTED_STATUS_CODE 70
+Person: struct {
+	age: i64,
+	is_programmer: bool
+};
+
+get_person: func() -> Person {
+	return { is_programmer = true, age = 70 };
+}
+
+main: func() -> i64 {
+	my_person: Person = get_person();
+	return my_person.age;
+}
+
+-- TEST variable name with same name as struct field
+-- EXPECTED_STATUS_CODE 26
+Person: struct {
+	age: i64,
+	is_programmer: bool
+};
+
+main: func() -> i64 {
+	michael: Person = {
+		age = 26,
+		is_programmer = true
+	};
+	age: var i64 = michael.age;
+	age = 100;
+
+	return michael.age;
+}
+
 -- TEST struct literal with missing fields
 -- EXPECTED_COMPILATION_ERROR Expected 2 fields in struct literal, got 1
 Person: struct {
@@ -129,4 +163,29 @@ Person: struct {
 
 main: func() -> i64 {
 	return 12;
+}
+
+-- TEST struct access with field that is not present in struct
+-- EXPECTED_COMPILATION_ERROR Undefined field other for struct Person
+Person: struct {
+	age: i8,
+	is_programmer: bool
+};
+
+main: func() -> i64 {
+	me: Person = { age = 26, is_programmer = true };
+	return me.other;
+}
+
+-- TEST struct access with field that does not match type
+-- EXPECTED_COMPILATION_ERROR Field is_programmer does not have expected type P_I64
+Person: struct {
+	age: i8,
+	is_programmer: bool
+};
+
+main: func() -> i64 {
+	me: Person = { age = 26, is_programmer = true };
+	my_age: i64 = me.is_programmer;
+	return my_age;
 }

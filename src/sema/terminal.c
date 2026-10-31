@@ -177,7 +177,7 @@ unsigned char analyse_struct_access(SemaState *state, StructAccess *struct_acces
   }
 
   if (field == NULL) {
-    fprintf(stderr, "Undefined field %s for struct %s\n", struct_access->field_name, struct_access->term_ident.name);
+    fprintf(stderr, "Undefined field %s for struct %s\n", struct_access->field_name, struct_def->name);
     return 1;
   }
 

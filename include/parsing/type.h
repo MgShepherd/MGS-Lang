@@ -43,8 +43,6 @@
   X(TERM_NONE)                                                                                                         \
   X(TERM_LITERAL)                                                                                                      \
   X(TERM_IDENTIFIER)                                                                                                   \
-  X(TERM_ARRAY_LITERAL)                                                                                                \
-  X(TERM_ARRAY_ACCESS)                                                                                                 \
   X(TERM_STRUCT_LITERAL)                                                                                               \
   X(TERM_STRUCT_ACCESS)                                                                                                \
   X(TERM_FUNC_CALL)
@@ -56,14 +54,12 @@
 
 #define DATATYPE_KINDS                                                                                                 \
   X(D_NONE)                                                                                                            \
-  X(D_ARRAY)                                                                                                           \
   X(D_STRUCT)                                                                                                          \
   X(D_PRIMITIVE)
 
 #define ASSIGNMENT_TYPES                                                                                               \
   X(A_NONE)                                                                                                            \
   X(A_IDENTIFIER)                                                                                                      \
-  X(A_ARRAY_ELEMENT)                                                                                                   \
   X(A_STRUCT_FIELD)
 
 #define TYPE_DEFINITION_KINDS                                                                                          \

@@ -23,7 +23,6 @@ typedef struct {
 
 typedef union {
   TerminalIdentifier term_ident;
-  ArrayAccess arr_element;
   StructAccess struct_field;
 } AssignmentOutputUnion;
 

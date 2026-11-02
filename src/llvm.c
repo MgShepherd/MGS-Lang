@@ -100,10 +100,8 @@ LLVMValueRef build_func_call(const IRState *state, const FunctionCall *func_call
 
 LLVMValueRef build_identifier(const IRState *state, const TerminalIdentifier *term_ident, const LLVMTypeRef d_type);
 LLVMValueRef build_literal(const Literal *literal, const LLVMTypeRef d_type);
-LLVMValueRef build_array_literal(const IRState *state, const ArrayLiteral *arr_lit);
 LLVMValueRef build_struct_literal(const IRState *state, const StructLiteral *struct_lit);
 LLVMValueRef build_struct_access(const IRState *state, const StructAccess *struct_access);
-LLVMValueRef build_array_access(const IRState *state, const ArrayAccess *arr_access);
 
 LLVMValueRef build_get_element_ptr(const IRState *state, const TerminalIdentifier *term_ident, size_t element_idx);
 
@@ -272,9 +270,6 @@ LLVMTypeRef get_type(const IRState *state, const DataType *d_type) {
 
   if (d_type->d_kind == D_PRIMITIVE) {
     return get_primitive_type(state, d_type->d_union.p_type);
-  } else if (d_type->d_kind == D_ARRAY) {
-    const LLVMTypeRef element_type = get_type(state, d_type->d_union.a_type.element_type);
-    return LLVMArrayType2(element_type, d_type->d_union.a_type.length);
   } else if (d_type->d_kind == D_STRUCT) {
     const TypeDefinitionRef *type_def = load_type_definition(&state->type_refs, d_type->d_union.s_type.name);
     return type_def->ref;
@@ -384,11 +379,6 @@ void build_assignment_statement(IRState *state, const AssignmentStatement *assig
     assert(assign_var != NULL);
     LLVMBuildStore(state->builder, expr_output, assign_var->ptr);
     break;
-  case A_ARRAY_ELEMENT:
-    const ArrayAccess *arr_access = &assign->a_output.a_union.arr_element;
-    const LLVMValueRef element_ptr = build_get_element_ptr(state, &arr_access->term_ident, arr_access->idx);
-    LLVMBuildStore(state->builder, expr_output, element_ptr);
-    break;
   case A_STRUCT_FIELD:
     const StructAccess *struct_field = &assign->a_output.a_union.struct_field;
     const LLVMValueRef field_ptr = build_get_element_ptr(state, &struct_field->term_ident, struct_field->field_idx);
@@ -489,12 +479,6 @@ LLVMValueRef build_terminal_expr(const IRState *state, const TerminalExpr *term,
   case TERM_FUNC_CALL:
     processed = build_func_call(state, &term->item.t_union.func_call, d_type);
     break;
-  case TERM_ARRAY_LITERAL:
-    processed = build_array_literal(state, &term->item.t_union.arr_literal);
-    break;
-  case TERM_ARRAY_ACCESS:
-    processed = build_array_access(state, &term->item.t_union.arr_access);
-    break;
   case TERM_STRUCT_LITERAL:
     processed = build_struct_literal(state, &term->item.t_union.struct_literal);
     break;
@@ -560,18 +544,6 @@ LLVMValueRef build_literal(const Literal *literal, const LLVMTypeRef p_type) {
   }
 }
 
-LLVMValueRef build_array_literal(const IRState *state, const ArrayLiteral *arr_lit) {
-  assert(arr_lit->d_type->d_kind == D_ARRAY);
-  LLVMValueRef arr_values[arr_lit->items.count];
-  const LLVMTypeRef element_type = get_type(state, arr_lit->d_type->d_union.a_type.element_type);
-
-  for (size_t i = 0; i < arr_lit->items.count; i++) {
-    arr_values[i] = build_expression(state, &arr_lit->items.elements[i], element_type);
-  }
-
-  return LLVMConstArray2(element_type, arr_values, arr_lit->items.count);
-}
-
 LLVMValueRef build_struct_literal(const IRState *state, const StructLiteral *struct_lit) {
   assert(struct_lit->d_type->d_kind == D_STRUCT);
   const LLVMTypeRef struct_type = get_type(state, struct_lit->d_type);
@@ -601,28 +573,20 @@ LLVMValueRef build_struct_access(const IRState *state, const StructAccess *struc
 }
 
 LLVMValueRef build_get_element_ptr(const IRState *state, const TerminalIdentifier *term_ident, size_t element_idx) {
-  const ValueRef *arr = load_identifier(&state->values, term_ident);
-  assert(arr != NULL);
-  const LLVMTypeRef arr_type = get_type(state, arr->d_type);
+  const ValueRef *outer_val = load_identifier(&state->values, term_ident);
+  assert(outer_val != NULL);
+  const LLVMTypeRef outer_type = get_type(state, outer_val->d_type);
 
   LLVMValueRef indices[] = {
-      // First index ensures that we are stepping into the array itself
+      // First index ensures that we are stepping into the struct itself
       LLVMConstInt(LLVMInt32TypeInContext(state->context), 0, false),
-      // Second index points to the element in the array that we want to access
+      // Second index points to the index of the field that we want to access
       LLVMConstInt(LLVMInt32TypeInContext(state->context), element_idx, false),
   };
   const uint64_t num_indices = sizeof(indices) / sizeof(indices[0]);
 
   // TODO: Improve how we create LLVM names in order to make IR easier to read/understand
-  return LLVMBuildInBoundsGEP2(state->builder, arr_type, arr->ptr, indices, num_indices, "access_element");
-}
-
-LLVMValueRef build_array_access(const IRState *state, const ArrayAccess *arr_access) {
-  const ValueRef *arr = load_identifier(&state->values, &arr_access->term_ident);
-  const LLVMTypeRef element_type = get_type(state, arr->d_type->d_union.a_type.element_type);
-
-  const LLVMValueRef element_ptr = build_get_element_ptr(state, &arr_access->term_ident, arr_access->idx);
-  return LLVMBuildLoad2(state->builder, element_type, element_ptr, "load_element");
+  return LLVMBuildInBoundsGEP2(state->builder, outer_type, outer_val->ptr, indices, num_indices, "access_element");
 }
 
 LLVMValueRef build_compound_expr(const IRState *state, const CompoundExpr *comp, const LLVMTypeRef p_type) {

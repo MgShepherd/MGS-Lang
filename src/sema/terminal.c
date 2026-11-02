@@ -84,21 +84,6 @@ unsigned char analyse_literal(TerminalLiteral *term_lit, const Token *sign, cons
   return 0;
 }
 
-unsigned char analyse_array_literal(SemaState *state, ArrayLiteral *arr_lit, const DataType *expr_type) {
-  assert(expr_type->d_kind == D_ARRAY);
-  arr_lit->d_type = expr_type;
-
-  // TODO: Check array length in type matches amount of elements provided - more error case handling needed in tests
-  for (size_t i = 0; i < arr_lit->items.count; i++) {
-    if (analyse_expression(state, &arr_lit->items.elements[i], arr_lit->d_type->d_union.a_type.element_type) != 0) {
-      fprintf(stderr, "Failed to analyse array item\n");
-      return 1;
-    }
-  }
-
-  return 0;
-}
-
 unsigned char analyse_struct_literal(SemaState *state, StructLiteral *struct_lit, const DataType *expr_type) {
   assert(expr_type->d_kind == D_STRUCT);
   struct_lit->d_type = expr_type;
@@ -191,41 +176,6 @@ unsigned char analyse_struct_access(SemaState *state, StructAccess *struct_acces
   struct_access->term_ident.scope = ident->scope;
   struct_access->type_def = type_def;
   struct_access->variable = ident->d_type->variable;
-  return 0;
-}
-
-unsigned char analyse_array_access(SemaState *state, ArrayAccess *arr_access, const DataType *expr_type) {
-  const Identifier *ident = get_identifier(state, arr_access->term_ident.name);
-  if (ident == NULL) {
-    fprintf(stderr, "Undefined variable: %s\n", arr_access->term_ident.name);
-    return 1;
-  }
-
-  if (ident->d_type->d_kind != D_ARRAY) {
-    fprintf(stderr, "Expected variable: %s to be an array type for array access\n", arr_access->term_ident.name);
-    return 1;
-  }
-
-  const ArrayType *array_type = &ident->d_type->d_union.a_type;
-  if (expr_type != NULL && !do_data_types_match(array_type->element_type, expr_type)) {
-    fprintf(stderr, "Element type of array %s does not match expected expression type: %s\n",
-            arr_access->term_ident.name, d_type_to_string(expr_type));
-    return 1;
-  }
-  long long arr_index;
-  if (tok_to_integer(&arr_index, arr_access->index_tok, false) != 0) {
-    fprintf(stderr, "Expected integer value for array index\n");
-    return 1;
-  }
-
-  arr_access->term_ident.scope = ident->scope;
-  arr_access->idx = (uint64_t)arr_index;
-
-  if (arr_access->idx >= array_type->length) {
-    fprintf(stderr, "Array index %lld out of bounds for array %s\n", arr_access->idx, arr_access->term_ident.name);
-    return 1;
-  }
-
   return 0;
 }
 

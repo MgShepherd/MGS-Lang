@@ -7,18 +7,11 @@
 typedef struct DataType DataType;
 
 typedef struct {
-  DataType *element_type;
-  // length will be populated as part of sema
-  uint64_t length;
-} ArrayType;
-
-typedef struct {
   const char *name;
 } StructType;
 
 typedef struct {
   PrimitiveType p_type;
-  ArrayType a_type;
   StructType s_type;
 } DataTypeUnion;
 
@@ -29,8 +22,6 @@ struct DataType {
 };
 
 unsigned char parse_data_type(DataType *data_type, const Tokens *tokens, size_t *idx);
-
-void data_type_free(DataType *data_type);
 
 const char *d_type_to_string(const DataType *data_type);
 

@@ -1,7 +1,6 @@
 #include "sema/statement.h"
 
 #include "dynamic_array.h"
-#include "sema/data_type.h"
 #include "sema/expression.h"
 #include "sema/terminal.h"
 #include "sema/utils.h"
@@ -60,11 +59,6 @@ unsigned char analyse_dec_statement(SemaState *state, DeclarationStatement *dec)
     return result;
   }
 
-  result = analyse_data_type(&dec->d_type, &dec->expr);
-  if (result != 0) {
-    return result;
-  }
-
   result = insert_identifier(state, dec->term_ident.name, &dec->d_type);
   if (result != 0) {
     return result;
@@ -89,24 +83,6 @@ unsigned char analyse_assign_statement(SemaState *state, AssignmentStatement *as
 
     assign->d_type = ident->d_type;
     term_ident->scope = ident->scope;
-
-    if (!assign->d_type->variable) {
-      fprintf(stderr, "Attempted to modify constant: %s\n", ident->name);
-      return 1;
-    }
-    break;
-  case A_ARRAY_ELEMENT:
-    ArrayAccess *arr_element = &assign->a_output.a_union.arr_element;
-    if (analyse_array_access(state, arr_element, NULL) != 0) {
-      fprintf(stderr, "Failed to analyse array access for assignment statement\n");
-      return 1;
-    }
-
-    // TODO: We are re-fetching the identifier here even though already fetched for analyse_terminal_array_access
-    ident = get_identifier(state, arr_element->term_ident.name);
-    assert(ident != NULL && ident->d_type->d_kind == D_ARRAY);
-
-    assign->d_type = ident->d_type->d_union.a_type.element_type;
 
     if (!assign->d_type->variable) {
       fprintf(stderr, "Attempted to modify constant: %s\n", ident->name);

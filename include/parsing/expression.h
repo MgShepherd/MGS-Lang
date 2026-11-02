@@ -43,23 +43,10 @@ typedef struct {
 } TerminalIdentifier;
 
 typedef struct {
-  TerminalIdentifier term_ident;
-  const Token *index_tok;
-  // idx will be populated by sema
-  uint64_t idx;
-} ArrayAccess;
-
-typedef struct {
   const Token *tok;
   // Will be populated by sema
   Literal literal;
 } TerminalLiteral;
-
-typedef struct {
-  Expressions items;
-  // d_type will be populated as part of semantic analysis
-  const DataType *d_type;
-} ArrayLiteral;
 
 typedef struct {
   TerminalIdentifier term_ident;
@@ -88,8 +75,6 @@ typedef struct {
   TerminalLiteral lit;
   TerminalIdentifier ident;
   FunctionCall func_call;
-  ArrayLiteral arr_literal;
-  ArrayAccess arr_access;
   StructLiteral struct_literal;
   StructAccess struct_access;
 } TerminalUnion;
@@ -126,7 +111,6 @@ struct FieldAssignment {
 };
 
 unsigned char parse_terminal_identifier(TerminalIdentifier *term_ident, const Tokens *tokens, size_t *idx);
-unsigned char parse_array_access(ArrayAccess *arr_access, const Tokens *tokens, size_t *idx);
 unsigned char parse_struct_access(StructAccess *struct_acc, const Tokens *tokens, size_t *idx);
 
 /*

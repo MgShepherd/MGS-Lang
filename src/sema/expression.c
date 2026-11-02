@@ -36,10 +36,6 @@ unsigned char analyse_term_expression(SemaState *state, TerminalExpr *term, cons
     return analyse_literal(&term->item.t_union.lit, term->sign, expr_type);
   case TERM_FUNC_CALL:
     return analyse_func_call(state, &term->item.t_union.func_call, expr_type);
-  case TERM_ARRAY_LITERAL:
-    return analyse_array_literal(state, &term->item.t_union.arr_literal, expr_type);
-  case TERM_ARRAY_ACCESS:
-    return analyse_array_access(state, &term->item.t_union.arr_access, expr_type);
   case TERM_STRUCT_LITERAL:
     return analyse_struct_literal(state, &term->item.t_union.struct_literal, expr_type);
   case TERM_STRUCT_ACCESS:
@@ -54,11 +50,6 @@ unsigned char analyse_comp_expression(SemaState *state, CompoundExpr *comp, cons
   const DataType *term_type = expr_type;
   if (expr_type->d_kind == D_PRIMITIVE && expr_type->d_union.p_type == P_BOOL) {
     term_type = &I32_TYPE;
-  }
-
-  if (expr_type->d_kind == D_ARRAY) {
-    fprintf(stderr, "Using arrays as part of compound expressions is not supported\n");
-    return 1;
   }
 
   unsigned char result = analyse_term_expression(state, &comp->lhs, term_type);

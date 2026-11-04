@@ -50,10 +50,11 @@ typedef struct {
 
 typedef struct {
   TerminalIdentifier term_ident;
-  const char *field_name;
-  // type_def, field_idx, variable and d_type will be populated as part of semantic analysis
+  const char **field_names;
+  size_t num_field_nestings;
+  // type_def, field_idxs, variable and d_type will be populated as part of semantic analysis
   const TypeDefinition *type_def;
-  size_t field_idx;
+  size_t *field_idxs;
   const DataType *d_type;
   // TODO: Is there a better way to handle variable for StructAccess - current solution a bit hacky
   bool variable;

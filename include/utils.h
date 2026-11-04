@@ -43,4 +43,11 @@ bool has_suffix(const char *input, const char *suffix);
  */
 char *file_name_from_path(const char *input);
 
+/*
+ * join_strings will join a provided array of strings (size num_strings) into one single string
+ * The strings will be separated using the provided separator char
+ * Resulting string is allocated on the heap so must be freed manually by caller
+ */
+char *join_strings(const char **strings, size_t num_strings, char separator);
+
 #endif // _UTILS_H_

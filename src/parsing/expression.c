@@ -81,10 +81,20 @@ void expression_free(Expression *expression) {
     break;
   case E_TERMINAL:
     if (expression->e_union.term.item.t_type == TERM_FUNC_CALL) {
-      for (size_t i = 0; i < expression->e_union.term.item.t_union.func_call.parameters.count; i++) {
-        expression_free(&expression->e_union.term.item.t_union.func_call.parameters.elements[i]);
+      FunctionCall *func_call = &expression->e_union.term.item.t_union.func_call;
+      for (size_t i = 0; i < func_call->parameters.count; i++) {
+        expression_free(&func_call->parameters.elements[i]);
       }
       dyn_array_free(&expression->e_union.term.item.t_union.func_call.parameters);
+    } else if (expression->e_union.term.item.t_type == TERM_STRUCT_ACCESS) {
+      StructAccess *struct_access = &expression->e_union.term.item.t_union.struct_access;
+      if (struct_access->field_names != NULL) {
+        free(struct_access->field_names);
+      }
+
+      if (struct_access->field_idxs != NULL) {
+        free(struct_access->field_idxs);
+      }
     }
     break;
   default:
@@ -268,6 +278,12 @@ unsigned char parse_struct_literal(StructLiteral *struct_lit, const Tokens *toke
 }
 
 unsigned char parse_struct_access(StructAccess *struct_acc, const Tokens *tokens, size_t *idx) {
+  // TODO: Should we change this to be more dynamic - realistically should be enough though
+  static const size_t MAX_FIELD_NESTING = 10;
+
+  struct_acc->field_idxs = NULL;
+  struct_acc->field_names = NULL;
+
   const Token *ident_tok = expect_next(T_IDENTIFIER, tokens, idx);
   if (ident_tok == NULL) {
     fprintf(stderr, "Expected identifier for struct field access\n");
@@ -276,17 +292,29 @@ unsigned char parse_struct_access(StructAccess *struct_acc, const Tokens *tokens
   assert(ident_tok->item != NULL);
   struct_acc->term_ident.name = ident_tok->item;
 
-  if (expect_next(T_DOT, tokens, idx) == NULL) {
-    fprintf(stderr, "Expected '.' separator for struct field access\n");
-    return 1;
+  struct_acc->field_names = malloc(sizeof(char *) * MAX_FIELD_NESTING);
+  size_t num_nestings = 0;
+  while (peek_index(tokens, *idx) == T_DOT) {
+    *idx += 1;
+
+    if (num_nestings >= MAX_FIELD_NESTING - 1) {
+      fprintf(stderr, "Maximum field nesting depth of %zu reached\n", MAX_FIELD_NESTING);
+      return 1;
+    }
+
+    const Token *field_name_tok = expect_next(T_IDENTIFIER, tokens, idx);
+    if (field_name_tok == NULL) {
+      fprintf(stderr, "Expected identifier for struct field access\n");
+      return 1;
+    }
+    struct_acc->field_names[num_nestings++] = field_name_tok->item;
   }
 
-  const Token *field_name_tok = expect_next(T_IDENTIFIER, tokens, idx);
-  if (field_name_tok == NULL) {
-    fprintf(stderr, "Expected identifier for struct field access\n");
+  if (num_nestings == 0) {
+    fprintf(stderr, "Expected at least one '.' for struct field access\n");
     return 1;
   }
-  struct_acc->field_name = field_name_tok->item;
+  struct_acc->num_field_nestings = num_nestings;
 
   return 0;
 }

@@ -1,9 +1,11 @@
 #include "sema/terminal.h"
 
 #include "parsing/data_type.h"
+#include "parsing/type.h"
 #include "parsing/type_definition.h"
 #include "sema/expression.h"
 #include "sema/utils.h"
+#include "utils.h"
 
 #include <assert.h>
 #include <stdio.h>
@@ -143,39 +145,70 @@ unsigned char analyse_struct_literal(SemaState *state, StructLiteral *struct_lit
 unsigned char analyse_struct_access(SemaState *state, StructAccess *struct_access, const DataType *expr_type) {
   const Identifier *ident = get_identifier(state, struct_access->term_ident.name);
   if (ident == NULL) {
-    fprintf(stderr, "Undefined variable: %s\n", struct_access->field_name);
+    fprintf(stderr, "Undefined variable: %s\n", struct_access->term_ident.name);
     return 1;
   }
   assert(ident->d_type != NULL && ident->d_type->d_kind == D_STRUCT);
 
-  const TypeDefinition *type_def = get_type_def(&state->type_defs, ident->d_type->d_union.s_type.name);
-  assert(type_def != NULL && type_def->td_kind == TD_STRUCT);
-  const StructDefinition *struct_def = &type_def->td_union.s_def;
+  const StructType *current_type = &ident->d_type->d_union.s_type;
+  Field *field = NULL;
+  size_t current_nested_level = 0;
 
-  const Field *field = NULL;
-  for (size_t i = 0; i < struct_def->fields.count; i++) {
-    if (strcmp(struct_def->fields.elements[i].term_ident.name, struct_access->field_name) == 0) {
+  struct_access->field_idxs = malloc(sizeof(size_t) * struct_access->num_field_nestings);
+  assert(struct_access->field_idxs != NULL);
+
+  while (current_nested_level < struct_access->num_field_nestings) {
+    const TypeDefinition *type_def = get_type_def(&state->type_defs, current_type->name);
+    if (current_nested_level == 0) {
+      struct_access->type_def = type_def;
+    }
+
+    assert(type_def->td_kind == TD_STRUCT);
+    const StructDefinition *struct_def = &type_def->td_union.s_def;
+
+    bool found = false;
+    for (size_t i = 0; i < struct_def->fields.count; i++) {
       field = &struct_def->fields.elements[i];
-      struct_access->field_idx = i;
+      if (strcmp(field->term_ident.name, struct_access->field_names[current_nested_level]) == 0) {
+        field = &struct_def->fields.elements[i];
+        struct_access->field_idxs[current_nested_level] = i;
+        found = true;
+        break;
+      }
+    }
+
+    if (!found) {
+      field = NULL;
       break;
     }
+
+    current_nested_level += 1;
+    if (field->d_type.d_kind != D_STRUCT) {
+      break;
+    }
+
+    current_type = &field->d_type.d_union.s_type;
   }
 
-  if (field == NULL) {
-    fprintf(stderr, "Undefined field %s for struct %s\n", struct_access->field_name, struct_def->name);
+  char *field_name = join_strings(struct_access->field_names, struct_access->num_field_nestings, '.');
+  if (field == NULL || current_nested_level < struct_access->num_field_nestings) {
+    fprintf(stderr, "Undefined field %s for struct %s\n", field_name, struct_access->type_def->td_union.s_def.name);
+    free(field_name);
     return 1;
   }
 
   if (expr_type != NULL && !do_data_types_match(&field->d_type, expr_type)) {
-    fprintf(stderr, "Field %s does not have expected type %s\n", struct_access->field_name,
-            d_type_to_string(expr_type));
+    fprintf(stderr, "Field %s expected type %s, got %s\n", field_name, d_type_to_string(expr_type),
+            d_type_to_string(&field->d_type));
+    free(field_name);
     return 1;
   }
 
   struct_access->d_type = &field->d_type;
   struct_access->term_ident.scope = ident->scope;
-  struct_access->type_def = type_def;
   struct_access->variable = ident->d_type->variable;
+
+  free(field_name);
   return 0;
 }
 

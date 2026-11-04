@@ -103,7 +103,8 @@ LLVMValueRef build_literal(const Literal *literal, const LLVMTypeRef d_type);
 LLVMValueRef build_struct_literal(const IRState *state, const StructLiteral *struct_lit);
 LLVMValueRef build_struct_access(const IRState *state, const StructAccess *struct_access);
 
-LLVMValueRef build_get_element_ptr(const IRState *state, const TerminalIdentifier *term_ident, size_t element_idx);
+LLVMValueRef build_get_element_ptr(const IRState *state, const TerminalIdentifier *term_ident, const size_t *indexes,
+                                   size_t num_indexes);
 
 unsigned char generate_object_file(const IRState *state, const char *file_name);
 
@@ -381,7 +382,8 @@ void build_assignment_statement(IRState *state, const AssignmentStatement *assig
     break;
   case A_STRUCT_FIELD:
     const StructAccess *struct_field = &assign->a_output.a_union.struct_field;
-    const LLVMValueRef field_ptr = build_get_element_ptr(state, &struct_field->term_ident, struct_field->field_idx);
+    const LLVMValueRef field_ptr = build_get_element_ptr(state, &struct_field->term_ident, struct_field->field_idxs,
+                                                         struct_field->num_field_nestings);
     LLVMBuildStore(state->builder, expr_output, field_ptr);
     break;
   default:
@@ -568,25 +570,29 @@ LLVMValueRef build_struct_access(const IRState *state, const StructAccess *struc
   const LLVMTypeRef field_type = get_type(state, struct_access->d_type);
   assert(type_def != NULL && field_type != NULL);
 
-  const LLVMValueRef element_ptr = build_get_element_ptr(state, &struct_access->term_ident, struct_access->field_idx);
+  const LLVMValueRef element_ptr = build_get_element_ptr(state, &struct_access->term_ident, struct_access->field_idxs,
+                                                         struct_access->num_field_nestings);
   return LLVMBuildLoad2(state->builder, field_type, element_ptr, "load_struct_field");
 }
 
-LLVMValueRef build_get_element_ptr(const IRState *state, const TerminalIdentifier *term_ident, size_t element_idx) {
+// TODO: Indexes is not good english - this should be indices
+LLVMValueRef build_get_element_ptr(const IRState *state, const TerminalIdentifier *term_ident, const size_t *indexes,
+                                   size_t num_indexes) {
   const ValueRef *outer_val = load_identifier(&state->values, term_ident);
   assert(outer_val != NULL);
   const LLVMTypeRef outer_type = get_type(state, outer_val->d_type);
 
-  LLVMValueRef indices[] = {
-      // First index ensures that we are stepping into the struct itself
-      LLVMConstInt(LLVMInt32TypeInContext(state->context), 0, false),
-      // Second index points to the index of the field that we want to access
-      LLVMConstInt(LLVMInt32TypeInContext(state->context), element_idx, false),
-  };
-  const uint64_t num_indices = sizeof(indices) / sizeof(indices[0]);
+  LLVMValueRef indices[num_indexes + 1];
+
+  // First index ensures that we are stepping into the struct itself
+  indices[0] = LLVMConstInt(LLVMInt32TypeInContext(state->context), 0, false);
+
+  for (size_t i = 0; i < num_indexes; i++) {
+    indices[i + 1] = LLVMConstInt(LLVMInt32TypeInContext(state->context), indexes[i], false);
+  }
 
   // TODO: Improve how we create LLVM names in order to make IR easier to read/understand
-  return LLVMBuildInBoundsGEP2(state->builder, outer_type, outer_val->ptr, indices, num_indices, "access_element");
+  return LLVMBuildInBoundsGEP2(state->builder, outer_type, outer_val->ptr, indices, num_indexes + 1, "access_element");
 }
 
 LLVMValueRef build_compound_expr(const IRState *state, const CompoundExpr *comp, const LLVMTypeRef p_type) {

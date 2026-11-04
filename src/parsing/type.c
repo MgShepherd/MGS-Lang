@@ -54,6 +54,14 @@ const char *term_type_to_string(TerminalType t) {
     return "unknown";
   }
 }
+
+const char *td_kind_to_string(TypeDefinitionKind td) {
+  switch (td) {
+    TYPE_DEFINITION_KINDS
+  default:
+    return "unknown";
+  }
+}
 #undef X
 
 PrimitiveType tok_to_primitive_type(TokenType t_type) {

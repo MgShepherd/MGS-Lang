@@ -106,6 +106,33 @@ main: func() -> i64 {
 	return person_3.age;
 }
 
+-- TEST nested struct
+-- EXPECTED_STATUS_CODE 4
+Birthday: struct {
+  day: i64,
+	month: i64,
+	year: i64
+};
+
+Person: struct {
+	age: i64,
+	is_programmer: bool,
+	birthday: Birthday
+};
+
+main: func() -> i64 {
+	michael: var Person = {
+		age = 26,
+		is_programmer = true,
+		birthday = {
+		  day = 15,
+			month = 4,
+			year = 2000
+		}
+	};
+
+	return michael.birthday.month;
+}
 
 -- TEST variable name with same name as struct field
 -- EXPECTED_STATUS_CODE 26
@@ -220,7 +247,7 @@ main: func() -> i64 {
 }
 
 -- TEST struct access with field that does not match type
--- EXPECTED_COMPILATION_ERROR Field is_programmer does not have expected type P_I64
+-- EXPECTED_COMPILATION_ERROR Field is_programmer expected type P_I64, got P_BOOL
 Person: struct {
 	age: i8,
 	is_programmer: bool

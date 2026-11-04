@@ -84,6 +84,7 @@ const char *p_type_to_string(PrimitiveType p);
 const char *o_type_to_string(OperatorType o);
 const char *l_type_to_string(LiteralType l);
 const char *term_type_to_string(TerminalType t);
+const char *td_kind_to_string(TypeDefinitionKind td);
 
 /*
  * Converts a provided token type into the matching primitive type

@@ -130,3 +130,34 @@ char *file_name_from_path(const char *input) {
 
   return string_slice(input, name_start, name_end);
 }
+
+char *join_strings(const char **strings, size_t num_strings, char separator) {
+  // Additional space needed for ending null terminator
+  size_t total_len = 1;
+  for (size_t i = 0; i < num_strings; i++) {
+    total_len += strlen(strings[i]);
+
+    // Add space for separator
+    if (i < num_strings - 1) {
+      total_len++;
+    }
+  }
+
+  char *joined = malloc(sizeof(char) * total_len);
+  assert(joined != NULL);
+
+  joined[total_len - 1] = '\0';
+
+  size_t current_idx = 0;
+  for (size_t i = 0; i < num_strings; i++) {
+    for (size_t j = 0; j < strlen(strings[i]); j++) {
+      joined[current_idx++] = strings[i][j];
+    }
+
+    if (i < num_strings - 1) {
+      joined[current_idx++] = separator;
+    }
+  }
+
+  return joined;
+}

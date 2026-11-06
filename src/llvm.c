@@ -2,6 +2,7 @@
 #include "dynamic_array.h"
 #include "lexer.h"
 #include "parsing/data_type.h"
+#include "parsing/expression.h"
 #include "parsing/type.h"
 #include "llvm-c/Types.h"
 
@@ -137,16 +138,16 @@ unsigned char program_to_object_file(const Program *program, const char *file_na
     }
   }
 
+  if (llvm_debug) {
+    fprintf(stdout, "%s\n", LLVMPrintModuleToString(state.module));
+  }
+
   char *message;
   if (LLVMVerifyModule(state.module, LLVMReturnStatusAction, &message) != 0) {
     fprintf(stderr, "Failed to build function due to: %s\n", message);
     LLVMDisposeMessage(message);
     dispose_ir_state(&state);
     return 1;
-  }
-
-  if (llvm_debug) {
-    fprintf(stdout, "%s\n", LLVMPrintModuleToString(state.module));
   }
 
   if (generate_object_file(&state, file_name) != 0) {
@@ -482,7 +483,8 @@ LLVMValueRef build_terminal_expr(const IRState *state, const TerminalExpr *term,
     processed = build_func_call(state, &term->item.t_union.func_call, d_type);
     break;
   case TERM_STRUCT_LITERAL:
-    processed = build_struct_literal(state, &term->item.t_union.struct_literal);
+    LLVMValueRef struct_ptr = build_struct_literal(state, &term->item.t_union.struct_literal);
+    processed = LLVMBuildLoad2(state->builder, d_type, struct_ptr, "load_struct");
     break;
   case TERM_STRUCT_ACCESS:
     processed = build_struct_access(state, &term->item.t_union.struct_access);
@@ -552,13 +554,20 @@ LLVMValueRef build_struct_literal(const IRState *state, const StructLiteral *str
   const TypeDefinitionRef *type_def = load_type_definition(&state->type_refs, struct_lit->d_type->d_union.s_type.name);
   assert(struct_lit->field_assignments.count == type_def->num_fields);
 
-  LLVMValueRef field_vals[struct_lit->field_assignments.count];
+  // TODO: This approach results in us allocating the same struct space twice - important to fix this
+  // We may need to restructure the expression logic so that rather than returning values, we store in already allocated
+  // space
+  LLVMValueRef struct_val = LLVMBuildAlloca(state->builder, struct_type, "alloc_struct");
+
   for (size_t i = 0; i < struct_lit->field_assignments.count; i++) {
-    field_vals[i] =
-        build_expression(state, &struct_lit->field_assignments.elements[i].expression, type_def->field_types[i]);
+    FieldAssignment *current = &struct_lit->field_assignments.elements[i];
+    LLVMValueRef expression_val = build_expression(state, &current->expression, type_def->field_types[i]);
+
+    LLVMValueRef struct_field = LLVMBuildStructGEP2(state->builder, struct_type, struct_val, i, current->name);
+    LLVMBuildStore(state->builder, expression_val, struct_field);
   }
 
-  return LLVMConstNamedStruct(struct_type, field_vals, struct_lit->field_assignments.count);
+  return struct_val;
 }
 
 LLVMValueRef build_struct_access(const IRState *state, const StructAccess *struct_access) {

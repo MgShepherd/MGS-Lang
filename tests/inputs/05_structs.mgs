@@ -134,6 +134,66 @@ main: func() -> i64 {
 	return michael.birthday.month;
 }
 
+-- TEST modifying nested field struct
+-- EXPECTED_STATUS_CODE 6
+Birthday: struct {
+  day: i64,
+	month: i64,
+	year: i64
+};
+
+Person: struct {
+	age: i64,
+	is_programmer: bool,
+	birthday: Birthday
+};
+
+main: func() -> i64 {
+	michael: var Person = {
+		age = 26,
+		is_programmer = true,
+		birthday = {
+		  day = 15,
+			month = 4,
+			year = 2000
+		}
+	};
+
+	michael.birthday.month = 6;
+
+	return michael.birthday.month;
+}
+
+-- TEST passing already defined struct as inner struct
+-- EXPECTED_STATUS_CODE 4
+Birthday: struct {
+  day: i64,
+	month: i64,
+	year: i64
+};
+
+Person: struct {
+	age: i64,
+	is_programmer: bool,
+	birthday: Birthday
+};
+
+main: func() -> i64 {
+	birthday: Birthday = {
+	  day = 15,
+		month = 4,
+		year = 2000
+	};
+
+	michael: var Person = {
+		age = 26,
+		is_programmer = true,
+		birthday = birthday
+	};
+
+	return michael.birthday.month;
+}
+
 -- TEST variable name with same name as struct field
 -- EXPECTED_STATUS_CODE 26
 Person: struct {

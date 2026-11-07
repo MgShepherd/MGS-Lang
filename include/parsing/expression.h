@@ -121,6 +121,14 @@ unsigned char parse_struct_access(StructAccess *struct_acc, const Tokens *tokens
  */
 unsigned char parse_expression(Expression *expression, const Tokens *tokens, size_t *idx);
 
+// TODO: We may want to restructure where some of these types and functions live - more a specific sort of utilty
+/**
+ * get_terminal_name will get a string representation of a terminal symbols name
+ * @param term - A pointer to the terminal to get the name of
+ * @return The string representation of the name - returns a copy so must be freed by the caller
+ */
+char *get_terminal_name(const Terminal *term);
+
 /*
  * Frees a single expression
  */

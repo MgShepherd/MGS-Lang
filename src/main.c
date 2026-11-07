@@ -1,10 +1,10 @@
 #include "cmd_args.h"
 #include "dynamic_array.h"
 #include "lexer.h"
-#include "llvm.h"
 #include "parsing/program.h"
 #include "sema/program.h"
 #include "utils.h"
+#include "llvm/llvm.h"
 
 #include <stdio.h>
 #include <stdlib.h>

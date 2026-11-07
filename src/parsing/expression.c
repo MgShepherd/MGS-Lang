@@ -3,6 +3,7 @@
 #include "lexer.h"
 #include "parsing/type.h"
 #include "parsing/utils.h"
+#include "utils.h"
 
 #include <assert.h>
 #include <stdio.h>
@@ -18,6 +19,46 @@ unsigned char parse_expression_list(Expressions *params, const Tokens *tokens, s
                                     const TokenType list_end_type);
 unsigned char parse_field_assignments(FieldAssignments *field_assignments, const Tokens *tokens, size_t *idx);
 unsigned char parse_struct_literal(StructLiteral *struct_lit, const Tokens *tokens, size_t *idx);
+
+char *get_terminal_name(const Terminal *term) {
+  static const char *CALL_PREFIX = "call_";
+
+  char *buffer = NULL;
+  switch (term->t_type) {
+  case TERM_IDENTIFIER:
+    const TerminalIdentifier *ident = &term->t_union.ident;
+    // plus 1 to account for null terminator
+    buffer = malloc(sizeof(char) * strlen(ident->name) + 1);
+    strcpy(buffer, ident->name);
+    break;
+  case TERM_FUNC_CALL:
+    const FunctionCall *func_call = &term->t_union.func_call;
+    const size_t name_len = strlen(CALL_PREFIX) + strlen(func_call->name->item) + 1;
+    buffer = malloc(sizeof(char) * name_len);
+    const size_t result = snprintf(buffer, name_len, "%s%s", CALL_PREFIX, func_call->name->item);
+    assert(result > 0);
+    break;
+  case TERM_LITERAL:
+    const TerminalLiteral *lit = &term->t_union.lit;
+    // plus 1 to account for null terminator
+    buffer = malloc(sizeof(char) * strlen(lit->tok->item) + 1);
+    strcpy(buffer, lit->tok->item);
+    break;
+  case TERM_STRUCT_ACCESS:
+    const StructAccess *access = &term->t_union.struct_access;
+    buffer = join_strings(access->field_names, access->num_field_nestings, '.');
+    break;
+  case TERM_STRUCT_LITERAL:
+    const StructLiteral *struct_lit = &term->t_union.struct_literal;
+    buffer = malloc(sizeof(char) * strlen(struct_lit->d_type->d_union.s_type.name));
+    break;
+  case T_NONE:
+    assert(false);
+  }
+
+  assert(buffer != NULL);
+  return buffer;
+}
 
 unsigned char parse_expression(Expression *expression, const Tokens *tokens, size_t *idx) {
   if (*idx >= tokens->count) {
@@ -102,7 +143,8 @@ void expression_free(Expression *expression) {
   }
 }
 
-// TODO: We end up parsing the same tokens multiple times when checking ahead for the terminal type, can we improve this
+// TODO: We end up parsing the same tokens multiple times when checking ahead for the terminal type, can we improve
+// this
 unsigned char parse_terminal_expr(TerminalExpr *term, const Tokens *tokens, size_t *idx) {
   const Token *next = &tokens->elements[*idx];
   term->item.t_type = TERM_NONE;

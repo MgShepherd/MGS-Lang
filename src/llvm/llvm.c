@@ -240,6 +240,7 @@ void build_return_statement(const IRState *state, const ReturnStatement *ret) {
   const LLVMValueRef out_ptr = LLVMBuildAlloca(state->builder, statement_type, "ret_ptr");
   build_expression(out_ptr, state, &ret->expr, statement_type);
 
+  // TODO: Lots of places like this where we are storing the expr result, then immediately loading, can we improve this
   const LLVMValueRef out_val = LLVMBuildLoad2(state->builder, statement_type, out_ptr, "ret_val");
   LLVMBuildRet(state->builder, out_val);
 }
@@ -316,7 +317,7 @@ unsigned char build_if_block(IRState *state, const IfBlock *if_block, const LLVM
     next_branch_block = LLVMAppendBasicBlockInContext(state->context, func, "next");
 
     LLVMValueRef else_if_expr_ptr = LLVMBuildAlloca(state->builder, bool_type, "else_if_expr_ptr");
-    build_expression(else_if_expr_ptr, state, &if_block->if_branch.expr, bool_type);
+    build_expression(else_if_expr_ptr, state, &if_block->else_if_branches.elements[i].expr, bool_type);
     LLVMValueRef else_if_expr = LLVMBuildLoad2(state->builder, bool_type, else_if_expr_ptr, "else_if_expr");
 
     LLVMBuildCondBr(state->builder, else_if_expr, then_else_if_block, next_branch_block);
@@ -351,8 +352,7 @@ void build_void_statement(const IRState *state, const VoidStatement *void_s) {
 
   printf("Building void statement\n");
   const LLVMTypeRef statement_type = LLVMVoidTypeInContext(state->context);
-  const LLVMValueRef out_ptr = LLVMBuildAlloca(state->builder, statement_type, "void_expr_ptr");
-  build_expression(out_ptr, state, &void_s->expr, statement_type);
+  build_expression(NULL, state, &void_s->expr, statement_type);
   printf("Built void statement\n");
 }
 

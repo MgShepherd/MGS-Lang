@@ -56,7 +56,7 @@ void build_terminal_expr(const LLVMValueRef out_ptr, const IRState *state, const
     assert(false);
   }
 
-  if (term->sign != NULL && term->sign->t_type == T_MINUS) {
+  if (term->sign != NULL && term->sign->t_type == T_MINUS && out_ptr != NULL) {
     char *term_name = get_terminal_name(&term->item);
     LLVMBuildNeg(state->builder, out_ptr, term_name);
     free(term_name);
@@ -115,7 +115,9 @@ void build_compound_expr(const LLVMValueRef out_ptr, const IRState *state, const
     assert(false);
   }
 
-  LLVMBuildStore(state->builder, result, out_ptr);
+  if (out_ptr != NULL) {
+    LLVMBuildStore(state->builder, result, out_ptr);
+  }
 }
 
 void build_literal(const LLVMValueRef out_ptr, const IRState *state, const Literal *literal, const LLVMTypeRef p_type) {
@@ -145,7 +147,9 @@ void build_literal(const LLVMValueRef out_ptr, const IRState *state, const Liter
   }
   assert(lit != NULL);
 
-  LLVMBuildStore(state->builder, lit, out_ptr);
+  if (out_ptr != NULL) {
+    LLVMBuildStore(state->builder, lit, out_ptr);
+  }
 }
 
 void build_identifier(const LLVMValueRef out_ptr, const IRState *state, const TerminalIdentifier *term_ident,
@@ -154,7 +158,10 @@ void build_identifier(const LLVMValueRef out_ptr, const IRState *state, const Te
   assert(value_ref != NULL);
 
   const LLVMValueRef loaded = LLVMBuildLoad2(state->builder, d_type, value_ref->ptr, term_ident->name);
-  LLVMBuildStore(state->builder, loaded, out_ptr);
+
+  if (out_ptr != NULL) {
+    LLVMBuildStore(state->builder, loaded, out_ptr);
+  }
 }
 
 void build_func_call(const LLVMValueRef out_ptr, const IRState *state, const FunctionCall *func_call,
@@ -168,8 +175,10 @@ void build_func_call(const LLVMValueRef out_ptr, const IRState *state, const Fun
     if (func->param_types[i] != LLVMInt32TypeInContext(state->context)) {
       LLVMDumpType(func->param_types[i]);
     }
-    build_expression(params[i], state, &func_call->parameters.elements[i], func->param_types[i]);
-    assert(params[i] != NULL);
+
+    const LLVMValueRef param_ptr = LLVMBuildAlloca(state->builder, func->param_types[i], "param_ptr");
+    build_expression(param_ptr, state, &func_call->parameters.elements[i], func->param_types[i]);
+    params[i] = LLVMBuildLoad2(state->builder, func->param_types[i], param_ptr, "param");
   }
 
   const char *name = func_call->name->item;
@@ -180,7 +189,9 @@ void build_func_call(const LLVMValueRef out_ptr, const IRState *state, const Fun
     func_result = LLVMBuildCall2(state->builder, func->func_type, func->ptr, params, func->num_params, "");
   }
 
-  LLVMBuildStore(state->builder, func_result, out_ptr);
+  if (out_ptr != NULL) {
+    LLVMBuildStore(state->builder, func_result, out_ptr);
+  }
 }
 
 void build_struct_literal(const LLVMValueRef out_ptr, const IRState *state, const StructLiteral *struct_lit) {
@@ -210,5 +221,8 @@ void build_struct_access(const LLVMValueRef out_ptr, const IRState *state, const
   const LLVMValueRef element_ptr =
       get_element_ptr(state, &struct_access->term_ident, struct_access->field_idxs, struct_access->num_field_nestings);
   const LLVMValueRef element_val = LLVMBuildLoad2(state->builder, field_type, element_ptr, "load_struct_field");
-  LLVMBuildStore(state->builder, element_val, out_ptr);
+
+  if (out_ptr != NULL) {
+    LLVMBuildStore(state->builder, element_val, out_ptr);
+  }
 }

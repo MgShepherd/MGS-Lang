@@ -10,6 +10,7 @@
  * Will output the built expression into the LLVMValueRef out_val
  *
  * @param out_ptr The LLVMValueRef containing the pointer to where we want to store the expression output
+ *                If the expression does not need to be stored anyway, provide NULL for this argument
  * @param state   The current state of the IR processing
  * @param expr    The expression representation that we are converting into IR
  * @param d_type  The LLVMTypeRef for which is associated with this expression

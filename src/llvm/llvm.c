@@ -237,25 +237,19 @@ void build_return_statement(const IRState *state, const ReturnStatement *ret) {
   assert(ret != NULL);
 
   const LLVMTypeRef statement_type = get_type(state, ret->d_type);
-  const LLVMValueRef out_ptr = LLVMBuildAlloca(state->builder, statement_type, "ret_ptr");
-  build_expression(out_ptr, state, &ret->expr, statement_type);
-
-  // TODO: Lots of places like this where we are storing the expr result, then immediately loading, can we improve this
-  const LLVMValueRef out_val = LLVMBuildLoad2(state->builder, statement_type, out_ptr, "ret_val");
-  LLVMBuildRet(state->builder, out_val);
+  const LLVMValueRef expr_output = build_expression(state, &ret->expr, statement_type, false);
+  LLVMBuildRet(state->builder, expr_output);
 }
 
 unsigned char build_declaration_statement(IRState *state, const DeclarationStatement *dec) {
   assert(dec != NULL && dec->d_type.d_kind != D_NONE);
 
   const LLVMTypeRef statement_type = get_type(state, &dec->d_type);
-  const LLVMValueRef var_ptr = LLVMBuildAlloca(state->builder, statement_type, dec->term_ident.name);
-
-  build_expression(var_ptr, state, &dec->expr, statement_type);
+  const LLVMValueRef output_ptr = build_expression(state, &dec->expr, statement_type, true);
 
   ValueRef var = {
       .name = dec->term_ident.name,
-      .ptr = var_ptr,
+      .ptr = output_ptr,
       .scope = dec->term_ident.scope,
       .d_type = &dec->d_type,
   };
@@ -271,7 +265,6 @@ void build_assignment_statement(IRState *state, const AssignmentStatement *assig
   switch (assign->a_output.a_type) {
   case A_IDENTIFIER:
     const ValueRef *assign_var = load_identifier(&state->values, &assign->a_output.a_union.term_ident);
-    assert(assign_var != NULL);
     out_ptr = assign_var->ptr;
     break;
   case A_STRUCT_FIELD:
@@ -284,7 +277,8 @@ void build_assignment_statement(IRState *state, const AssignmentStatement *assig
   }
 
   const LLVMTypeRef statement_type = get_type(state, assign->d_type);
-  build_expression(out_ptr, state, &assign->expr, statement_type);
+  const LLVMValueRef expr_output = build_expression(state, &assign->expr, statement_type, false);
+  LLVMBuildStore(state->builder, expr_output, out_ptr);
 }
 
 unsigned char build_if_block(IRState *state, const IfBlock *if_block, const LLVMValueRef func) {
@@ -296,13 +290,10 @@ unsigned char build_if_block(IRState *state, const IfBlock *if_block, const LLVM
   const LLVMBasicBlockRef then_if_block = LLVMAppendBasicBlockInContext(state->context, func, "if-then");
   LLVMBasicBlockRef next_branch_block = LLVMAppendBasicBlockInContext(state->context, func, "next");
 
-  LLVMValueRef if_expr_ptr = LLVMBuildAlloca(state->builder, bool_type, "if_expr_ptr");
-  build_expression(if_expr_ptr, state, &if_block->if_branch.expr, bool_type);
-  LLVMValueRef if_expr = LLVMBuildLoad2(state->builder, bool_type, if_expr_ptr, "if_expr");
-
+  LLVMValueRef if_expr = build_expression(state, &if_block->if_branch.expr, bool_type, false);
   LLVMBuildCondBr(state->builder, if_expr, then_if_block, next_branch_block);
-
   LLVMPositionBuilderAtEnd(state->builder, then_if_block);
+
   if (build_statements(state, &if_block->if_branch.block.body, func) != 0) {
     return 1;
   }
@@ -316,10 +307,7 @@ unsigned char build_if_block(IRState *state, const IfBlock *if_block, const LLVM
     LLVMPositionBuilderAtEnd(state->builder, next_branch_block);
     next_branch_block = LLVMAppendBasicBlockInContext(state->context, func, "next");
 
-    LLVMValueRef else_if_expr_ptr = LLVMBuildAlloca(state->builder, bool_type, "else_if_expr_ptr");
-    build_expression(else_if_expr_ptr, state, &if_block->else_if_branches.elements[i].expr, bool_type);
-    LLVMValueRef else_if_expr = LLVMBuildLoad2(state->builder, bool_type, else_if_expr_ptr, "else_if_expr");
-
+    LLVMValueRef else_if_expr = build_expression(state, &if_block->else_if_branches.elements[i].expr, bool_type, false);
     LLVMBuildCondBr(state->builder, else_if_expr, then_else_if_block, next_branch_block);
 
     LLVMPositionBuilderAtEnd(state->builder, then_else_if_block);
@@ -350,10 +338,8 @@ unsigned char build_if_block(IRState *state, const IfBlock *if_block, const LLVM
 void build_void_statement(const IRState *state, const VoidStatement *void_s) {
   assert(void_s != NULL);
 
-  printf("Building void statement\n");
   const LLVMTypeRef statement_type = LLVMVoidTypeInContext(state->context);
-  build_expression(NULL, state, &void_s->expr, statement_type);
-  printf("Built void statement\n");
+  build_expression(state, &void_s->expr, statement_type, false);
 }
 
 unsigned char generate_object_file(const IRState *state, const char *file_name) {

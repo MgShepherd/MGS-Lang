@@ -5,6 +5,7 @@
 #include "parsing/type.h"
 #include "llvm-c/Types.h"
 #include "llvm/expression.h"
+#include "llvm/type_definition.h"
 #include "llvm/utils.h"
 
 #include <assert.h>
@@ -27,16 +28,14 @@ unsigned char init_ir_state(IRState *state);
 
 unsigned char build_function(IRState *state, const Function *func);
 
-unsigned char build_type_definition(IRState *state, const TypeDefinition *type_def);
-
 unsigned char build_statements(IRState *state, const Statements *statements, const LLVMValueRef func);
 unsigned char build_statement(IRState *state, const Statement *statement, const LLVMValueRef func);
 // Statements which return unsigned char can only error due to failing to add ValueRef into array
 unsigned char build_declaration_statement(IRState *state, const DeclarationStatement *dec);
 unsigned char build_if_block(IRState *state, const IfBlock *if_block, const LLVMValueRef func);
 void build_assignment_statement(IRState *state, const AssignmentStatement *assign);
-void build_return_statement(const IRState *state, const ReturnStatement *ret);
-void build_void_statement(const IRState *state, const VoidStatement *void_s);
+void build_return_statement(IRState *state, const ReturnStatement *ret);
+void build_void_statement(IRState *state, const VoidStatement *void_s);
 
 unsigned char generate_object_file(const IRState *state, const char *file_name);
 
@@ -52,10 +51,7 @@ unsigned char program_to_object_file(const Program *program, const char *file_na
   }
 
   for (size_t i = 0; i < program->type_defs.count; i++) {
-    if (build_type_definition(&state, &program->type_defs.elements[i]) != 0) {
-      dispose_ir_state(&state);
-      return 1;
-    }
+    build_type_definition(&state, &program->type_defs.elements[i]);
   }
 
   for (size_t i = 0; i < program->functions.count; i++) {
@@ -169,31 +165,6 @@ unsigned char build_function(IRState *state, const Function *func) {
   return 0;
 }
 
-unsigned char build_type_definition(IRState *state, const TypeDefinition *type_definition) {
-  TypeDefinitionRef type_ref;
-
-  assert(type_definition->td_kind == TD_STRUCT);
-  const StructDefinition *struct_definition = &type_definition->td_union.s_def;
-
-  LLVMTypeRef *field_types = malloc(sizeof(LLVMTypeRef) * struct_definition->fields.count);
-  assert(field_types != NULL);
-
-  for (size_t i = 0; i < struct_definition->fields.count; i++) {
-    field_types[i] = get_type(state, &struct_definition->fields.elements[i].d_type);
-  }
-
-  type_ref.ref = LLVMStructCreateNamed(state->context, struct_definition->name);
-  LLVMStructSetBody(type_ref.ref, field_types, struct_definition->fields.count, false);
-
-  type_ref.name = struct_definition->name;
-  type_ref.field_types = field_types;
-  type_ref.num_fields = struct_definition->fields.count;
-
-  dyn_array_insert(&state->type_refs, type_ref);
-
-  return 0;
-}
-
 unsigned char build_statements(IRState *state, const Statements *statements, const LLVMValueRef func) {
   for (size_t i = 0; i < statements->count; i++) {
     unsigned char result = build_statement(state, &statements->elements[i], func);
@@ -233,7 +204,7 @@ unsigned char build_statement(IRState *state, const Statement *statement, const 
   return 0;
 }
 
-void build_return_statement(const IRState *state, const ReturnStatement *ret) {
+void build_return_statement(IRState *state, const ReturnStatement *ret) {
   assert(ret != NULL);
 
   const LLVMTypeRef statement_type = get_type(state, ret->d_type);
@@ -335,7 +306,7 @@ unsigned char build_if_block(IRState *state, const IfBlock *if_block, const LLVM
   return 0;
 }
 
-void build_void_statement(const IRState *state, const VoidStatement *void_s) {
+void build_void_statement(IRState *state, const VoidStatement *void_s) {
   assert(void_s != NULL);
 
   const LLVMTypeRef statement_type = LLVMVoidTypeInContext(state->context);

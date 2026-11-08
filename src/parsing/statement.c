@@ -80,6 +80,7 @@ void statements_free(Statements *statements) {
 void statement_free(Statement *statement) {
   switch (statement->s_type) {
   case S_DECLARATION:
+    data_type_free(&statement->s_union.dec.d_type);
     expression_free(&statement->s_union.dec.expr);
     break;
   case S_ASSIGNMENT:

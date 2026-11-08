@@ -1,6 +1,7 @@
 #include "parsing/expression.h"
 #include "dynamic_array.h"
 #include "lexer.h"
+#include "parsing/data_type.h"
 #include "parsing/type.h"
 #include "parsing/utils.h"
 #include "utils.h"
@@ -11,14 +12,16 @@
 
 #define PARAMETER_LIST_LEN_ESTIMATE 5
 #define STRUCT_FIELDS_ESTIMATE 5
+#define ARRAY_LEN_ESTIMATE 5
 
 unsigned char parse_terminal_expr(TerminalExpr *term, const Tokens *tokens, size_t *idx);
 unsigned char parse_terminal_literal(TerminalLiteral *term_literal, const Tokens *tokens, size_t *idx);
 unsigned char parse_func_call(FunctionCall *func_call, const Tokens *tokens, size_t *idx);
-unsigned char parse_expression_list(Expressions *params, const Tokens *tokens, size_t *idx,
+unsigned char parse_expression_list(Expressions *expressions, const Tokens *tokens, size_t *idx,
                                     const TokenType list_end_type);
 unsigned char parse_field_assignments(FieldAssignments *field_assignments, const Tokens *tokens, size_t *idx);
 unsigned char parse_struct_literal(StructLiteral *struct_lit, const Tokens *tokens, size_t *idx);
+unsigned char parse_array_literal(ArrayLiteral *array_lit, const Tokens *tokens, size_t *idx);
 
 char *get_terminal_name(const Terminal *term) {
   static const char *CALL_PREFIX = "call_";
@@ -51,6 +54,11 @@ char *get_terminal_name(const Terminal *term) {
   case TERM_STRUCT_LITERAL:
     const StructLiteral *struct_lit = &term->t_union.struct_literal;
     buffer = malloc(sizeof(char) * strlen(struct_lit->d_type->d_union.s_type.name));
+    break;
+  case TERM_ARRAY_LITERAL:
+    const char *array_name = "ARRAY";
+    buffer = malloc(sizeof(char) * strlen(array_name));
+    strcpy(buffer, array_name);
     break;
   case T_NONE:
     assert(false);
@@ -136,6 +144,12 @@ void expression_free(Expression *expression) {
       if (struct_access->field_idxs != NULL) {
         free(struct_access->field_idxs);
       }
+    } else if (expression->e_union.term.item.t_type == TERM_ARRAY_LITERAL) {
+      ArrayLiteral *array_lit = &expression->e_union.term.item.t_union.array_literal;
+      for (size_t i = 0; i < array_lit->items.count; i++) {
+        expression_free(&array_lit->items.elements[i]);
+      }
+      dyn_array_free(&array_lit->items);
     }
     break;
   default:
@@ -185,6 +199,12 @@ unsigned char parse_terminal_expr(TerminalExpr *term, const Tokens *tokens, size
     }
     term->item.t_type = TERM_STRUCT_LITERAL;
     return 0;
+  } else if (next->t_type == T_LEFT_SQUARE) {
+    if (parse_array_literal(&term->item.t_union.array_literal, tokens, idx) != 0) {
+      return 1;
+    }
+    term->item.t_type = TERM_ARRAY_LITERAL;
+    return 0;
   }
 
   if (parse_terminal_literal(&term->item.t_union.lit, tokens, idx) != 0) {
@@ -194,7 +214,7 @@ unsigned char parse_terminal_expr(TerminalExpr *term, const Tokens *tokens, size
   return 0;
 }
 
-unsigned char parse_expression_list(Expressions *params, const Tokens *tokens, size_t *idx,
+unsigned char parse_expression_list(Expressions *expressions, const Tokens *tokens, size_t *idx,
                                     const TokenType list_end_type) {
   if (peek_index(tokens, *idx) == list_end_type) {
     return 0;
@@ -207,7 +227,7 @@ unsigned char parse_expression_list(Expressions *params, const Tokens *tokens, s
       return 1;
     }
 
-    dyn_array_insert(params, expression);
+    dyn_array_insert(expressions, expression);
 
     if (peek_index(tokens, *idx) != T_COMMA) {
       return 0;
@@ -316,6 +336,21 @@ unsigned char parse_struct_literal(StructLiteral *struct_lit, const Tokens *toke
     return 1;
   }
 
+  return 0;
+}
+
+unsigned char parse_array_literal(ArrayLiteral *array_lit, const Tokens *tokens, size_t *idx) {
+  // We can assert on next token as this should already be checked in calling function
+  assert(expect_next(T_LEFT_SQUARE, tokens, idx) != NULL);
+
+  dyn_array_init(&array_lit->items, sizeof(Expression), ARRAY_LEN_ESTIMATE);
+  if (parse_expression_list(&array_lit->items, tokens, idx, T_RIGHT_SQUARE) != 0) {
+    fprintf(stderr, "Failed to process expression list for array literal\n");
+    return 1;
+  }
+
+  // We can assert on next token since it should already be checked by expression list parsing
+  assert(expect_next(T_RIGHT_SQUARE, tokens, idx) != NULL);
   return 0;
 }
 

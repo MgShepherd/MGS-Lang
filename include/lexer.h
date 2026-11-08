@@ -24,6 +24,8 @@
   X(T_RIGHT_PAREN)                                                                                                     \
   X(T_LEFT_CURLY)                                                                                                      \
   X(T_RIGHT_CURLY)                                                                                                     \
+  X(T_LEFT_SQUARE)                                                                                                     \
+  X(T_RIGHT_SQUARE)                                                                                                    \
   X(T_EQUALS)                                                                                                          \
   X(T_COLON)                                                                                                           \
   X(T_PLUS)                                                                                                            \

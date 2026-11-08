@@ -17,6 +17,6 @@
  * @return        If store is true, will store expression value into memory and return a pointer to that memory.
  *                Otherwise will directly return the expression value
  */
-LLVMValueRef build_expression(const IRState *state, const Expression *expr, const LLVMTypeRef d_type, bool store);
+LLVMValueRef build_expression(IRState *state, const Expression *expr, const LLVMTypeRef d_type, bool store);
 
 #endif // _LLVM_EXPRESSION_H_

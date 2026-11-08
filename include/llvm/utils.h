@@ -1,6 +1,7 @@
 #ifndef _LLVM_UTILS_H_
 #define _LLVM_UTILS_H_
 
+#include "parsing/data_type.h"
 #include "llvm/llvm.h"
 
 /**
@@ -34,7 +35,7 @@ const TypeDefinitionRef *load_type_definition(const TypeDefinitionRefs *type_ref
  * @param d_type - The data type we are wanting the representation of
  * @return       - The LLVMTypeRef of the provided d_type
  */
-LLVMTypeRef get_type(const IRState *state, const DataType *d_type);
+LLVMTypeRef get_type(IRState *state, const DataType *d_type);
 
 /**
  * Gets a pointer into a provided identifier - assumes the identifier can be indexed
@@ -44,7 +45,14 @@ LLVMTypeRef get_type(const IRState *state, const DataType *d_type);
  * @param num_indices - Number of elements in the indices array
  * @return            - The LLVMValueRef for the pointer to the element
  */
-LLVMValueRef get_element_ptr(const IRState *state, const TerminalIdentifier *term_ident, const size_t *indices,
+LLVMValueRef get_element_ptr(IRState *state, const TerminalIdentifier *term_ident, const size_t *indices,
                              size_t num_indices);
+
+/**
+ * get_array_type_def_name will get the name that should be used for the internal array type definition.
+ * @param array_type - Pointer to the array type we want to get the type_def name for
+ * @return           - The string represention of the array type - allocated on the heap so needs to be manually freed
+ */
+char *get_array_type_def_name(const ArrayType *array_type);
 
 #endif // _LLVM_UTILS_H_

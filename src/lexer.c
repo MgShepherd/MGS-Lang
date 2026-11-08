@@ -182,6 +182,12 @@ unsigned char process_symbol_token(Token *token, const char *input, size_t input
   case '}':
     token->t_type = T_RIGHT_CURLY;
     break;
+  case '[':
+    token->t_type = T_LEFT_SQUARE;
+    break;
+  case ']':
+    token->t_type = T_RIGHT_SQUARE;
+    break;
   case '=':
     token->t_type = T_EQUALS;
     break;

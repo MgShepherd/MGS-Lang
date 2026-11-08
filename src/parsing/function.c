@@ -13,6 +13,7 @@
 unsigned char parse_function(Function *function, const Tokens *tokens, size_t *idx);
 
 void function_free(Function *function) {
+  data_type_free(&function->return_type);
   statements_free(&function->block.body);
   dyn_array_free(&function->parameters);
 }

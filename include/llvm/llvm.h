@@ -2,6 +2,7 @@
 #define _LLVM_H_
 
 #include "parsing/program.h"
+#include "llvm/type_definition.h"
 #include <llvm-c/Core.h>
 
 typedef struct {
@@ -18,19 +19,6 @@ typedef struct {
 } ValueRefs;
 
 typedef struct {
-  const char *name;
-  LLVMTypeRef ref;
-  LLVMTypeRef *field_types;
-  size_t num_fields;
-} TypeDefinitionRef;
-
-typedef struct {
-  TypeDefinitionRef *elements;
-  size_t count;
-  size_t capacity;
-} TypeDefinitionRefs;
-
-typedef struct {
   LLVMTypeRef *param_types;
   size_t num_params;
   LLVMTypeRef func_type;
@@ -44,14 +32,14 @@ typedef struct {
   size_t capacity;
 } FuncRefs;
 
-typedef struct {
+struct IRState {
   LLVMContextRef context;
   LLVMModuleRef module;
   LLVMBuilderRef builder;
   ValueRefs values;
   FuncRefs funcs;
   TypeDefinitionRefs type_refs;
-} IRState;
+};
 
 /*
  * program_to_object_file takes a built program AST and will generate a native obj file via LLVM

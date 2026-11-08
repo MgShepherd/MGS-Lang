@@ -111,7 +111,7 @@ unsigned char tok_to_integer(long long *output_num, const Token *tok, bool is_ne
 bool is_void_type(const DataType *d_type) {
   if (d_type->d_kind == D_PRIMITIVE) {
     return d_type->d_union.p_type == P_VOID;
-  } else if (d_type->d_kind == D_STRUCT) {
+  } else if (d_type->d_kind == D_STRUCT || d_type->d_kind == D_ARRAY) {
     return false;
   }
 

@@ -48,11 +48,4 @@ LLVMTypeRef get_type(IRState *state, const DataType *d_type);
 LLVMValueRef get_element_ptr(IRState *state, const TerminalIdentifier *term_ident, const size_t *indices,
                              size_t num_indices);
 
-/**
- * get_array_type_def_name will get the name that should be used for the internal array type definition.
- * @param array_type - Pointer to the array type we want to get the type_def name for
- * @return           - The string represention of the array type - allocated on the heap so needs to be manually freed
- */
-char *get_array_type_def_name(const ArrayType *array_type);
-
 #endif // _LLVM_UTILS_H_

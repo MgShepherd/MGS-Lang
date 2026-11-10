@@ -16,6 +16,8 @@ unsigned char analyse_struct_access(SemaState *state, StructAccess *struct_acces
 
 unsigned char analyse_array_literal(SemaState *state, ArrayLiteral *array_lit, const DataType *expr_type);
 
+unsigned char analyse_array_access(SemaState *state, ArrayAccess *array_access, const DataType *expr_type);
+
 unsigned char analyse_numeric_literal(TerminalLiteral *term_lit, bool is_negative, const DataType *expr_type);
 
 #endif // _SEMA_TERMINAL_H_

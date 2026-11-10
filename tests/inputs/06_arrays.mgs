@@ -1,6 +1,6 @@
 -- TEST basic array definition and access
--- EXPECTED_STATUS_CODE 26
+-- EXPECTED_STATUS_CODE 12
 main: func() -> i64 {
   my_array: []i32 = [10, 12, 2];
-	return my_array[0];
+	return my_array[1];
 }

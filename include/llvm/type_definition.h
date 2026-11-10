@@ -39,9 +39,7 @@ void build_type_definition(IRState *state, const TypeDefinition *type_def);
  * The built TypeDefinition will contain an element pointer (for the start of the array) and a length (in that order)
  * @param state         - The current state of the IR processing - will append the newly created TypeDefintionRef to
  *                        type_refs
- * @return              - Reference to the new type definition - does not need to be freed as points into states
- *                        type_refs
  */
-const TypeDefinitionRef *build_array_type_definition(IRState *state);
+void build_array_type_definition(IRState *state);
 
 #endif // _LLVM_TYPE_DEFINITION_H_

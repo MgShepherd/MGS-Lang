@@ -17,6 +17,9 @@ typedef struct {
   const void *scope;
   // Identifiers only store a pointer to an already existing d_type so not freed when destroyed
   const DataType *d_type;
+  // length only populated for array identifiers as part of sema
+  // TODO: is this the best way todo this or can this be in some other type?
+  size_t length;
 } Identifier;
 
 typedef struct {

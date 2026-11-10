@@ -22,6 +22,7 @@ unsigned char parse_expression_list(Expressions *expressions, const Tokens *toke
 unsigned char parse_field_assignments(FieldAssignments *field_assignments, const Tokens *tokens, size_t *idx);
 unsigned char parse_struct_literal(StructLiteral *struct_lit, const Tokens *tokens, size_t *idx);
 unsigned char parse_array_literal(ArrayLiteral *array_lit, const Tokens *tokens, size_t *idx);
+unsigned char parse_array_access(ArrayAccess *array_access, const Tokens *tokens, size_t *idx);
 
 char *get_terminal_name(const Terminal *term) {
   static const char *CALL_PREFIX = "call_";
@@ -59,6 +60,11 @@ char *get_terminal_name(const Terminal *term) {
     const char *array_name = "ARRAY";
     buffer = malloc(sizeof(char) * strlen(array_name));
     strcpy(buffer, array_name);
+    break;
+  case TERM_ARRAY_ACCESS:
+    const char *array_access_name = "ARRAY_ACCESS";
+    buffer = malloc(sizeof(char) * strlen(array_access_name));
+    strcpy(buffer, array_access_name);
     break;
   case T_NONE:
     assert(false);
@@ -185,6 +191,14 @@ unsigned char parse_terminal_expr(TerminalExpr *term, const Tokens *tokens, size
         return 1;
       }
       term->item.t_type = TERM_STRUCT_ACCESS;
+      return 0;
+    }
+
+    if (after_type == T_LEFT_SQUARE) {
+      if (parse_array_access(&term->item.t_union.array_access, tokens, idx) != 0) {
+        return 1;
+      }
+      term->item.t_type = TERM_ARRAY_ACCESS;
       return 0;
     }
 
@@ -351,6 +365,28 @@ unsigned char parse_array_literal(ArrayLiteral *array_lit, const Tokens *tokens,
 
   // We can assert on next token since it should already be checked by expression list parsing
   assert(expect_next(T_RIGHT_SQUARE, tokens, idx) != NULL);
+  return 0;
+}
+
+unsigned char parse_array_access(ArrayAccess *array_access, const Tokens *tokens, size_t *idx) {
+  const Token *ident_tok = expect_next(T_IDENTIFIER, tokens, idx);
+  // We can assert on the indentifier and '[' tokens since these are already checked in calling function
+  assert(ident_tok != NULL);
+  assert(expect_next(T_LEFT_SQUARE, tokens, idx) != NULL);
+
+  array_access->term_ident.name = ident_tok->item;
+
+  array_access->idx_tok = expect_next(T_NUMERIC_LIT, tokens, idx);
+  if (array_access->idx_tok == NULL) {
+    fprintf(stderr, "Expected numeric literal for array access\n");
+    return 1;
+  }
+
+  if (expect_next(T_RIGHT_SQUARE, tokens, idx) == NULL) {
+    fprintf(stderr, "Expected ']' for array access\n");
+    return 1;
+  }
+
   return 0;
 }
 

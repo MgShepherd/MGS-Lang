@@ -3,7 +3,7 @@
 
 #include "sema/program.h"
 
-unsigned char insert_identifier(SemaState *state, const char *name, const DataType *d_type);
+unsigned char insert_identifier(SemaState *state, const char *name, const DataType *d_type, const Expression *expr);
 
 const Identifier *get_identifier(const SemaState *state, const char *name);
 

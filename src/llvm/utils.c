@@ -1,5 +1,7 @@
 #include "llvm/utils.h"
 #include "parsing/data_type.h"
+#include "parsing/type.h"
+#include "llvm-c/Core.h"
 #include "llvm/type_definition.h"
 
 #include <assert.h>
@@ -53,16 +55,8 @@ LLVMTypeRef get_type(IRState *state, const DataType *d_type) {
     const TypeDefinitionRef *type_def = load_type_definition(&state->type_refs, d_type->d_union.s_type.name);
     return type_def->ref;
   } else if (d_type->d_kind == D_ARRAY) {
-    // For array types, we need to check if there is already a type defintion for the array interal represention - if
-    // not we need to create one - this should only need to happen for the very first array of any type defined in the
-    // program
     const TypeDefinitionRef *type_def = load_type_definition(&state->type_refs, ARRAY_TYPE_DEFINITION_NAME);
-    if (type_def != NULL) {
-      return type_def->ref;
-    }
-
-    const TypeDefinitionRef *array_def = build_array_type_definition(state);
-    return array_def->ref;
+    return type_def->ref;
   }
 
   assert(false);
@@ -76,32 +70,17 @@ LLVMValueRef get_element_ptr(IRState *state, const TerminalIdentifier *term_iden
 
   LLVMValueRef llvm_indices[num_indices + 1];
 
+  // TODO: Figure out why these need to be i32s and not i64
   // First index ensures that we are stepping into the struct itself
-  llvm_indices[0] = LLVMConstInt(LLVMInt64TypeInContext(state->context), 0, false);
+  llvm_indices[0] = LLVMConstInt(LLVMInt32TypeInContext(state->context), 0, false);
 
   for (size_t i = 0; i < num_indices; i++) {
-    llvm_indices[i + 1] = LLVMConstInt(LLVMInt64TypeInContext(state->context), indices[i], false);
+    llvm_indices[i + 1] = LLVMConstInt(LLVMInt32TypeInContext(state->context), indices[i], false);
   }
 
   // TODO: Improve how we create LLVM names in order to make IR easier to read/understand
   return LLVMBuildInBoundsGEP2(state->builder, outer_type, outer_val->ptr, llvm_indices, num_indices + 1,
                                "access_element");
-}
-
-char *get_array_type_def_name(const ArrayType *array_type) {
-  // Array type def prefix starts with ! in order to ensure this never collides with user defined types
-  static const char *ARRAY_TYPE_DEF_PREFIX = "!ARRAY_";
-
-  const char *element_type_name = d_type_to_string(array_type->element_type);
-  // Add 1 to length to account for null terminator
-  const size_t name_len = strlen(ARRAY_TYPE_DEF_PREFIX) + strlen(element_type_name) + 1;
-  char *name = malloc(sizeof(char) * name_len);
-  assert(name != NULL);
-
-  size_t result = snprintf(name, name_len, "%s%s", ARRAY_TYPE_DEF_PREFIX, element_type_name);
-  assert(result > 0);
-
-  return name;
 }
 
 LLVMTypeRef get_primitive_type(const IRState *state, PrimitiveType p_type) {

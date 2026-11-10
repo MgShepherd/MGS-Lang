@@ -18,6 +18,7 @@ LLVMValueRef build_literal(const IRState *state, const Literal *literal, const L
 LLVMValueRef build_struct_literal(IRState *state, const StructLiteral *struct_lit, bool store);
 LLVMValueRef build_struct_access(IRState *state, const StructAccess *struct_access, bool store);
 LLVMValueRef build_array_literal(IRState *state, const ArrayLiteral *array_lit, bool store);
+LLVMValueRef build_array_access(IRState *state, const ArrayAccess *array_access, bool store);
 
 LLVMValueRef build_expression(IRState *state, const Expression *expr, const LLVMTypeRef d_type, bool store) {
   switch (expr->e_type) {
@@ -47,6 +48,9 @@ LLVMValueRef build_terminal_expr(IRState *state, const TerminalExpr *term, const
     break;
   case TERM_ARRAY_LITERAL:
     result = build_array_literal(state, &term->item.t_union.array_literal, store);
+    break;
+  case TERM_ARRAY_ACCESS:
+    result = build_array_access(state, &term->item.t_union.array_access, store);
     break;
   case TERM_STRUCT_ACCESS:
     result = build_struct_access(state, &term->item.t_union.struct_access, store);
@@ -235,18 +239,59 @@ LLVMValueRef build_array_literal(IRState *state, const ArrayLiteral *array_lit, 
 
   LLVMValueRef ptr = LLVMBuildAlloca(state->builder, array_struct_type, "alloc_array_struct");
 
-  LLVMValueRef array_ptr_field = LLVMBuildStructGEP2(state->builder, array_struct_type, ptr, 0, "array_ptr_field");
-  LLVMValueRef array_data = LLVMBuildArrayAlloca(state->builder, array_element_type, num_elements, "array_elements");
-  LLVMBuildStore(state->builder, array_data, array_ptr_field);
-
-  LLVMValueRef array_len_field = LLVMBuildStructGEP2(state->builder, array_struct_type, ptr, 1, "array_len_field");
+  LLVMValueRef array_len_field = LLVMBuildStructGEP2(state->builder, array_struct_type, ptr, 0, "array_len_field");
   LLVMBuildStore(state->builder, num_elements, array_len_field);
+
+  LLVMValueRef array_ptr_field = LLVMBuildStructGEP2(state->builder, array_struct_type, ptr, 1, "array_ptr_field");
+  LLVMValueRef array_data = LLVMBuildArrayAlloca(state->builder, array_element_type, num_elements, "array_elements");
+
+  LLVMTypeRef index_type = LLVMInt64TypeInContext(state->context);
+
+  // TODO: Seems like there may be a more IR code efficient way todo this - investigate
+  for (size_t i = 0; i < array_lit->items.count; i++) {
+    Expression *current = &array_lit->items.elements[i];
+
+    LLVMValueRef index = LLVMConstInt(index_type, i, false);
+    LLVMValueRef item_ptr = LLVMBuildInBoundsGEP2(state->builder, index_type, array_data, &index, 1, "set_element");
+    LLVMValueRef item_value = build_expression(state, current, array_element_type, false);
+    LLVMBuildStore(state->builder, item_value, item_ptr);
+  }
+
+  LLVMBuildStore(state->builder, array_data, array_ptr_field);
 
   if (store) {
     return ptr;
   }
 
   return LLVMBuildLoad2(state->builder, array_struct_type, ptr, "load_array");
+}
+
+// TODO: This code may need revisting and cleaning up
+LLVMValueRef build_array_access(IRState *state, const ArrayAccess *array_access, bool store) {
+  const TypeDefinitionRef *type_def = load_type_definition(&state->type_refs, ARRAY_TYPE_DEFINITION_NAME);
+  const LLVMTypeRef element_type = get_type(state, array_access->d_type);
+  assert(type_def != NULL && element_type != NULL);
+
+  size_t array_ptr_element = 1;
+  const LLVMValueRef array_data_ptr = get_element_ptr(state, &array_access->term_ident, &array_ptr_element, 1);
+  const LLVMValueRef array_data =
+      LLVMBuildLoad2(state->builder, type_def->field_types[1], array_data_ptr, "get_array_data");
+
+  const LLVMTypeRef index_type = LLVMInt64TypeInContext(state->context);
+  LLVMValueRef array_indices[] = {LLVMConstInt(index_type, array_access->idx, false)};
+  const LLVMValueRef element_ptr =
+      LLVMBuildGEP2(state->builder, index_type, array_data, array_indices, 1, "access_array");
+
+  const LLVMValueRef element_val = LLVMBuildLoad2(state->builder, element_type, element_ptr, "load_array_field");
+  return element_val;
+
+  if (!store) {
+    return element_val;
+  }
+
+  LLVMValueRef ptr = LLVMBuildAlloca(state->builder, element_type, "access_ptr");
+  LLVMBuildStore(state->builder, element_val, ptr);
+  return ptr;
 }
 
 LLVMValueRef build_struct_access(IRState *state, const StructAccess *struct_access, bool store) {

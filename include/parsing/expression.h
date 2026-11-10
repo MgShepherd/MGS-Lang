@@ -61,6 +61,15 @@ typedef struct {
 } StructAccess;
 
 typedef struct {
+  TerminalIdentifier term_ident;
+  // TODO: Update this to be able to support nested arrays
+  const Token *idx_tok;
+  // d_type and idx will be populated as part of semantic analysis
+  const DataType *d_type;
+  size_t idx;
+} ArrayAccess;
+
+typedef struct {
   FieldAssignment *elements;
   size_t count;
   size_t capacity;
@@ -85,6 +94,7 @@ typedef struct {
   StructLiteral struct_literal;
   StructAccess struct_access;
   ArrayLiteral array_literal;
+  ArrayAccess array_access;
 } TerminalUnion;
 
 typedef struct {

@@ -53,6 +53,9 @@ unsigned char program_to_object_file(const Program *program, const char *file_na
   for (size_t i = 0; i < program->type_defs.count; i++) {
     build_type_definition(&state, &program->type_defs.elements[i]);
   }
+  // TODO: For all programs we are building the array type, even if there are no arrays - can we check this as part of
+  // sema
+  build_array_type_definition(&state);
 
   for (size_t i = 0; i < program->functions.count; i++) {
     if (build_function(&state, &program->functions.elements[i]) != 0) {
@@ -216,6 +219,7 @@ unsigned char build_declaration_statement(IRState *state, const DeclarationState
   assert(dec != NULL && dec->d_type.d_kind != D_NONE);
 
   const LLVMTypeRef statement_type = get_type(state, &dec->d_type);
+  assert(statement_type != NULL);
   const LLVMValueRef output_ptr = build_expression(state, &dec->expr, statement_type, true);
 
   ValueRef var = {

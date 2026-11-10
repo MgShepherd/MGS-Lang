@@ -32,15 +32,15 @@ void build_type_definition(IRState *state, const TypeDefinition *type_definition
   dyn_array_insert(&state->type_refs, type_ref);
 }
 
-const TypeDefinitionRef *build_array_type_definition(IRState *state) {
+void build_array_type_definition(IRState *state) {
   TypeDefinitionRef type_ref;
 
   LLVMTypeRef *field_types = malloc(sizeof(LLVMTypeRef) * NUM_ARRAY_TYPE_DEF_FIELDS);
   assert(field_types != NULL);
 
-  field_types[0] = LLVMPointerTypeInContext(state->context, DEFAULT_ADDRESS_SPACE);
   // We are using an int 64 to represent the length of the array
-  field_types[1] = LLVMInt64TypeInContext(state->context);
+  field_types[0] = LLVMInt64TypeInContext(state->context);
+  field_types[1] = LLVMPointerTypeInContext(state->context, DEFAULT_ADDRESS_SPACE);
 
   type_ref.ref = LLVMStructCreateNamed(state->context, ARRAY_TYPE_DEFINITION_NAME);
   LLVMStructSetBody(type_ref.ref, field_types, NUM_ARRAY_TYPE_DEF_FIELDS, false);
@@ -50,5 +50,4 @@ const TypeDefinitionRef *build_array_type_definition(IRState *state) {
   type_ref.num_fields = NUM_ARRAY_TYPE_DEF_FIELDS;
 
   dyn_array_insert(&state->type_refs, type_ref);
-  return &state->type_refs.elements[state->type_refs.count - 1];
 }

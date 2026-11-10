@@ -1,6 +1,11 @@
 #include "llvm/utils.h"
+#include "parsing/data_type.h"
+#include "parsing/type.h"
+#include "llvm-c/Core.h"
+#include "llvm/type_definition.h"
 
 #include <assert.h>
+#include <stdio.h>
 #include <string.h>
 
 LLVMTypeRef get_primitive_type(const IRState *state, PrimitiveType p_type);
@@ -41,7 +46,7 @@ const TypeDefinitionRef *load_type_definition(const TypeDefinitionRefs *type_ref
   return NULL;
 }
 
-LLVMTypeRef get_type(const IRState *state, const DataType *d_type) {
+LLVMTypeRef get_type(IRState *state, const DataType *d_type) {
   assert(state != NULL && d_type->d_kind != D_NONE);
 
   if (d_type->d_kind == D_PRIMITIVE) {
@@ -49,12 +54,15 @@ LLVMTypeRef get_type(const IRState *state, const DataType *d_type) {
   } else if (d_type->d_kind == D_STRUCT) {
     const TypeDefinitionRef *type_def = load_type_definition(&state->type_refs, d_type->d_union.s_type.name);
     return type_def->ref;
+  } else if (d_type->d_kind == D_ARRAY) {
+    const TypeDefinitionRef *type_def = load_type_definition(&state->type_refs, ARRAY_TYPE_DEFINITION_NAME);
+    return type_def->ref;
   }
 
   assert(false);
 }
 
-LLVMValueRef get_element_ptr(const IRState *state, const TerminalIdentifier *term_ident, const size_t *indices,
+LLVMValueRef get_element_ptr(IRState *state, const TerminalIdentifier *term_ident, const size_t *indices,
                              size_t num_indices) {
   const ValueRef *outer_val = load_identifier(&state->values, term_ident);
   assert(outer_val != NULL);
@@ -62,6 +70,7 @@ LLVMValueRef get_element_ptr(const IRState *state, const TerminalIdentifier *ter
 
   LLVMValueRef llvm_indices[num_indices + 1];
 
+  // TODO: Figure out why these need to be i32s and not i64
   // First index ensures that we are stepping into the struct itself
   llvm_indices[0] = LLVMConstInt(LLVMInt32TypeInContext(state->context), 0, false);
 

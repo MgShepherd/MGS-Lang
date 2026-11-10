@@ -45,6 +45,8 @@
   X(TERM_IDENTIFIER)                                                                                                   \
   X(TERM_STRUCT_LITERAL)                                                                                               \
   X(TERM_STRUCT_ACCESS)                                                                                                \
+  X(TERM_ARRAY_LITERAL)                                                                                                \
+  X(TERM_ARRAY_ACCESS)                                                                                                 \
   X(TERM_FUNC_CALL)
 
 #define IDENTIFIER_TYPES                                                                                               \
@@ -55,6 +57,7 @@
 #define DATATYPE_KINDS                                                                                                 \
   X(D_NONE)                                                                                                            \
   X(D_STRUCT)                                                                                                          \
+  X(D_ARRAY)                                                                                                           \
   X(D_PRIMITIVE)
 
 #define ASSIGNMENT_TYPES                                                                                               \

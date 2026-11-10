@@ -212,6 +212,50 @@ unsigned char analyse_struct_access(SemaState *state, StructAccess *struct_acces
   return 0;
 }
 
+unsigned char analyse_array_literal(SemaState *state, ArrayLiteral *array_lit, const DataType *expr_type) {
+  assert(expr_type->d_kind == D_ARRAY);
+  array_lit->d_type = expr_type;
+
+  const ArrayType *array_type = &expr_type->d_union.a_type;
+
+  for (size_t i = 0; i < array_lit->items.count; i++) {
+    if (analyse_expression(state, &array_lit->items.elements[i], array_type->element_type) != 0) {
+      fprintf(stderr, "Failed to analyse expression for array item\n");
+      return 1;
+    }
+  }
+
+  return 0;
+}
+
+unsigned char analyse_array_access(SemaState *state, ArrayAccess *array_access, const DataType *expr_type) {
+  array_access->d_type = expr_type;
+
+  const Identifier *ident = get_identifier(state, array_access->term_ident.name);
+  if (ident == NULL) {
+    fprintf(stderr, "Undefined variable: %s\n", array_access->term_ident.name);
+    return 1;
+  }
+  assert(ident->d_type != NULL && ident->d_type->d_kind == D_ARRAY);
+
+  long long int_val;
+  // TODO: Test what happens with negative array access
+  if (tok_to_integer(&int_val, array_access->idx_tok, false) != 0) {
+    return 1;
+  }
+
+  array_access->idx = (size_t)int_val;
+
+  if (array_access->idx >= ident->length) {
+    fprintf(stderr, "Array index %zu out of bounds for length %zu\n", array_access->idx, ident->length);
+    return 1;
+  }
+
+  array_access->term_ident.scope = ident->scope;
+
+  return 0;
+}
+
 unsigned char analyse_numeric_literal(TerminalLiteral *term_lit, bool is_negative, const DataType *expr_type) {
   assert(term_lit->tok->t_type == T_NUMERIC_LIT && term_lit->tok->item != NULL);
   term_lit->literal.d_type = expr_type;

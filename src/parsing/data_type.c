@@ -9,6 +9,7 @@
 
 unsigned char parse_primitive(PrimitiveType *primitive_type, const Tokens *tokens, size_t *idx);
 unsigned char parse_struct(StructType *struct_type, const Tokens *tokens, size_t *idx);
+unsigned char parse_array(ArrayType *array_type, const Tokens *tokens, size_t *idx);
 
 unsigned char parse_data_type(DataType *data_type, const Tokens *tokens, size_t *idx) {
   data_type->d_kind = D_NONE;
@@ -28,6 +29,11 @@ unsigned char parse_data_type(DataType *data_type, const Tokens *tokens, size_t 
   } else if (next == T_IDENTIFIER) {
     data_type->d_kind = D_STRUCT;
     if (parse_struct(&data_type->d_union.s_type, tokens, idx) != 0) {
+      return 1;
+    }
+  } else if (next == T_LEFT_SQUARE) {
+    data_type->d_kind = D_ARRAY;
+    if (parse_array(&data_type->d_union.a_type, tokens, idx) != 0) {
       return 1;
     }
   } else {
@@ -66,6 +72,20 @@ bool do_data_types_match(const DataType *d_type_1, const DataType *d_type_2) {
   }
 }
 
+void data_type_free(DataType *data_type) {
+  switch (data_type->d_kind) {
+  case D_ARRAY:
+    const ArrayType *array_type = &data_type->d_union.a_type;
+    if (array_type->element_type != NULL) {
+      data_type_free(array_type->element_type);
+      free(array_type->element_type);
+    }
+    break;
+  default:
+    break;
+  }
+}
+
 unsigned char parse_primitive(PrimitiveType *p_type, const Tokens *tokens, size_t *idx) {
   const TokenType next_type = tokens->elements[(*idx)++].t_type;
   *p_type = tok_to_primitive_type(next_type);
@@ -85,6 +105,26 @@ unsigned char parse_struct(StructType *struct_type, const Tokens *tokens, size_t
   }
   assert(ident_tok->item != NULL);
   struct_type->name = ident_tok->item;
+
+  return 0;
+}
+
+unsigned char parse_array(ArrayType *array_type, const Tokens *tokens, size_t *idx) {
+  // We can assert the next element since we have already checked this in the calling function
+  assert(expect_next(T_LEFT_SQUARE, tokens, idx) != NULL);
+
+  if (expect_next(T_RIGHT_SQUARE, tokens, idx) == NULL) {
+    fprintf(stderr, "Expected ']' for array type");
+    return 1;
+  }
+
+  array_type->element_type = malloc(sizeof(DataType));
+  assert(array_type != NULL);
+
+  if (parse_data_type(array_type->element_type, tokens, idx) != 0) {
+    fprintf(stderr, "Failed to parse element type for array\n");
+    return 1;
+  }
 
   return 0;
 }

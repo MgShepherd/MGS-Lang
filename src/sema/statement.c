@@ -59,7 +59,7 @@ unsigned char analyse_dec_statement(SemaState *state, DeclarationStatement *dec)
     return result;
   }
 
-  result = insert_identifier(state, dec->term_ident.name, &dec->d_type);
+  result = insert_identifier(state, dec->term_ident.name, &dec->d_type, &dec->expr);
   if (result != 0) {
     return result;
   }

@@ -1,6 +1,7 @@
 #ifndef _SEMA_TERMINAL_H_
 #define _SEMA_TERMINAL_H_
 
+#include "parsing/expression.h"
 #include "sema/program.h"
 
 unsigned char analyse_func_call(SemaState *state, const FunctionCall *func_call, const DataType *expr_type);
@@ -12,6 +13,10 @@ unsigned char analyse_literal(TerminalLiteral *term_lit, const Token *sign, cons
 unsigned char analyse_struct_literal(SemaState *state, StructLiteral *struct_lit, const DataType *expr_type);
 
 unsigned char analyse_struct_access(SemaState *state, StructAccess *struct_access, const DataType *expr_type);
+
+unsigned char analyse_array_literal(SemaState *state, ArrayLiteral *array_lit, const DataType *expr_type);
+
+unsigned char analyse_array_access(SemaState *state, ArrayAccess *array_access, const DataType *expr_type);
 
 unsigned char analyse_numeric_literal(TerminalLiteral *term_lit, bool is_negative, const DataType *expr_type);
 

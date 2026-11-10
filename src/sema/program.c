@@ -103,7 +103,7 @@ unsigned char analyse_func(SemaState *state, Function *func) {
 unsigned char analyse_parameters(SemaState *state, Fields *parameters) {
   for (size_t i = 0; i < parameters->count; i++) {
     Field *param = &parameters->elements[i];
-    if (insert_identifier(state, param->term_ident.name, &param->d_type) != 0) {
+    if (insert_identifier(state, param->term_ident.name, &param->d_type, NULL) != 0) {
       return 1;
     }
 

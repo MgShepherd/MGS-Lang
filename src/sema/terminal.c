@@ -229,8 +229,6 @@ unsigned char analyse_array_literal(SemaState *state, ArrayLiteral *array_lit, c
 }
 
 unsigned char analyse_array_access(SemaState *state, ArrayAccess *array_access, const DataType *expr_type) {
-  array_access->d_type = expr_type;
-
   const Identifier *ident = get_identifier(state, array_access->term_ident.name);
   if (ident == NULL) {
     fprintf(stderr, "Undefined variable: %s\n", array_access->term_ident.name);
@@ -251,7 +249,15 @@ unsigned char analyse_array_access(SemaState *state, ArrayAccess *array_access, 
     return 1;
   }
 
+  const DataType *element_type = ident->d_type->d_union.a_type.element_type;
+  if (expr_type != NULL && !do_data_types_match(element_type, expr_type)) {
+    fprintf(stderr, "Expected type %s, got %s\n", d_type_to_string(expr_type), d_type_to_string(element_type));
+    return 1;
+  }
+
+  array_access->d_type = element_type;
   array_access->term_ident.scope = ident->scope;
+  array_access->variable = ident->d_type->d_union.a_type.element_type->variable;
 
   return 0;
 }
@@ -296,6 +302,7 @@ unsigned char analyse_numeric_literal(TerminalLiteral *term_lit, bool is_negativ
     assert(false);
   }
 
+  assert(term_lit->tok->t_type == T_NUMERIC_LIT && term_lit->tok->item != NULL);
   return 0;
 }
 

@@ -1,6 +1,29 @@
 -- TEST basic array definition and access
 -- EXPECTED_STATUS_CODE 12
 main: func() -> i64 {
+  my_array: []i64 = [10, 12, 2];
+	return my_array[1];
+}
+
+-- TEST assigning to an array field
+-- EXPECTED_STATUS_CODE 23
+main: func() -> i64 {
+  my_array: []var i64 = [10, 12, 2];
+	my_array[2] = 23;
+	return my_array[2];
+}
+
+-- TEST array type does not match function return type
+-- EXPECTED_COMPILATION_ERROR Expected type P_I64, got P_I32
+main: func() -> i64 {
   my_array: []i32 = [10, 12, 2];
+	return my_array[1];
+}
+
+-- TEST attempting to modify element of array of constants
+-- EXPECTED_COMPILATION_ERROR Attempted to modify constant: my_array
+main: func() -> i64 {
+  my_array: []i64 = [10, 12, 2];
+	my_array[1] = 10;
 	return my_array[1];
 }

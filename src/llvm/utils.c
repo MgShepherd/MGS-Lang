@@ -70,7 +70,6 @@ LLVMValueRef get_element_ptr(IRState *state, const TerminalIdentifier *term_iden
 
   LLVMValueRef llvm_indices[num_indices + 1];
 
-  // TODO: Figure out why these need to be i32s and not i64
   // First index ensures that we are stepping into the struct itself
   llvm_indices[0] = LLVMConstInt(LLVMInt32TypeInContext(state->context), 0, false);
 
@@ -81,6 +80,23 @@ LLVMValueRef get_element_ptr(IRState *state, const TerminalIdentifier *term_iden
   // TODO: Improve how we create LLVM names in order to make IR easier to read/understand
   return LLVMBuildInBoundsGEP2(state->builder, outer_type, outer_val->ptr, llvm_indices, num_indices + 1,
                                "access_element");
+}
+
+LLVMValueRef get_array_element_ptr(IRState *state, const TerminalIdentifier *term_ident, const size_t *indices,
+                                   size_t num_indices) {
+  const TypeDefinitionRef *type_def = load_type_definition(&state->type_refs, ARRAY_TYPE_DEFINITION_NAME);
+  assert(type_def != NULL);
+
+  const size_t array_ptr_element_in_struct = 1;
+  const LLVMValueRef array_data_ptr = get_element_ptr(state, term_ident, &array_ptr_element_in_struct, 1);
+  const LLVMValueRef array_data =
+      LLVMBuildLoad2(state->builder, type_def->field_types[1], array_data_ptr, "get_array_data");
+
+  const LLVMTypeRef index_type = LLVMInt32TypeInContext(state->context);
+
+  // TODO: Update this to support multi-dimensional arrays
+  LLVMValueRef array_indices[] = {LLVMConstInt(index_type, indices[0], false)};
+  return LLVMBuildGEP2(state->builder, index_type, array_data, array_indices, num_indices, "access_array");
 }
 
 LLVMTypeRef get_primitive_type(const IRState *state, PrimitiveType p_type) {

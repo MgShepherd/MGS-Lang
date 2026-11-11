@@ -63,6 +63,7 @@
 #define ASSIGNMENT_TYPES                                                                                               \
   X(A_NONE)                                                                                                            \
   X(A_IDENTIFIER)                                                                                                      \
+  X(A_ARRAY_INDEX)                                                                                                     \
   X(A_STRUCT_FIELD)
 
 #define TYPE_DEFINITION_KINDS                                                                                          \

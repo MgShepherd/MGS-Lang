@@ -22,7 +22,6 @@ unsigned char parse_expression_list(Expressions *expressions, const Tokens *toke
 unsigned char parse_field_assignments(FieldAssignments *field_assignments, const Tokens *tokens, size_t *idx);
 unsigned char parse_struct_literal(StructLiteral *struct_lit, const Tokens *tokens, size_t *idx);
 unsigned char parse_array_literal(ArrayLiteral *array_lit, const Tokens *tokens, size_t *idx);
-unsigned char parse_array_access(ArrayAccess *array_access, const Tokens *tokens, size_t *idx);
 
 char *get_terminal_name(const Terminal *term) {
   static const char *CALL_PREFIX = "call_";

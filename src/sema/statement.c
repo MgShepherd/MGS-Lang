@@ -1,6 +1,7 @@
 #include "sema/statement.h"
 
 #include "dynamic_array.h"
+#include "parsing/type.h"
 #include "sema/expression.h"
 #include "sema/terminal.h"
 #include "sema/utils.h"
@@ -99,6 +100,19 @@ unsigned char analyse_assign_statement(SemaState *state, AssignmentStatement *as
     assign->d_type = struct_field->d_type;
     if (!struct_field->variable) {
       fprintf(stderr, "Attempted to modify constant: %s\n", struct_field->term_ident.name);
+      return 1;
+    }
+    break;
+  case A_ARRAY_INDEX:
+    ArrayAccess *array_access = &assign->a_output.a_union.array_index;
+    if (analyse_array_access(state, array_access, NULL) != 0) {
+      fprintf(stderr, "Failed to analyse array access for assignment statement\n");
+      return 1;
+    }
+
+    assign->d_type = array_access->d_type;
+    if (!array_access->variable) {
+      fprintf(stderr, "Attempted to modify constant: %s\n", array_access->term_ident.name);
       return 1;
     }
     break;

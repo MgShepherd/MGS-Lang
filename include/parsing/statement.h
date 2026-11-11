@@ -24,6 +24,7 @@ typedef struct {
 typedef union {
   TerminalIdentifier term_ident;
   StructAccess struct_field;
+  ArrayAccess array_index;
 } AssignmentOutputUnion;
 
 typedef struct {

@@ -66,6 +66,22 @@ main: func() -> i64 {
 	return my_person.age;
 }
 
+-- TEST passing struct to function
+-- EXPECTED_STATUS_CODE 26
+Person: struct {
+	age: i64,
+	is_programmer: bool
+};
+
+get_age: func(person: Person) -> i64 {
+	return person.age;
+}
+
+main: func() -> i64 {
+	my_person: Person = { age = 26, is_programmer = false };
+	return get_age(my_person);
+}
+
 -- TEST returning struct literal directly from function
 -- EXPECTED_STATUS_CODE 70
 Person: struct {

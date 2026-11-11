@@ -247,6 +247,10 @@ void build_assignment_statement(IRState *state, const AssignmentStatement *assig
     out_ptr =
         get_element_ptr(state, &struct_field->term_ident, struct_field->field_idxs, struct_field->num_field_nestings);
     break;
+  case A_ARRAY_INDEX:
+    const ArrayAccess *array_access = &assign->a_output.a_union.array_index;
+    out_ptr = get_array_element_ptr(state, &array_access->term_ident, &array_access->idx, 1);
+    break;
   default:
     assert(false);
   }

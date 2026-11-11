@@ -67,6 +67,7 @@ typedef struct {
   // d_type and idx will be populated as part of semantic analysis
   const DataType *d_type;
   size_t idx;
+  bool variable;
 } ArrayAccess;
 
 typedef struct {
@@ -130,6 +131,7 @@ struct FieldAssignment {
 
 unsigned char parse_terminal_identifier(TerminalIdentifier *term_ident, const Tokens *tokens, size_t *idx);
 unsigned char parse_struct_access(StructAccess *struct_acc, const Tokens *tokens, size_t *idx);
+unsigned char parse_array_access(ArrayAccess *array_access, const Tokens *tokens, size_t *idx);
 
 /*
  * parse_expression will attempt to convert the next tokens into an expression and output to provided expression

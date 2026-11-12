@@ -1,6 +1,7 @@
 #include "sema/program.h"
 
 #include "dynamic_array.h"
+#include "sema/data_type.h"
 #include "sema/statement.h"
 #include "sema/type_definition.h"
 #include "sema/utils.h"
@@ -73,13 +74,13 @@ unsigned char analyse_block(SemaState *state, Block *block, const DataType *func
   }
 
   // TODO: This is inefficient to have to search through the statements again, can we improve this
-  block->has_return = false;
+  block->return_expr = NULL;
   for (size_t i = 0; i < block->body.count; i++) {
     if (block->body.elements[i].s_type != S_RETURN) {
       continue;
     }
 
-    block->has_return = true;
+    block->return_expr = &block->body.elements[i].s_union.ret.expr;
     if (i < block->body.count - 1) {
       fprintf(stderr, "Dead code after return statement\n");
       return 1;
@@ -99,7 +100,11 @@ unsigned char analyse_func(SemaState *state, Function *func) {
     return 1;
   }
 
-  return analyse_block(state, &func->block, &func->return_type);
+  if (analyse_block(state, &func->block, &func->return_type) != 0) {
+    return 1;
+  }
+
+  return analyse_data_type(state, &func->return_type, func->block.return_expr);
 }
 
 unsigned char analyse_parameters(SemaState *state, Fields *parameters) {

@@ -30,6 +30,28 @@ main: func() -> i64 {
 	return my_array[1];
 }
 
+-- TEST returning array from function
+-- EXPECTED_STATUS_CODE 2
+get_array: func() -> []i64 {
+  return [1, 2, 3, 4, 5, 6];
+}
+
+main: func() -> i64 {
+  my_array: []i64 = get_array();
+	return my_array[1];
+}
+
+-- TEST returning array from function and trying to access element out of bounds
+-- EXPECTED_COMPILATION_ERROR Array index 10 out of bounds for length 6
+get_array: func() -> []i64 {
+  return [1, 2, 3, 4, 5, 6];
+}
+
+main: func() -> i64 {
+  my_array: []i64 = get_array();
+	return my_array[10];
+}
+
 -- TEST array type does not match function return type
 -- EXPECTED_COMPILATION_ERROR Expected type P_I64, got P_I32
 main: func() -> i64 {

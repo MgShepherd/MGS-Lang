@@ -3,6 +3,7 @@
 #include "dynamic_array.h"
 #include "parsing/expression.h"
 #include "parsing/type.h"
+#include "sema/data_type.h"
 #include "sema/expression.h"
 #include "sema/terminal.h"
 #include "sema/utils.h"
@@ -17,8 +18,6 @@ unsigned char analyse_ret_statement(SemaState *state, ReturnStatement *ret, cons
 unsigned char analyse_if_block(SemaState *state, IfBlock *if_block, const DataType *func_type);
 unsigned char analyse_if_branch(SemaState *state, IfBranch *if_branch, const DataType *func_type);
 unsigned char analyse_void_statement(SemaState *state, VoidStatement *void_s);
-
-int64_t get_array_length(SemaState *state, const Expression *expr);
 
 static const DataType BOOL_TYPE = {.d_kind = D_PRIMITIVE, .d_union = {.p_type = P_BOOL}};
 static const DataType VOID_TYPE = {.d_kind = D_PRIMITIVE, .d_union = {.p_type = P_VOID}};
@@ -68,12 +67,9 @@ unsigned char analyse_dec_statement(SemaState *state, DeclarationStatement *dec)
     return result;
   }
 
-  if (dec->d_type.d_kind == D_ARRAY) {
-    dec->d_type.d_union.a_type.length = get_array_length(state, &dec->expr);
-
-    if (!state->requires_array_type) {
-      state->requires_array_type = true;
-    }
+  if (analyse_data_type(state, &dec->d_type, &dec->expr) != 0) {
+    fprintf(stderr, "Failed to analyse data type for declaration statement\n");
+    return 1;
   }
 
   dec->term_ident.scope = state->scopes.elements[state->scopes.count - 1];
@@ -182,30 +178,4 @@ unsigned char analyse_if_branch(SemaState *state, IfBranch *if_branch, const Dat
 
 unsigned char analyse_void_statement(SemaState *state, VoidStatement *void_s) {
   return analyse_expression(state, &void_s->expr, &VOID_TYPE);
-}
-
-int64_t get_array_length(SemaState *state, const Expression *expr) {
-  // TODO: For now we don't get the array length for compound expressions, should improve this in the future
-  if (expr->e_type == E_COMPOUND) {
-    return -1;
-  }
-
-  const Terminal *term = &expr->e_union.term.item;
-  // Set the array length based on the expression if we know the length at compile time, otherwise set to -1
-  switch (term->t_type) {
-  case TERM_ARRAY_LITERAL:
-    const ArrayLiteral *array_lit = &term->t_union.array_literal;
-    return array_lit->items.count;
-  case TERM_IDENTIFIER:
-    const Identifier *ident = get_identifier(state, term->t_union.ident.name);
-    assert(ident->d_type->d_kind == D_ARRAY);
-    return ident->d_type->d_union.a_type.length;
-    break;
-  case TERM_FUNC_CALL:
-    const Function *func = get_function(&state->functions, term->t_union.func_call.name->item);
-    assert(func->return_type.d_kind == D_ARRAY);
-    return func->return_type.d_union.a_type.length;
-  default:
-    return -1;
-  }
 }

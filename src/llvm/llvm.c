@@ -277,7 +277,7 @@ unsigned char build_if_block(IRState *state, const IfBlock *if_block, const LLVM
   if (build_statements(state, &if_block->if_branch.block.body, func) != 0) {
     return 1;
   }
-  if (!if_block->if_branch.block.has_return) {
+  if (if_block->if_branch.block.return_expr == NULL) {
     LLVMBuildBr(state->builder, exit_if_block);
   }
 
@@ -294,7 +294,7 @@ unsigned char build_if_block(IRState *state, const IfBlock *if_block, const LLVM
     if (build_statements(state, &if_block->else_if_branches.elements[i].block.body, func) != 0) {
       return 1;
     }
-    if (!if_block->else_if_branches.elements[i].block.has_return) {
+    if (if_block->else_if_branches.elements[i].block.return_expr == NULL) {
       LLVMBuildBr(state->builder, exit_if_block);
     }
   }
@@ -306,7 +306,7 @@ unsigned char build_if_block(IRState *state, const IfBlock *if_block, const LLVM
     if (build_statements(state, &if_block->else_branch.block.body, func) != 0) {
       return 1;
     }
-    if (!if_block->else_branch.block.has_return) {
+    if (if_block->else_branch.block.return_expr == NULL) {
       LLVMBuildBr(state->builder, exit_if_block);
     }
   }

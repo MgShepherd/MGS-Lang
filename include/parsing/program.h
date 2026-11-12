@@ -20,6 +20,10 @@ typedef struct {
 typedef struct {
   Functions functions;
   TypeDefinitions type_defs;
+  // requires_array_type will be filled in during sema
+  // This is needed since we have a single global array type, which we only want to define if the program actually uses
+  // arrays
+  bool requires_array_type;
 } Program;
 
 /*

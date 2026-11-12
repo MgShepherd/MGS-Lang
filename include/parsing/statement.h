@@ -51,8 +51,9 @@ typedef struct {
 
 typedef struct {
   Statements body;
-  // has_return will be populated as part of semantic analysis
-  bool has_return;
+  // return_expr will be populated as part of semantic analysis
+  // Will be NULL if there is no return statement in the block
+  const Expression *return_expr;
 } Block;
 
 typedef struct {

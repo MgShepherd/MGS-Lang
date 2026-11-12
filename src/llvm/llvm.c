@@ -53,9 +53,10 @@ unsigned char program_to_object_file(const Program *program, const char *file_na
   for (size_t i = 0; i < program->type_defs.count; i++) {
     build_type_definition(&state, &program->type_defs.elements[i]);
   }
-  // TODO: For all programs we are building the array type, even if there are no arrays - can we check this as part of
-  // sema
-  build_array_type_definition(&state);
+
+  if (program->requires_array_type) {
+    build_array_type_definition(&state);
+  }
 
   for (size_t i = 0; i < program->functions.count; i++) {
     if (build_function(&state, &program->functions.elements[i]) != 0) {
@@ -276,7 +277,7 @@ unsigned char build_if_block(IRState *state, const IfBlock *if_block, const LLVM
   if (build_statements(state, &if_block->if_branch.block.body, func) != 0) {
     return 1;
   }
-  if (!if_block->if_branch.block.has_return) {
+  if (if_block->if_branch.block.return_expr == NULL) {
     LLVMBuildBr(state->builder, exit_if_block);
   }
 
@@ -293,7 +294,7 @@ unsigned char build_if_block(IRState *state, const IfBlock *if_block, const LLVM
     if (build_statements(state, &if_block->else_if_branches.elements[i].block.body, func) != 0) {
       return 1;
     }
-    if (!if_block->else_if_branches.elements[i].block.has_return) {
+    if (if_block->else_if_branches.elements[i].block.return_expr == NULL) {
       LLVMBuildBr(state->builder, exit_if_block);
     }
   }
@@ -305,7 +306,7 @@ unsigned char build_if_block(IRState *state, const IfBlock *if_block, const LLVM
     if (build_statements(state, &if_block->else_branch.block.body, func) != 0) {
       return 1;
     }
-    if (!if_block->else_branch.block.has_return) {
+    if (if_block->else_branch.block.return_expr == NULL) {
       LLVMBuildBr(state->builder, exit_if_block);
     }
   }

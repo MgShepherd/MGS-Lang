@@ -244,8 +244,9 @@ unsigned char analyse_array_access(SemaState *state, ArrayAccess *array_access, 
 
   array_access->idx = (size_t)int_val;
 
-  if (array_access->idx >= ident->length) {
-    fprintf(stderr, "Array index %zu out of bounds for length %zu\n", array_access->idx, ident->length);
+  int64_t length = ident->d_type->d_union.a_type.length;
+  if (length != -1 && array_access->idx >= (size_t)length) {
+    fprintf(stderr, "Array index %zu out of bounds for length %lld\n", array_access->idx, length);
     return 1;
   }
 

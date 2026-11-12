@@ -12,6 +12,8 @@ typedef struct {
 
 typedef struct {
   DataType *element_type;
+  // length will be populated as part of sema - if length is unknown at compile time, -1 will be used here
+  int64_t length;
 } ArrayType;
 
 typedef struct {

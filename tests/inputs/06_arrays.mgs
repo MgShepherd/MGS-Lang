@@ -13,6 +13,23 @@ main: func() -> i64 {
 	return my_array[2];
 }
 
+-- TEST variable array allows changing the array data being pointed at
+-- EXPECTED_STATUS_CODE 7
+main: func() -> i64 {
+  my_array: var []i64 = [10, 12, 2];
+	my_array = [9, 8, 7];
+	return my_array[2];
+}
+
+-- TEST variable that can both change elements and actual array
+-- EXPECTED_STATUS_CODE 5
+main: func() -> i64 {
+  my_array: var []var i64 = [10, 12, 2];
+	my_array = [9, 8, 7];
+	my_array[1] = 5;
+	return my_array[1];
+}
+
 -- TEST array type does not match function return type
 -- EXPECTED_COMPILATION_ERROR Expected type P_I64, got P_I32
 main: func() -> i64 {
@@ -21,9 +38,25 @@ main: func() -> i64 {
 }
 
 -- TEST attempting to modify element of array of constants
--- EXPECTED_COMPILATION_ERROR Attempted to modify constant: my_array
+-- EXPECTED_COMPILATION_ERROR Attempted to modify element of constant array: my_array
 main: func() -> i64 {
   my_array: []i64 = [10, 12, 2];
+	my_array[1] = 10;
+	return my_array[1];
+}
+
+-- TEST attempting to modify array when elements are variable but array itself is not
+-- EXPECTED_COMPILATION_ERROR Attempted to modify constant: my_array
+main: func() -> i64 {
+  my_array: []var i64 = [10, 12, 2];
+	my_array = [9, 8, 7];
+	return my_array[1];
+}
+
+-- TEST attempting to modify element when array is variable but elements are not
+-- EXPECTED_COMPILATION_ERROR Attempted to modify element of constant array: my_array
+main: func() -> i64 {
+  my_array: var []i64 = [10, 12, 2];
 	my_array[1] = 10;
 	return my_array[1];
 }

@@ -9,7 +9,7 @@
 
 #define INT_BASE 10
 
-unsigned char insert_identifier(SemaState *state, const char *name, const DataType *d_type, const Expression *expr) {
+unsigned char insert_identifier(SemaState *state, const char *name, const DataType *d_type) {
   const Identifier *existing = get_identifier(state, name);
   if (existing != NULL) {
     fprintf(stderr, "Variable %s shadows existing variable in scope\n", existing->name);
@@ -21,13 +21,6 @@ unsigned char insert_identifier(SemaState *state, const char *name, const DataTy
       .name = name,
       .scope = state->scopes.elements[state->scopes.count - 1],
   };
-
-  // TODO: Bit of a hacky solution to get around parameters not having an expression, is there a better way todo this?
-  if (expr != NULL && d_type->d_kind == D_ARRAY) {
-    assert(expr->e_type == E_TERMINAL && expr->e_union.term.item.t_type == TERM_ARRAY_LITERAL);
-    const ArrayLiteral *array_lit = &expr->e_union.term.item.t_union.array_literal;
-    new_ident.length = array_lit->items.count;
-  }
 
   dyn_array_insert(&state->identifiers, new_ident);
   return 0;

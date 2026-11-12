@@ -67,6 +67,10 @@ bool do_data_types_match(const DataType *d_type_1, const DataType *d_type_2) {
     const StructType *s1_type = &d_type_1->d_union.s_type;
     const StructType *s2_type = &d_type_2->d_union.s_type;
     return strcmp(s1_type->name, s2_type->name) == 0;
+  case D_ARRAY:
+    const ArrayType *a1_type = &d_type_1->d_union.a_type;
+    const ArrayType *a2_type = &d_type_2->d_union.a_type;
+    return do_data_types_match(a1_type->element_type, a2_type->element_type);
   default:
     assert(false);
   }

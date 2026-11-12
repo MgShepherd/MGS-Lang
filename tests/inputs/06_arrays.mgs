@@ -37,6 +37,14 @@ main: func() -> i64 {
 	return my_array[1];
 }
 
+-- TEST accessing out of bounds element
+-- EXPECTED_COMPILATION_ERROR Array index 3 out of bounds for length 3
+main: func() -> i64 {
+  my_array: []i32 = [10, 12, 2];
+	my_array_2: []i32 = my_array;
+	return my_array_2[3];
+}
+
 -- TEST attempting to modify element of array of constants
 -- EXPECTED_COMPILATION_ERROR Attempted to modify element of constant array: my_array
 main: func() -> i64 {

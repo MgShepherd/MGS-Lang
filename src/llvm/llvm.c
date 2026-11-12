@@ -53,9 +53,10 @@ unsigned char program_to_object_file(const Program *program, const char *file_na
   for (size_t i = 0; i < program->type_defs.count; i++) {
     build_type_definition(&state, &program->type_defs.elements[i]);
   }
-  // TODO: For all programs we are building the array type, even if there are no arrays - can we check this as part of
-  // sema
-  build_array_type_definition(&state);
+
+  if (program->requires_array_type) {
+    build_array_type_definition(&state);
+  }
 
   for (size_t i = 0; i < program->functions.count; i++) {
     if (build_function(&state, &program->functions.elements[i]) != 0) {

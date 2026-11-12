@@ -30,9 +30,10 @@ typedef struct {
   const Functions functions;
   const TypeDefinitions type_defs;
   Scopes scopes;
+  bool requires_array_type;
 } SemaState;
 
-unsigned char analyse_program(const Program *program);
+unsigned char analyse_program(Program *program);
 
 unsigned char analyse_block(SemaState *state, Block *block, const DataType *func_type);
 

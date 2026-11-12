@@ -13,7 +13,7 @@
 unsigned char analyse_func(SemaState *state, Function *func);
 unsigned char analyse_parameters(SemaState *state, Fields *parameters);
 
-unsigned char analyse_program(const Program *program) {
+unsigned char analyse_program(Program *program) {
   Identifiers identifiers;
   dyn_array_init(&identifiers, sizeof(Identifier), NUM_VARIABLES_ESTIMATE);
   assert(identifiers.elements != NULL);
@@ -59,6 +59,8 @@ unsigned char analyse_program(const Program *program) {
     free_sema_state(&state);
     return 1;
   }
+
+  program->requires_array_type = state.requires_array_type;
 
   free_sema_state(&state);
   return 0;

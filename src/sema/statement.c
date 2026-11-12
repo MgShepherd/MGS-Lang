@@ -70,6 +70,10 @@ unsigned char analyse_dec_statement(SemaState *state, DeclarationStatement *dec)
 
   if (dec->d_type.d_kind == D_ARRAY) {
     dec->d_type.d_union.a_type.length = get_array_length(state, &dec->expr);
+
+    if (!state->requires_array_type) {
+      state->requires_array_type = true;
+    }
   }
 
   dec->term_ident.scope = state->scopes.elements[state->scopes.count - 1];
@@ -197,6 +201,10 @@ int64_t get_array_length(SemaState *state, const Expression *expr) {
     assert(ident->d_type->d_kind == D_ARRAY);
     return ident->d_type->d_union.a_type.length;
     break;
+  case TERM_FUNC_CALL:
+    const Function *func = get_function(&state->functions, term->t_union.func_call.name->item);
+    assert(func->return_type.d_kind == D_ARRAY);
+    return func->return_type.d_union.a_type.length;
   default:
     return -1;
   }

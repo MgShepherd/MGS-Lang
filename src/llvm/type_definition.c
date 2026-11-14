@@ -38,8 +38,8 @@ void build_array_type_definition(IRState *state) {
   LLVMTypeRef *field_types = malloc(sizeof(LLVMTypeRef) * NUM_ARRAY_TYPE_DEF_FIELDS);
   assert(field_types != NULL);
 
-  // We are using an int 64 to represent the length of the array
-  field_types[0] = LLVMInt64TypeInContext(state->context);
+  // We are using an int32 to represent the length of the array as this matches what LLVM uses for a lot of indexing ops
+  field_types[0] = LLVMInt32TypeInContext(state->context);
   field_types[1] = LLVMPointerTypeInContext(state->context, DEFAULT_ADDRESS_SPACE);
 
   type_ref.ref = LLVMStructCreateNamed(state->context, ARRAY_TYPE_DEFINITION_NAME);

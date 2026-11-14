@@ -32,10 +32,6 @@ int64_t get_array_length(SemaState *state, const Expression *expr) {
     assert(ident->d_type->d_kind == D_ARRAY);
     return ident->d_type->d_union.a_type.length;
     break;
-  case TERM_FUNC_CALL:
-    const Function *func = get_function(&state->functions, term->t_union.func_call.name->item);
-    assert(func->return_type.d_kind == D_ARRAY);
-    return func->return_type.d_union.a_type.length;
   default:
     return -1;
   }

@@ -28,11 +28,11 @@ unsigned char init_ir_state(IRState *state);
 
 unsigned char build_function(IRState *state, const Function *func);
 
-unsigned char build_statements(IRState *state, const Statements *statements, const LLVMValueRef func);
-unsigned char build_statement(IRState *state, const Statement *statement, const LLVMValueRef func);
+unsigned char build_statements(IRState *state, const Statements *statements);
+unsigned char build_statement(IRState *state, const Statement *statement);
 // Statements which return unsigned char can only error due to failing to add ValueRef into array
 unsigned char build_declaration_statement(IRState *state, const DeclarationStatement *dec);
-unsigned char build_if_block(IRState *state, const IfBlock *if_block, const LLVMValueRef func);
+unsigned char build_if_block(IRState *state, const IfBlock *if_block);
 void build_assignment_statement(IRState *state, const AssignmentStatement *assign);
 void build_return_statement(IRState *state, const ReturnStatement *ret);
 void build_void_statement(IRState *state, const VoidStatement *void_s);
@@ -57,6 +57,20 @@ unsigned char program_to_object_file(const Program *program, const char *file_na
   if (program->requires_array_type) {
     build_array_type_definition(&state);
   }
+
+  // Add the exit function from libc
+  LLVMTypeRef *param_types = malloc(sizeof(LLVMTypeRef) * 1);
+  param_types[0] = LLVMInt32TypeInContext(state.context);
+  LLVMTypeRef exit_type = LLVMFunctionType(LLVMVoidTypeInContext(state.context), param_types, 1, false);
+  LLVMValueRef func_ptr = LLVMAddFunction(state.module, "exit", exit_type);
+  const LlvmFunc exit_func = {
+      .param_types = param_types,
+      .num_params = 1,
+      .ptr = func_ptr,
+      .func_type = exit_type,
+      .name = "exit",
+  };
+  dyn_array_insert(&state.funcs, exit_func);
 
   for (size_t i = 0; i < program->functions.count; i++) {
     if (build_function(&state, &program->functions.elements[i]) != 0) {
@@ -139,8 +153,9 @@ unsigned char build_function(IRState *state, const Function *func) {
     }
   }
 
+  state->current_func = llvm_func;
   for (size_t i = 0; i < func->block.body.count; i++) {
-    if (build_statement(state, &func->block.body.elements[i], llvm_func) != 0) {
+    if (build_statement(state, &func->block.body.elements[i]) != 0) {
       fprintf(stderr, "Failed to build statement\n");
       return 1;
     }
@@ -169,9 +184,9 @@ unsigned char build_function(IRState *state, const Function *func) {
   return 0;
 }
 
-unsigned char build_statements(IRState *state, const Statements *statements, const LLVMValueRef func) {
+unsigned char build_statements(IRState *state, const Statements *statements) {
   for (size_t i = 0; i < statements->count; i++) {
-    unsigned char result = build_statement(state, &statements->elements[i], func);
+    unsigned char result = build_statement(state, &statements->elements[i]);
     if (result != 0) {
       return result;
     }
@@ -179,7 +194,7 @@ unsigned char build_statements(IRState *state, const Statements *statements, con
   return 0;
 }
 
-unsigned char build_statement(IRState *state, const Statement *statement, const LLVMValueRef func) {
+unsigned char build_statement(IRState *state, const Statement *statement) {
   assert(state != NULL && statement != NULL);
   switch (statement->s_type) {
   case S_RETURN:
@@ -194,7 +209,7 @@ unsigned char build_statement(IRState *state, const Statement *statement, const 
     build_assignment_statement(state, &statement->s_union.assign);
     break;
   case S_IF:
-    if (build_if_block(state, &statement->s_union.if_block, func) != 0) {
+    if (build_if_block(state, &statement->s_union.if_block) != 0) {
       return 1;
     }
     break;
@@ -261,40 +276,42 @@ void build_assignment_statement(IRState *state, const AssignmentStatement *assig
   LLVMBuildStore(state->builder, expr_output, out_ptr);
 }
 
-unsigned char build_if_block(IRState *state, const IfBlock *if_block, const LLVMValueRef func) {
+unsigned char build_if_block(IRState *state, const IfBlock *if_block) {
   assert(if_block != NULL);
 
   const LLVMTypeRef bool_type = LLVMInt1TypeInContext(state->context);
+  const LLVMValueRef function = state->current_func;
 
-  const LLVMBasicBlockRef exit_if_block = LLVMAppendBasicBlockInContext(state->context, func, "if-exit");
-  const LLVMBasicBlockRef then_if_block = LLVMAppendBasicBlockInContext(state->context, func, "if-then");
-  LLVMBasicBlockRef next_branch_block = LLVMAppendBasicBlockInContext(state->context, func, "next");
+  const LLVMBasicBlockRef exit_if_block = LLVMAppendBasicBlockInContext(state->context, function, "if-exit");
+  const LLVMBasicBlockRef then_if_block = LLVMAppendBasicBlockInContext(state->context, function, "if-then");
+  LLVMBasicBlockRef next_branch_block = LLVMAppendBasicBlockInContext(state->context, function, "next");
 
   LLVMValueRef if_expr = build_expression(state, &if_block->if_branch.expr, bool_type, false);
   LLVMBuildCondBr(state->builder, if_expr, then_if_block, next_branch_block);
   LLVMPositionBuilderAtEnd(state->builder, then_if_block);
 
-  if (build_statements(state, &if_block->if_branch.block.body, func) != 0) {
+  if (build_statements(state, &if_block->if_branch.block.body) != 0) {
     return 1;
   }
-  if (if_block->if_branch.block.return_expr == NULL) {
+  if (!if_block->if_branch.block.has_return) {
     LLVMBuildBr(state->builder, exit_if_block);
   }
 
   for (size_t i = 0; i < if_block->else_if_branches.count; i++) {
-    const LLVMBasicBlockRef then_else_if_block = LLVMAppendBasicBlockInContext(state->context, func, "else-if-then");
+    const LLVMBasicBlockRef then_else_if_block =
+        LLVMAppendBasicBlockInContext(state->context, state->current_func, "else-if-then");
 
     LLVMPositionBuilderAtEnd(state->builder, next_branch_block);
-    next_branch_block = LLVMAppendBasicBlockInContext(state->context, func, "next");
+    next_branch_block = LLVMAppendBasicBlockInContext(state->context, function, "next");
 
     LLVMValueRef else_if_expr = build_expression(state, &if_block->else_if_branches.elements[i].expr, bool_type, false);
     LLVMBuildCondBr(state->builder, else_if_expr, then_else_if_block, next_branch_block);
 
     LLVMPositionBuilderAtEnd(state->builder, then_else_if_block);
-    if (build_statements(state, &if_block->else_if_branches.elements[i].block.body, func) != 0) {
+    if (build_statements(state, &if_block->else_if_branches.elements[i].block.body) != 0) {
       return 1;
     }
-    if (if_block->else_if_branches.elements[i].block.return_expr == NULL) {
+    if (!if_block->else_if_branches.elements[i].block.has_return) {
       LLVMBuildBr(state->builder, exit_if_block);
     }
   }
@@ -303,10 +320,10 @@ unsigned char build_if_block(IRState *state, const IfBlock *if_block, const LLVM
   if (if_block->else_branch.block.body.count == 0) {
     LLVMBuildBr(state->builder, exit_if_block);
   } else {
-    if (build_statements(state, &if_block->else_branch.block.body, func) != 0) {
+    if (build_statements(state, &if_block->else_branch.block.body) != 0) {
       return 1;
     }
-    if (if_block->else_branch.block.return_expr == NULL) {
+    if (!if_block->else_branch.block.has_return) {
       LLVMBuildBr(state->builder, exit_if_block);
     }
   }
@@ -361,6 +378,7 @@ void dispose_ir_state(IRState *state) {
   for (size_t i = 0; i < state->funcs.count; i++) {
     free(state->funcs.elements[i].param_types);
   }
+
   dyn_array_free(&state->funcs);
   for (size_t i = 0; i < state->type_refs.count; i++) {
     free(state->type_refs.elements[i].field_types);

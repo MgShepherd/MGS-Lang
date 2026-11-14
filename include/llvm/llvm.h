@@ -36,6 +36,7 @@ struct IRState {
   LLVMContextRef context;
   LLVMModuleRef module;
   LLVMBuilderRef builder;
+  LLVMValueRef current_func;
   ValueRefs values;
   FuncRefs funcs;
   TypeDefinitionRefs type_refs;

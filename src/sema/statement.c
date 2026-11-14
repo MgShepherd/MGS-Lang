@@ -22,10 +22,20 @@ unsigned char analyse_void_statement(SemaState *state, VoidStatement *void_s);
 static const DataType BOOL_TYPE = {.d_kind = D_PRIMITIVE, .d_union = {.p_type = P_BOOL}};
 static const DataType VOID_TYPE = {.d_kind = D_PRIMITIVE, .d_union = {.p_type = P_VOID}};
 
-unsigned char analyse_statements(SemaState *state, const Statements *statements, const DataType *func_type) {
-  for (size_t i = 0; i < statements->count; i++) {
-    if (analyse_statement(state, &statements->elements[i], func_type) != 0) {
+unsigned char analyse_statements(SemaState *state, Block *block, const DataType *func_type) {
+  block->has_return = false;
+  for (size_t i = 0; i < block->body.count; i++) {
+    if (block->has_return) {
+      fprintf(stderr, "Dead code after return statement\n");
       return 1;
+    }
+
+    if (analyse_statement(state, &block->body.elements[i], func_type) != 0) {
+      return 1;
+    }
+
+    if (block->body.elements[i].s_type == S_RETURN) {
+      block->has_return = true;
     }
   }
   return 0;

@@ -68,24 +68,9 @@ unsigned char analyse_program(Program *program) {
 }
 
 unsigned char analyse_block(SemaState *state, Block *block, const DataType *func_type) {
-  unsigned char result = analyse_statements(state, &block->body, func_type);
+  unsigned char result = analyse_statements(state, block, func_type);
   if (result != 0) {
     return result;
-  }
-
-  // TODO: This is inefficient to have to search through the statements again, can we improve this
-  block->has_return = false;
-  for (size_t i = 0; i < block->body.count; i++) {
-    if (block->body.elements[i].s_type != S_RETURN) {
-      continue;
-    }
-
-    block->has_return = true;
-    if (i < block->body.count - 1) {
-      fprintf(stderr, "Dead code after return statement\n");
-      return 1;
-    }
-    break;
   }
 
   return 0;

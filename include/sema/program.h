@@ -12,6 +12,8 @@ typedef struct {
   size_t capacity;
 } Scopes;
 
+// TODO: This is confusing with also having TerminalIdentifier type - I think we may possibly be able to refactor and
+// remove this
 typedef struct {
   const char *name;
   const void *scope;

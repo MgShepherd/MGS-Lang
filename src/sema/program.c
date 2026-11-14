@@ -74,17 +74,18 @@ unsigned char analyse_block(SemaState *state, Block *block, const DataType *func
   }
 
   // TODO: This is inefficient to have to search through the statements again, can we improve this
-  block->return_expr = NULL;
+  block->has_return = false;
   for (size_t i = 0; i < block->body.count; i++) {
     if (block->body.elements[i].s_type != S_RETURN) {
       continue;
     }
 
-    block->return_expr = &block->body.elements[i].s_union.ret.expr;
+    block->has_return = true;
     if (i < block->body.count - 1) {
       fprintf(stderr, "Dead code after return statement\n");
       return 1;
     }
+    break;
   }
 
   return 0;
@@ -104,7 +105,7 @@ unsigned char analyse_func(SemaState *state, Function *func) {
     return 1;
   }
 
-  return analyse_data_type(state, &func->return_type, func->block.return_expr);
+  return analyse_data_type(state, &func->return_type, NULL);
 }
 
 unsigned char analyse_parameters(SemaState *state, Fields *parameters) {

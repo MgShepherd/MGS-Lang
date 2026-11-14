@@ -41,15 +41,32 @@ main: func() -> i64 {
 	return my_array[1];
 }
 
--- TEST returning array from function and trying to access element out of bounds
--- EXPECTED_COMPILATION_ERROR Array index 10 out of bounds for length 6
+-- TEST returning arrays with different lengths from function
+-- EXPECTED_STATUS_CODE 5
 get_array: func() -> []i64 {
-  return [1, 2, 3, 4, 5, 6];
+  if 10 > 9 {
+	  return [1, 2, 3, 4, 5];
+	}
+	return [1, 2];
 }
 
 main: func() -> i64 {
   my_array: []i64 = get_array();
-	return my_array[10];
+	return my_array[4];
+}
+
+-- TEST Array access out of bounds from runtime check should exit with code 1
+-- EXPECTED_STATUS_CODE 1
+get_array: func() -> []i64 {
+  if 10 < 9 {
+	  return [1, 2, 3, 4, 5];
+	}
+	return [1, 2];
+}
+
+main: func() -> i64 {
+  my_array: []i64 = get_array();
+	return my_array[3];
 }
 
 -- TEST array type does not match function return type

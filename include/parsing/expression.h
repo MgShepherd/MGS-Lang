@@ -31,8 +31,7 @@ typedef struct {
 } Expressions;
 
 typedef struct {
-  // TODO: Update this to use the char* rather than the actual token (same as TerminalIdentifier)
-  const Token *name;
+  const char *name;
   Expressions parameters;
 } FunctionCall;
 

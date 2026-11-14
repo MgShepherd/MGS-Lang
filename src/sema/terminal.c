@@ -14,9 +14,9 @@
 int field_assignment_compare(const void *item1, const void *item2);
 
 unsigned char analyse_func_call(SemaState *state, const FunctionCall *func_call, const DataType *expr_type) {
-  const Function *func = get_function(&state->functions, func_call->name->item);
+  const Function *func = get_function(&state->functions, func_call->name);
   if (func == NULL) {
-    fprintf(stderr, "Undefined function: %s\n", func_call->name->item);
+    fprintf(stderr, "Undefined function: %s\n", func_call->name);
     return 1;
   }
 

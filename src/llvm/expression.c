@@ -3,6 +3,7 @@
 #include "parsing/type.h"
 #include "llvm-c/Core.h"
 #include "llvm-c/Types.h"
+#include "llvm/gep.h"
 #include "llvm/type_definition.h"
 #include "llvm/utils.h"
 #include <assert.h>
@@ -177,7 +178,7 @@ LLVMValueRef build_identifier(const IRState *state, const TerminalIdentifier *te
 }
 
 LLVMValueRef build_func_call(IRState *state, const FunctionCall *func_call, const LLVMTypeRef d_type, bool store) {
-  const LlvmFunc *func = load_function(&state->funcs, func_call->name->item);
+  const LlvmFunc *func = load_function(&state->funcs, func_call->name);
   assert(func != NULL);
 
   LLVMValueRef params[func->num_params];
@@ -185,12 +186,12 @@ LLVMValueRef build_func_call(IRState *state, const FunctionCall *func_call, cons
     params[i] = build_expression(state, &func_call->parameters.elements[i], func->param_types[i], false);
   }
 
-  const char *name = func_call->name->item;
+  const char *name = func_call->name;
   LLVMValueRef func_result;
-  // TODO: Check why we need this if statement logic, looks like only the name parameter is different, why?
   if (d_type != LLVMVoidTypeInContext(state->context)) {
     func_result = LLVMBuildCall2(state->builder, func->func_type, func->ptr, params, func->num_params, name);
   } else {
+    // Void functions cannot have a name assignment since they don't return a value
     func_result = LLVMBuildCall2(state->builder, func->func_type, func->ptr, params, func->num_params, "");
   }
 

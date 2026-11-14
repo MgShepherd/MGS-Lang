@@ -32,13 +32,17 @@ unsigned char parse_statements(Statements *statements, const Tokens *tokens, siz
         fprintf(stderr, "Invalid tokens at end of input\n");
         return result;
       }
-      if (tokens->elements[*idx + 1].t_type == T_COLON) {
+
+      switch (tokens->elements[*idx + 1].t_type) {
+      case T_COLON:
         result = parse_dec_statement(&statement, tokens, idx);
-        // TODO: Can we improve this check, we are checking the same tokens multiple times
-      } else if (tokens->elements[*idx + 1].t_type == T_EQUALS || tokens->elements[*idx + 1].t_type == T_DOT ||
-                 tokens->elements[*idx + 1].t_type == T_LEFT_SQUARE) {
+        break;
+      case T_EQUALS:
+      case T_DOT:
+      case T_LEFT_SQUARE:
         result = parse_assign_statement(&statement, tokens, idx);
-      } else {
+        break;
+      default:
         result = parse_void_statement(&statement, tokens, idx);
       }
       break;

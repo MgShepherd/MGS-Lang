@@ -5,6 +5,7 @@
 #include "parsing/type.h"
 #include "llvm-c/Types.h"
 #include "llvm/expression.h"
+#include "llvm/gep.h"
 #include "llvm/type_definition.h"
 #include "llvm/utils.h"
 

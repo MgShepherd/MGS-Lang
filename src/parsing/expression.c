@@ -36,9 +36,9 @@ char *get_terminal_name(const Terminal *term) {
     break;
   case TERM_FUNC_CALL:
     const FunctionCall *func_call = &term->t_union.func_call;
-    const size_t name_len = strlen(CALL_PREFIX) + strlen(func_call->name->item) + 1;
+    const size_t name_len = strlen(CALL_PREFIX) + strlen(func_call->name) + 1;
     buffer = malloc(sizeof(char) * name_len);
-    const size_t result = snprintf(buffer, name_len, "%s%s", CALL_PREFIX, func_call->name->item);
+    const size_t result = snprintf(buffer, name_len, "%s%s", CALL_PREFIX, func_call->name);
     assert(result > 0);
     break;
   case TERM_LITERAL:
@@ -305,11 +305,12 @@ unsigned char parse_terminal_literal(TerminalLiteral *term_literal, const Tokens
 }
 
 unsigned char parse_func_call(FunctionCall *func_call, const Tokens *tokens, size_t *idx) {
-  func_call->name = expect_next(T_IDENTIFIER, tokens, idx);
-  if (func_call->name == NULL) {
+  const Token *name_token = expect_next(T_IDENTIFIER, tokens, idx);
+  if (name_token == NULL) {
     fprintf(stderr, "Expected identifier for start of function call\n");
     return 1;
   }
+  func_call->name = name_token->item;
 
   if (expect_next(T_LEFT_PAREN, tokens, idx) == NULL) {
     fprintf(stderr, "Expected '(' for start of parameter list\n");

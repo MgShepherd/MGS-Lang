@@ -23,20 +23,22 @@ unsigned char parse_program(Program *program, const Tokens *tokens) {
   dyn_array_init(&program->functions, sizeof(Function), capacity);
   dyn_array_init(&program->type_defs, sizeof(TypeDefinition), USER_TYPES_ARRAY_LEN);
 
-  // NEXT TODO: Add ParseState into logic with idx and tokens, prep for store Identifier list
+  ParseState state = {
+      .tokens = tokens,
+      .idx = 0,
+  };
 
-  size_t idx = 0;
-  while (idx < tokens->count) {
+  while (state.idx < tokens->count) {
     // idx + 2 should contain what type of construct this is (idx should be identifer, idx+1 should be ':')
-    if (idx + 2 >= tokens->count) {
+    if (state.idx + 2 >= tokens->count) {
       fprintf(stderr, "Invalid global construct\n");
       return 1;
     }
 
-    switch (tokens->elements[idx + 2].t_type) {
+    switch (tokens->elements[state.idx + 2].t_type) {
     case T_FUNCTION:
       Function func;
-      if (parse_function(&func, tokens, &idx) != 0) {
+      if (parse_function(&func, &state) != 0) {
         fprintf(stderr, "Failed to parse function\n");
         return 1;
       }
@@ -44,7 +46,7 @@ unsigned char parse_program(Program *program, const Tokens *tokens) {
       break;
     case T_STRUCT:
       TypeDefinition type_def;
-      if (parse_type_definition(&type_def, tokens, &idx) != 0) {
+      if (parse_type_definition(&type_def, &state) != 0) {
         fprintf(stderr, "Failed to parse type definition\n");
         return 1;
       }
@@ -52,7 +54,7 @@ unsigned char parse_program(Program *program, const Tokens *tokens) {
       break;
     default:
       fprintf(stderr, "Unexpected token type: %s for global construct\n",
-              t_type_to_string(tokens->elements[idx + 2].t_type));
+              t_type_to_string(tokens->elements[state.idx + 2].t_type));
       return 1;
     }
   }

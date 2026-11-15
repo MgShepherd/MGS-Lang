@@ -3,7 +3,7 @@
 
 #include "parsing/type.h"
 
-unsigned char parse_function(Function *function, const Tokens *tokens, size_t *idx);
+unsigned char parse_function(Function *function, ParseState *state);
 
 void function_free(Function *function);
 

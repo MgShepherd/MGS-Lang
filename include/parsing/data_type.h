@@ -4,7 +4,7 @@
 #include "parsing/type.h"
 #include <stdint.h>
 
-unsigned char parse_data_type(DataType *data_type, const Tokens *tokens, size_t *idx);
+unsigned char parse_data_type(DataType *data_type, ParseState *state);
 
 const char *d_type_to_string(const DataType *data_type);
 

@@ -369,6 +369,11 @@ typedef struct {
   bool requires_array_type;
 } Program;
 
+typedef struct {
+  const Tokens *tokens;
+  size_t idx;
+} ParseState;
+
 /*
  * Converts a provided token type into the matching primitive type
  * Will return P_NONE if invalid primitive

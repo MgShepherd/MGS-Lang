@@ -2,17 +2,17 @@
 
 #include <string.h>
 
-const Token *expect_next(TokenType expected, const Tokens *tokens, size_t *idx) {
-  if (*idx >= tokens->count) {
+const Token *expect_next(TokenType expected, ParseState *state) {
+  if (state->idx >= state->tokens->count) {
     return NULL;
   }
 
-  const Token *next = &tokens->elements[*idx];
+  const Token *next = &state->tokens->elements[state->idx];
   if (next->t_type != expected) {
     return NULL;
   }
 
-  *idx += 1;
+  state->idx += 1;
   return next;
 }
 

@@ -7,33 +7,33 @@
 #include <stdio.h>
 #include <string.h>
 
-unsigned char parse_primitive(PrimitiveType *primitive_type, const Tokens *tokens, size_t *idx);
-unsigned char parse_struct(StructType *struct_type, const Tokens *tokens, size_t *idx);
-unsigned char parse_array(ArrayType *array_type, const Tokens *tokens, size_t *idx);
+unsigned char parse_primitive(PrimitiveType *primitive_type, ParseState *state);
+unsigned char parse_struct(StructType *struct_type, ParseState *state);
+unsigned char parse_array(ArrayType *array_type, ParseState *state);
 
-unsigned char parse_data_type(DataType *data_type, const Tokens *tokens, size_t *idx) {
+unsigned char parse_data_type(DataType *data_type, ParseState *state) {
   data_type->d_kind = D_NONE;
-  if (*idx >= tokens->count) {
+  if (state->idx >= state->tokens->count) {
     fprintf(stderr, "Failed to parse data type as reached end of input\n");
     return 1;
   }
 
-  data_type->variable = expect_next(T_VAR, tokens, idx) != NULL;
+  data_type->variable = expect_next(T_VAR, state) != NULL;
 
-  const TokenType next = peek_index(tokens, *idx);
+  const TokenType next = peek_index(state->tokens, state->idx);
   if (tok_to_primitive_type(next)) {
     data_type->d_kind = D_PRIMITIVE;
-    if (parse_primitive(&data_type->d_union.p_type, tokens, idx) != 0) {
+    if (parse_primitive(&data_type->d_union.p_type, state) != 0) {
       return 1;
     }
   } else if (next == T_IDENTIFIER) {
     data_type->d_kind = D_STRUCT;
-    if (parse_struct(&data_type->d_union.s_type, tokens, idx) != 0) {
+    if (parse_struct(&data_type->d_union.s_type, state) != 0) {
       return 1;
     }
   } else if (next == T_LEFT_SQUARE) {
     data_type->d_kind = D_ARRAY;
-    if (parse_array(&data_type->d_union.a_type, tokens, idx) != 0) {
+    if (parse_array(&data_type->d_union.a_type, state) != 0) {
       return 1;
     }
   } else {
@@ -90,8 +90,8 @@ void data_type_free(DataType *data_type) {
   }
 }
 
-unsigned char parse_primitive(PrimitiveType *p_type, const Tokens *tokens, size_t *idx) {
-  const TokenType next_type = tokens->elements[(*idx)++].t_type;
+unsigned char parse_primitive(PrimitiveType *p_type, ParseState *state) {
+  const TokenType next_type = state->tokens->elements[(state->idx)++].t_type;
   *p_type = tok_to_primitive_type(next_type);
   if (p_type == P_NONE) {
     fprintf(stderr, "Failed to covert token type %s into primitive data type\n", t_type_to_string(next_type));
@@ -101,8 +101,8 @@ unsigned char parse_primitive(PrimitiveType *p_type, const Tokens *tokens, size_
   return 0;
 }
 
-unsigned char parse_struct(StructType *struct_type, const Tokens *tokens, size_t *idx) {
-  const Token *ident_tok = expect_next(T_IDENTIFIER, tokens, idx);
+unsigned char parse_struct(StructType *struct_type, ParseState *state) {
+  const Token *ident_tok = expect_next(T_IDENTIFIER, state);
   if (ident_tok == NULL) {
     fprintf(stderr, "Expected struct identifier\n");
     return 1;
@@ -113,11 +113,11 @@ unsigned char parse_struct(StructType *struct_type, const Tokens *tokens, size_t
   return 0;
 }
 
-unsigned char parse_array(ArrayType *array_type, const Tokens *tokens, size_t *idx) {
+unsigned char parse_array(ArrayType *array_type, ParseState *state) {
   // We can assert the next element since we have already checked this in the calling function
-  assert(expect_next(T_LEFT_SQUARE, tokens, idx) != NULL);
+  assert(expect_next(T_LEFT_SQUARE, state) != NULL);
 
-  if (expect_next(T_RIGHT_SQUARE, tokens, idx) == NULL) {
+  if (expect_next(T_RIGHT_SQUARE, state) == NULL) {
     fprintf(stderr, "Expected ']' for array type");
     return 1;
   }
@@ -125,7 +125,7 @@ unsigned char parse_array(ArrayType *array_type, const Tokens *tokens, size_t *i
   array_type->element_type = malloc(sizeof(DataType));
   assert(array_type != NULL);
 
-  if (parse_data_type(array_type->element_type, tokens, idx) != 0) {
+  if (parse_data_type(array_type->element_type, state) != 0) {
     fprintf(stderr, "Failed to parse element type for array\n");
     return 1;
   }

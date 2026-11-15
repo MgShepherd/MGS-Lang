@@ -2,9 +2,12 @@
 
 #include "dynamic_array.h"
 #include "lexer.h"
+#include "parsing/expression.h"
 #include <assert.h>
 #include <stdio.h>
+#include <string.h>
 
+#define NUM_VARIABLES_ESTIMATE 10
 #define FUNCTION_ARRAY_LEN_FACTOR 0.1
 #define USER_TYPES_ARRAY_LEN 10
 
@@ -17,8 +20,14 @@ unsigned char parse_program(Program *program, const Tokens *tokens) {
     capacity = 1;
   }
 
+  ParseState state = {
+      .idx = 0,
+      .tokens = tokens,
+  };
+
   dyn_array_init(&program->functions, sizeof(Function), capacity);
   dyn_array_init(&program->type_defs, sizeof(TypeDefinition), USER_TYPES_ARRAY_LEN);
+  dyn_array_init(&state.identifiers, sizeof(Identifier *), NUM_VARIABLES_ESTIMATE);
 
   size_t idx = 0;
   while (idx < tokens->count) {
@@ -51,6 +60,10 @@ unsigned char parse_program(Program *program, const Tokens *tokens) {
       return 1;
     }
   }
+
+  const size_t identifiers_size = sizeof(Identifier *) * state.identifiers.count;
+  program->identifiers = malloc(identifiers_size);
+  memcpy(program->identifiers, state.identifiers.elements, identifiers_size);
 
   return 0;
 }

@@ -6,7 +6,7 @@
 typedef struct TypeDefinition TypeDefinition;
 
 typedef struct {
-  TerminalIdentifier term_ident;
+  Identifier term_ident;
   DataType d_type;
 } Field;
 

@@ -8,22 +8,17 @@
 #include <stdio.h>
 #include <string.h>
 
-#define NUM_VARIABLES_ESTIMATE 10
 #define NUM_SCOPES_ESTIMATE 5
 
 unsigned char analyse_func(SemaState *state, Function *func);
 unsigned char analyse_parameters(SemaState *state, Fields *parameters);
 
 unsigned char analyse_program(Program *program) {
-  Identifiers identifiers;
-  dyn_array_init(&identifiers, sizeof(Identifier), NUM_VARIABLES_ESTIMATE);
-  assert(identifiers.elements != NULL);
   Scopes scopes;
   dyn_array_init(&scopes, sizeof(void *), NUM_SCOPES_ESTIMATE);
   assert(scopes.elements != NULL);
 
   SemaState state = {
-      .identifiers = identifiers,
       .functions = program->functions,
       .type_defs = program->type_defs,
       .scopes = scopes,

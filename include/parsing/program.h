@@ -18,13 +18,27 @@ typedef struct {
 } TypeDefinitions;
 
 typedef struct {
+  Identifier *elements;
+  size_t count;
+  size_t capacity;
+} Identifiers;
+
+typedef struct {
+  // TODO: Can we refactor Functions and TypeDefintions in the same way we have for identifiers
   Functions functions;
   TypeDefinitions type_defs;
+  Identifier *identifiers;
   // requires_array_type will be filled in during sema
   // This is needed since we have a single global array type, which we only want to define if the program actually uses
   // arrays
   bool requires_array_type;
 } Program;
+
+typedef struct {
+  const Tokens *tokens;
+  size_t idx;
+  Identifiers identifiers;
+} ParseState;
 
 /*
  * parse_program will convert the filled tokens into a Program Syntax Tree

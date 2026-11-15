@@ -6,19 +6,6 @@
 #include <llvm-c/Core.h>
 
 typedef struct {
-  const char *name;
-  LLVMValueRef ptr;
-  const void *scope;
-  const DataType *d_type;
-} ValueRef;
-
-typedef struct {
-  ValueRef *elements;
-  size_t count;
-  size_t capacity;
-} ValueRefs;
-
-typedef struct {
   LLVMTypeRef *param_types;
   size_t num_params;
   LLVMTypeRef func_type;
@@ -37,7 +24,6 @@ struct IRState {
   LLVMModuleRef module;
   LLVMBuilderRef builder;
   LLVMValueRef current_func;
-  ValueRefs values;
   FuncRefs funcs;
   TypeDefinitionRefs type_refs;
 };

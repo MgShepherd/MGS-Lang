@@ -8,10 +8,10 @@
  * load_identifier will return the ValueRef struct which represents the provided term_ident
  * Finds ValueRef which has matching name and scope as requested identifier
  * @param values     - The dynamic array of ValueRefs which contain all defined values
- * @param term_ident - The identifier we want to load
+ * @param ident - The identifier we want to load
  * @return             The ValueRef representation of the identifier - NULL if not found
  */
-const ValueRef *load_identifier(const ValueRefs *values, const TerminalIdentifier *term_ident);
+const ValueRef *load_identifier(const ValueRefs *values, const Identifier *ident);
 
 /**
  * load_function will return the LlvmFunc struct which matches the provided identifier string

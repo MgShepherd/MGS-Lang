@@ -122,7 +122,7 @@ unsigned char parse_dec_statement(Statement *statement, const Tokens *tokens, si
     return 1;
   }
   assert(ident->item != NULL);
-  dec.term_ident.name = ident->item;
+  dec.ident.name = ident->item;
 
   if (expect_next(T_COLON, tokens, idx) == NULL) {
     fprintf(stderr, "Failed to read colon for declaration statement\n");
@@ -133,6 +133,7 @@ unsigned char parse_dec_statement(Statement *statement, const Tokens *tokens, si
     fprintf(stderr, "Failed to parse datatype for declaration statement\n");
     return 1;
   }
+  dec.ident.d_type = dec.d_type;
 
   if (expect_next(T_EQUALS, tokens, idx) == NULL) {
     fprintf(stderr, "Failed to read equals for declaration statement\n");

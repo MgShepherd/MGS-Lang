@@ -4,6 +4,7 @@
 #include "lexer.h"
 #include "parsing/data_type.h"
 #include "parsing/type.h"
+#include <llvm-c/Core.h>
 #include <stdint.h>
 
 typedef struct Expression Expression;
@@ -37,10 +38,14 @@ typedef struct {
 
 typedef struct {
   const char *name;
+  DataType d_type;
   // Will be populated by sema
   const void *scope;
-} TerminalIdentifier;
+  // Will be populated by LLVM
+  LLVMValueRef ptr;
+} Identifier;
 
+// TODO: We have literal and terminal literal - can these be cleaned up into one type?
 typedef struct {
   const Token *tok;
   // Will be populated by sema
@@ -48,7 +53,7 @@ typedef struct {
 } TerminalLiteral;
 
 typedef struct {
-  TerminalIdentifier term_ident;
+  Identifier ident;
   const char **field_names;
   size_t num_field_nestings;
   // type_def, field_idxs, variable and d_type will be populated as part of semantic analysis
@@ -60,7 +65,7 @@ typedef struct {
 } StructAccess;
 
 typedef struct {
-  TerminalIdentifier term_ident;
+  Identifier ident;
   // TODO: Update this to be able to support nested arrays
   const Token *idx_tok;
   // d_type and idx will be populated as part of semantic analysis
@@ -89,7 +94,7 @@ typedef struct {
 
 typedef struct {
   TerminalLiteral lit;
-  TerminalIdentifier ident;
+  Identifier ident;
   FunctionCall func_call;
   StructLiteral struct_literal;
   StructAccess struct_access;
@@ -128,7 +133,7 @@ struct FieldAssignment {
   Expression expression;
 };
 
-unsigned char parse_terminal_identifier(TerminalIdentifier *term_ident, const Tokens *tokens, size_t *idx);
+unsigned char parse_identifier(Identifier *ident, const Tokens *tokens, size_t *idx);
 unsigned char parse_struct_access(StructAccess *struct_acc, const Tokens *tokens, size_t *idx);
 unsigned char parse_array_access(ArrayAccess *array_access, const Tokens *tokens, size_t *idx);
 

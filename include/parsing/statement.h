@@ -16,13 +16,15 @@ typedef struct {
 } Statements;
 
 typedef struct {
-  TerminalIdentifier term_ident;
+  // Index into the programs identifiers array
+  size_t *ident_idx;
   DataType d_type;
   Expression expr;
 } DeclarationStatement;
 
 typedef union {
-  TerminalIdentifier term_ident;
+  // Index into the programs identifiers array
+  size_t *ident_idx;
   StructAccess struct_field;
   ArrayAccess array_index;
 } AssignmentOutputUnion;

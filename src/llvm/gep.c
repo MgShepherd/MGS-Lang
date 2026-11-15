@@ -3,11 +3,10 @@
 #include "llvm/utils.h"
 #include <assert.h>
 
-void build_array_length_check(IRState *state, const TerminalIdentifier *term_ident, const TypeDefinitionRef *type_def,
+void build_array_length_check(IRState *state, const Identifier *ident, const TypeDefinitionRef *type_def,
                               LLVMValueRef index);
 
-LLVMValueRef get_element_ptr(IRState *state, const TerminalIdentifier *term_ident, const size_t *indices,
-                             size_t num_indices) {
+LLVMValueRef get_element_ptr(IRState *state, const Identifier *ident, const size_t *indices, size_t num_indices) {
   const ValueRef *outer_val = load_identifier(&state->values, term_ident);
   assert(outer_val != NULL);
   const LLVMTypeRef outer_type = get_type(state, outer_val->d_type);

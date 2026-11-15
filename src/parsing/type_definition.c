@@ -43,13 +43,13 @@ unsigned char parse_type_definition(TypeDefinition *type_def, ParseState *state)
 unsigned char parse_fields(Fields *fields, ParseState *state) {
   while (true) {
     Field field;
-    const Token *ident = expect_next(T_IDENTIFIER, state);
-    if (ident == NULL) {
+    Identifier ident;
+    const Token *ident_tok = expect_next(T_IDENTIFIER, state);
+    if (ident_tok == NULL) {
       fprintf(stderr, "Expected identifier for field value\n");
       return 1;
     }
-    assert(ident->item != NULL);
-    field.term_ident.name = ident->item;
+    ident.name = ident_tok->item;
 
     if (expect_next(T_COLON, state) == NULL) {
       fprintf(stderr, "Expected colon after field value\n");
@@ -60,6 +60,11 @@ unsigned char parse_fields(Fields *fields, ParseState *state) {
       fprintf(stderr, "Failed to parse datatype for field\n");
       return 1;
     }
+    ident.d_type = field.d_type;
+
+    dyn_array_insert(&state->identifiers, ident);
+    field.name = ident.name;
+    field.ident_idx = state->identifiers.count - 1;
 
     dyn_array_insert(fields, field);
 

@@ -2,11 +2,12 @@
 #define _SEMA_TERMINAL_H_
 
 #include "parsing/expression.h"
+#include "parsing/type.h"
 #include "sema/program.h"
 
 unsigned char analyse_func_call(SemaState *state, const FunctionCall *func_call, const DataType *expr_type);
 
-unsigned char analyse_identifier(SemaState *state, TerminalIdentifier *term_ident, const DataType *expr_type);
+unsigned char analyse_ident_key(SemaState *state, IdentifierKey *ident_key, const DataType *expr_type);
 
 unsigned char analyse_literal(TerminalLiteral *term_lit, const Token *sign, const DataType *expr_type);
 

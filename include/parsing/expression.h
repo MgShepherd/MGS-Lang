@@ -5,7 +5,7 @@
 #include "parsing/type.h"
 #include <stdint.h>
 
-unsigned char parse_terminal_identifier(TerminalIdentifier *term_ident, ParseState *state);
+unsigned char parse_identifier_key(IdentifierKey *ident_key, ParseState *state);
 unsigned char parse_struct_access(StructAccess *struct_acc, ParseState *state);
 unsigned char parse_array_access(ArrayAccess *array_access, ParseState *state);
 

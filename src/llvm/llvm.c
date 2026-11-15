@@ -20,12 +20,11 @@
 #include <string.h>
 
 #define MODULE_NAME "main"
-#define VARIBLE_LEN_ESTIMATE 20
 #define FUNC_LEN_ESTIMATE 5
 #define TYPE_DEFINITIONS_LEN_ESTIMATE 5
 #define ARRAY_REALLOC_FACTOR 2
 
-unsigned char init_ir_state(IRState *state);
+unsigned char init_ir_state(IRState *state, const Program *program);
 
 unsigned char build_function(IRState *state, const Function *func);
 
@@ -46,7 +45,7 @@ unsigned char program_to_object_file(const Program *program, const char *file_na
   assert(program != NULL);
 
   IRState state;
-  if (init_ir_state(&state) != 0) {
+  if (init_ir_state(&state, program) != 0) {
     fprintf(stderr, "Failed to initialise IR state\n");
     return 1;
   }
@@ -102,8 +101,7 @@ unsigned char program_to_object_file(const Program *program, const char *file_na
   return 0;
 }
 
-unsigned char init_ir_state(IRState *state) {
-  dyn_array_init(&state->values, sizeof(ValueRef), VARIBLE_LEN_ESTIMATE);
+unsigned char init_ir_state(IRState *state, const Program *program) {
   dyn_array_init(&state->funcs, sizeof(LlvmFunc), FUNC_LEN_ESTIMATE);
   dyn_array_init(&state->type_refs, sizeof(TypeDefinitionRef), TYPE_DEFINITIONS_LEN_ESTIMATE);
 
@@ -111,6 +109,7 @@ unsigned char init_ir_state(IRState *state) {
   state->context = LLVMContextCreate();
   state->module = LLVMModuleCreateWithNameInContext(MODULE_NAME, state->context);
   state->builder = LLVMCreateBuilderInContext(state->context);
+  state->program = program;
 
   return 0;
 }
@@ -139,18 +138,10 @@ unsigned char build_function(IRState *state, const Function *func) {
 
     for (size_t i = 0; i < func->parameters.count; i++) {
       const Field *param = &func->parameters.elements[i];
-      const LLVMValueRef param_ptr = LLVMBuildAlloca(state->builder, param_types[i], param->term_ident.name);
-      assert(param_ptr != NULL);
-      LLVMBuildStore(state->builder, params[i], param_ptr);
-
-      // TODO: ValueRef in LLVM is very simlar to Identifier in sema, can we combine these somehow?
-      ValueRef param_val = {
-          .name = param->term_ident.name,
-          .ptr = param_ptr,
-          .scope = param->term_ident.scope,
-          .d_type = &param->d_type,
-      };
-      dyn_array_insert(&state->values, param_val);
+      Identifier *ident = &state->program->identifiers.elements[param->ident_idx];
+      ident->ptr = LLVMBuildAlloca(state->builder, param_types[i], ident->name);
+      assert(ident->ptr != NULL);
+      LLVMBuildStore(state->builder, params[i], ident->ptr);
     }
   }
 
@@ -237,15 +228,8 @@ unsigned char build_declaration_statement(IRState *state, const DeclarationState
 
   const LLVMTypeRef statement_type = get_type(state, &dec->d_type);
   assert(statement_type != NULL);
-  const LLVMValueRef output_ptr = build_expression(state, &dec->expr, statement_type, true);
-
-  ValueRef var = {
-      .name = dec->term_ident.name,
-      .ptr = output_ptr,
-      .scope = dec->term_ident.scope,
-      .d_type = &dec->d_type,
-  };
-  dyn_array_insert(&state->values, var);
+  Identifier *ident = &state->program->identifiers.elements[dec->ident_idx];
+  ident->ptr = build_expression(state, &dec->expr, statement_type, true);
 
   return 0;
 }
@@ -256,17 +240,17 @@ void build_assignment_statement(IRState *state, const AssignmentStatement *assig
   LLVMValueRef out_ptr;
   switch (assign->a_output.a_type) {
   case A_IDENTIFIER:
-    const ValueRef *assign_var = load_identifier(&state->values, &assign->a_output.a_union.term_ident);
-    out_ptr = assign_var->ptr;
+    const Identifier *ident = load_identifier(&state->program->identifiers, &assign->a_output.a_union.ident_key);
+    out_ptr = ident->ptr;
     break;
   case A_STRUCT_FIELD:
     const StructAccess *struct_field = &assign->a_output.a_union.struct_field;
     out_ptr =
-        get_element_ptr(state, &struct_field->term_ident, struct_field->field_idxs, struct_field->num_field_nestings);
+        get_element_ptr(state, &struct_field->ident_key, struct_field->field_idxs, struct_field->num_field_nestings);
     break;
   case A_ARRAY_INDEX:
     const ArrayAccess *array_access = &assign->a_output.a_union.array_index;
-    out_ptr = get_array_element_ptr(state, &array_access->term_ident, &array_access->idx, 1);
+    out_ptr = get_array_element_ptr(state, &array_access->ident_key, &array_access->idx, 1);
     break;
   default:
     assert(false);
@@ -375,7 +359,6 @@ unsigned char generate_object_file(const IRState *state, const char *file_name) 
 }
 
 void dispose_ir_state(IRState *state) {
-  dyn_array_free(&state->values);
   for (size_t i = 0; i < state->funcs.count; i++) {
     free(state->funcs.elements[i].param_types);
   }

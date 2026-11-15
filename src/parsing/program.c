@@ -8,6 +8,7 @@
 #include <assert.h>
 #include <stdio.h>
 
+#define NUM_VARIABLES_ESTIMATE 10
 #define FUNCTION_ARRAY_LEN_FACTOR 0.1
 #define USER_TYPES_ARRAY_LEN 10
 
@@ -20,13 +21,14 @@ unsigned char parse_program(Program *program, const Tokens *tokens) {
     capacity = 1;
   }
 
-  dyn_array_init(&program->functions, sizeof(Function), capacity);
-  dyn_array_init(&program->type_defs, sizeof(TypeDefinition), USER_TYPES_ARRAY_LEN);
-
   ParseState state = {
       .tokens = tokens,
       .idx = 0,
   };
+
+  dyn_array_init(&program->functions, sizeof(Function), capacity);
+  dyn_array_init(&program->type_defs, sizeof(TypeDefinition), USER_TYPES_ARRAY_LEN);
+  dyn_array_init(&state.identifiers, sizeof(Identifier), NUM_VARIABLES_ESTIMATE);
 
   while (state.idx < tokens->count) {
     // idx + 2 should contain what type of construct this is (idx should be identifer, idx+1 should be ':')
@@ -59,6 +61,8 @@ unsigned char parse_program(Program *program, const Tokens *tokens) {
     }
   }
 
+  program->identifiers = state.identifiers;
+
   return 0;
 }
 
@@ -75,4 +79,5 @@ void program_free(Program *program) {
   }
 
   dyn_array_free(&program->type_defs);
+  dyn_array_free(&program->identifiers);
 }

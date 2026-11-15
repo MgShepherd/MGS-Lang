@@ -12,17 +12,17 @@
 
 LLVMTypeRef get_primitive_type(const IRState *state, PrimitiveType p_type);
 
-const ValueRef *load_identifier(const ValueRefs *values, const TerminalIdentifier *term_ident) {
-  for (size_t i = 0; i < values->count; i++) {
-    if (strcmp(values->elements[i].name, term_ident->name) != 0) {
+const Identifier *load_identifier(const Identifiers *identifiers, const IdentifierKey *ident_key) {
+  for (size_t i = 0; i < identifiers->count; i++) {
+    if (strcmp(identifiers->elements[i].name, ident_key->name) != 0) {
       continue;
     }
 
-    if (term_ident->scope != values->elements[i].scope) {
+    if (ident_key->scope != identifiers->elements[i].scope) {
       continue;
     }
 
-    return &values->elements[i];
+    return &identifiers->elements[i];
   }
 
   return NULL;

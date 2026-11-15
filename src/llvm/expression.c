@@ -13,7 +13,7 @@ LLVMValueRef build_terminal_expr(IRState *state, const TerminalExpr *term, const
 LLVMValueRef build_compound_expr(IRState *state, const CompoundExpr *comp, const LLVMTypeRef d_type, bool store);
 LLVMValueRef build_func_call(IRState *state, const FunctionCall *func_call, const LLVMTypeRef d_type, bool store);
 
-LLVMValueRef build_identifier(const IRState *state, const TerminalIdentifier *term_ident, const LLVMTypeRef d_type,
+LLVMValueRef build_identifier(const IRState *state, const IdentifierKey *ident_key, const LLVMTypeRef d_type,
                               bool store);
 LLVMValueRef build_literal(const IRState *state, const Literal *literal, const LLVMTypeRef d_type, bool store);
 LLVMValueRef build_struct_literal(IRState *state, const StructLiteral *struct_lit, bool store);
@@ -36,7 +36,7 @@ LLVMValueRef build_terminal_expr(IRState *state, const TerminalExpr *term, const
   LLVMValueRef result = NULL;
   switch (term->item.t_type) {
   case TERM_IDENTIFIER:
-    result = build_identifier(state, &term->item.t_union.ident, d_type, store);
+    result = build_identifier(state, &term->item.t_union.ident_key, d_type, store);
     break;
   case TERM_LITERAL:
     result = build_literal(state, &term->item.t_union.lit.literal, d_type, store);
@@ -161,12 +161,12 @@ LLVMValueRef build_literal(const IRState *state, const Literal *literal, const L
   return ptr;
 }
 
-LLVMValueRef build_identifier(const IRState *state, const TerminalIdentifier *term_ident, const LLVMTypeRef d_type,
+LLVMValueRef build_identifier(const IRState *state, const IdentifierKey *ident_key, const LLVMTypeRef d_type,
                               bool store) {
-  const ValueRef *value_ref = load_identifier(&state->values, term_ident);
-  assert(value_ref != NULL);
+  const Identifier *ident = load_identifier(&state->program->identifiers, ident_key);
+  assert(ident != NULL && ident->ptr != NULL);
 
-  const LLVMValueRef loaded = LLVMBuildLoad2(state->builder, d_type, value_ref->ptr, term_ident->name);
+  const LLVMValueRef loaded = LLVMBuildLoad2(state->builder, d_type, ident->ptr, ident->name);
 
   if (!store) {
     return loaded;
@@ -271,7 +271,7 @@ LLVMValueRef build_array_access(IRState *state, const ArrayAccess *array_access,
   const LLVMTypeRef element_type = get_type(state, array_access->d_type);
   assert(element_type != NULL);
 
-  const LLVMValueRef element_ptr = get_array_element_ptr(state, &array_access->term_ident, &array_access->idx, 1);
+  const LLVMValueRef element_ptr = get_array_element_ptr(state, &array_access->ident_key, &array_access->idx, 1);
   const LLVMValueRef element_val = LLVMBuildLoad2(state->builder, element_type, element_ptr, "load_array_field");
   return element_val;
 
@@ -294,7 +294,7 @@ LLVMValueRef build_struct_access(IRState *state, const StructAccess *struct_acce
   assert(type_def != NULL && field_type != NULL);
 
   const LLVMValueRef element_ptr =
-      get_element_ptr(state, &struct_access->term_ident, struct_access->field_idxs, struct_access->num_field_nestings);
+      get_element_ptr(state, &struct_access->ident_key, struct_access->field_idxs, struct_access->num_field_nestings);
   const LLVMValueRef element_val = LLVMBuildLoad2(state->builder, field_type, element_ptr, "load_struct_field");
 
   if (!store) {

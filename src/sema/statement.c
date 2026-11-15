@@ -72,17 +72,21 @@ unsigned char analyse_dec_statement(SemaState *state, DeclarationStatement *dec)
     return result;
   }
 
-  result = insert_identifier(state, dec->term_ident.name, &dec->d_type);
-  if (result != 0) {
-    return result;
-  }
-
   if (analyse_data_type(state, &dec->d_type, &dec->expr) != 0) {
     fprintf(stderr, "Failed to analyse data type for declaration statement\n");
     return 1;
   }
 
-  dec->term_ident.scope = state->scopes.elements[state->scopes.count - 1];
+  Identifier *ident = &state->program->identifiers.elements[dec->ident_idx];
+  if (get_identifier(state, ident->name) != NULL) {
+    fprintf(stderr, "Variable %s shadows existing variable in scope\n", ident->name);
+    return 1;
+  }
+
+  const void *current_scope = state->scopes.elements[state->scopes.count - 1];
+  ident->scope = current_scope;
+  // TODO: We shouldn't need both a d_type for the ident and statement - remove from statement?
+  ident->d_type = dec->d_type;
 
   return 0;
 }
@@ -91,16 +95,16 @@ unsigned char analyse_assign_statement(SemaState *state, AssignmentStatement *as
   const Identifier *ident = NULL;
   switch (assign->a_output.a_type) {
   case A_IDENTIFIER:
-    TerminalIdentifier *term_ident = &assign->a_output.a_union.term_ident;
-    ident = get_identifier(state, term_ident->name);
+    IdentifierKey *ident_key = &assign->a_output.a_union.ident_key;
+    ident = get_identifier(state, ident_key->name);
 
     if (ident == NULL) {
-      fprintf(stderr, "Undefined variable: %s\n", term_ident->name);
+      fprintf(stderr, "Undefined variable: %s\n", ident_key->name);
       return 1;
     }
 
-    assign->d_type = ident->d_type;
-    term_ident->scope = ident->scope;
+    ident_key->scope = ident->scope;
+    assign->d_type = &ident->d_type;
 
     if (!assign->d_type->variable) {
       fprintf(stderr, "Attempted to modify constant: %s\n", ident->name);
@@ -116,7 +120,7 @@ unsigned char analyse_assign_statement(SemaState *state, AssignmentStatement *as
 
     assign->d_type = struct_field->d_type;
     if (!struct_field->variable) {
-      fprintf(stderr, "Attempted to modify constant: %s\n", struct_field->term_ident.name);
+      fprintf(stderr, "Attempted to modify constant: %s\n", struct_field->ident_key.name);
       return 1;
     }
     break;
@@ -129,7 +133,7 @@ unsigned char analyse_assign_statement(SemaState *state, AssignmentStatement *as
 
     assign->d_type = array_access->d_type;
     if (!array_access->variable) {
-      fprintf(stderr, "Attempted to modify element of constant array: %s\n", array_access->term_ident.name);
+      fprintf(stderr, "Attempted to modify element of constant array: %s\n", array_access->ident_key.name);
       return 1;
     }
     break;

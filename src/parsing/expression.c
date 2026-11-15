@@ -28,10 +28,10 @@ char *get_terminal_name(const Terminal *term) {
   char *buffer = NULL;
   switch (term->t_type) {
   case TERM_IDENTIFIER:
-    const TerminalIdentifier *ident = &term->t_union.ident;
+    const IdentifierKey *ident_key = &term->t_union.ident_key;
     // plus 1 to account for null terminator
-    buffer = malloc(sizeof(char) * strlen(ident->name) + 1);
-    strcpy(buffer, ident->name);
+    buffer = malloc(sizeof(char) * strlen(ident_key->name) + 1);
+    strcpy(buffer, ident_key->name);
     break;
   case TERM_FUNC_CALL:
     const FunctionCall *func_call = &term->t_union.func_call;
@@ -115,15 +115,15 @@ unsigned char parse_expression(Expression *expression, ParseState *state) {
   return 0;
 }
 
-unsigned char parse_terminal_identifier(TerminalIdentifier *term_ident, ParseState *state) {
+unsigned char parse_identifier_key(IdentifierKey *ident_key, ParseState *state) {
   const Token *next = expect_next(T_IDENTIFIER, state);
   if (next == NULL) {
     fprintf(stderr, "Expected identifier for terminal expression\n");
     return 1;
   }
 
-  term_ident->name = next->item;
-  term_ident->scope = NULL;
+  ident_key->name = next->item;
+  ident_key->scope = NULL;
   return 0;
 }
 
@@ -201,7 +201,7 @@ unsigned char parse_terminal_expr(TerminalExpr *term, ParseState *state) {
       return 0;
     }
 
-    if (parse_terminal_identifier(&term->item.t_union.ident, state) != 0) {
+    if (parse_identifier_key(&term->item.t_union.ident_key, state) != 0) {
       return 1;
     }
     term->item.t_type = TERM_IDENTIFIER;
@@ -368,12 +368,9 @@ unsigned char parse_array_literal(ArrayLiteral *array_lit, ParseState *state) {
 }
 
 unsigned char parse_array_access(ArrayAccess *array_access, ParseState *state) {
-  const Token *ident_tok = expect_next(T_IDENTIFIER, state);
-  // We can assert on the indentifier and '[' tokens since these are already checked in calling function
-  assert(ident_tok != NULL);
+  // We can assert on the identifier and '[' tokens since these are already checked in calling function
+  assert(parse_identifier_key(&array_access->ident_key, state) == 0);
   assert(expect_next(T_LEFT_SQUARE, state) != NULL);
-
-  array_access->term_ident.name = ident_tok->item;
 
   array_access->idx_tok = expect_next(T_NUMERIC_LIT, state);
   if (array_access->idx_tok == NULL) {
@@ -396,13 +393,10 @@ unsigned char parse_struct_access(StructAccess *struct_acc, ParseState *state) {
   struct_acc->field_idxs = NULL;
   struct_acc->field_names = NULL;
 
-  const Token *ident_tok = expect_next(T_IDENTIFIER, state);
-  if (ident_tok == NULL) {
+  if (parse_identifier_key(&struct_acc->ident_key, state) != 0) {
     fprintf(stderr, "Expected identifier for struct field access\n");
     return 1;
   }
-  assert(ident_tok->item != NULL);
-  struct_acc->term_ident.name = ident_tok->item;
 
   struct_acc->field_names = malloc(sizeof(char *) * MAX_FIELD_NESTING);
   size_t num_nestings = 0;

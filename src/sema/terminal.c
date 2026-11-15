@@ -40,19 +40,19 @@ unsigned char analyse_func_call(SemaState *state, const FunctionCall *func_call,
   return 0;
 }
 
-unsigned char analyse_identifier(SemaState *state, TerminalIdentifier *term_ident, const DataType *expr_type) {
-  const Identifier *ident = get_identifier(state, term_ident->name);
+unsigned char analyse_ident_key(SemaState *state, IdentifierKey *ident_key, const DataType *expr_type) {
+  const Identifier *ident = get_identifier(state, ident_key->name);
   if (ident == NULL) {
-    fprintf(stderr, "Undefined variable: %s\n", term_ident->name);
+    fprintf(stderr, "Undefined variable: %s\n", ident_key->name);
     return 1;
   }
 
-  if (!do_data_types_match(expr_type, ident->d_type)) {
+  if (!do_data_types_match(expr_type, &ident->d_type)) {
     fprintf(stderr, "Variable %s does not have expected type %s\n", ident->name, d_type_to_string(expr_type));
     return 1;
   }
 
-  term_ident->scope = ident->scope;
+  ident_key->scope = ident->scope;
 
   return 0;
 }
@@ -115,7 +115,9 @@ unsigned char analyse_struct_literal(SemaState *state, StructLiteral *struct_lit
     FieldAssignment *current_field = &struct_lit->field_assignments.elements[i];
 
     for (size_t i = 0; i < struct_def->fields.count; i++) {
-      if (strcmp(struct_def->fields.elements[i].term_ident.name, current_field->name) == 0) {
+      const size_t ident_idx = struct_def->fields.elements[i].ident_idx;
+      const Identifier *ident = &state->program->identifiers.elements[ident_idx];
+      if (strcmp(ident->name, current_field->name) == 0) {
         field_def = &struct_def->fields.elements[i];
       }
     }
@@ -143,14 +145,14 @@ unsigned char analyse_struct_literal(SemaState *state, StructLiteral *struct_lit
 }
 
 unsigned char analyse_struct_access(SemaState *state, StructAccess *struct_access, const DataType *expr_type) {
-  const Identifier *ident = get_identifier(state, struct_access->term_ident.name);
+  const Identifier *ident = get_identifier(state, struct_access->ident_key.name);
   if (ident == NULL) {
-    fprintf(stderr, "Undefined variable: %s\n", struct_access->term_ident.name);
+    fprintf(stderr, "Undefined variable: %s\n", struct_access->ident_key.name);
     return 1;
   }
-  assert(ident->d_type != NULL && ident->d_type->d_kind == D_STRUCT);
+  assert(ident->d_type.d_kind == D_STRUCT);
 
-  const StructType *current_type = &ident->d_type->d_union.s_type;
+  const StructType *current_type = &ident->d_type.d_union.s_type;
   Field *field = NULL;
   size_t current_nested_level = 0;
 
@@ -169,7 +171,9 @@ unsigned char analyse_struct_access(SemaState *state, StructAccess *struct_acces
     bool found = false;
     for (size_t i = 0; i < struct_def->fields.count; i++) {
       field = &struct_def->fields.elements[i];
-      if (strcmp(field->term_ident.name, struct_access->field_names[current_nested_level]) == 0) {
+      // TODO: This doesn't really make sense for the field to be an identifier, should look to change this
+      const Identifier *ident = &state->program->identifiers.elements[field->ident_idx];
+      if (strcmp(ident->name, struct_access->field_names[current_nested_level]) == 0) {
         field = &struct_def->fields.elements[i];
         struct_access->field_idxs[current_nested_level] = i;
         found = true;
@@ -205,8 +209,8 @@ unsigned char analyse_struct_access(SemaState *state, StructAccess *struct_acces
   }
 
   struct_access->d_type = &field->d_type;
-  struct_access->term_ident.scope = ident->scope;
-  struct_access->variable = ident->d_type->variable;
+  struct_access->ident_key.scope = ident->scope;
+  struct_access->variable = ident->d_type.variable;
 
   free(field_name);
   return 0;
@@ -229,12 +233,12 @@ unsigned char analyse_array_literal(SemaState *state, ArrayLiteral *array_lit, c
 }
 
 unsigned char analyse_array_access(SemaState *state, ArrayAccess *array_access, const DataType *expr_type) {
-  const Identifier *ident = get_identifier(state, array_access->term_ident.name);
+  const Identifier *ident = get_identifier(state, array_access->ident_key.name);
   if (ident == NULL) {
-    fprintf(stderr, "Undefined variable: %s\n", array_access->term_ident.name);
+    fprintf(stderr, "Undefined variable: %s\n", array_access->ident_key.name);
     return 1;
   }
-  assert(ident->d_type != NULL && ident->d_type->d_kind == D_ARRAY);
+  assert(ident->d_type.d_kind == D_ARRAY);
 
   long long int_val;
   // TODO: Test what happens with negative array access
@@ -244,21 +248,21 @@ unsigned char analyse_array_access(SemaState *state, ArrayAccess *array_access, 
 
   array_access->idx = (size_t)int_val;
 
-  int64_t length = ident->d_type->d_union.a_type.length;
+  int64_t length = ident->d_type.d_union.a_type.length;
   if (length != -1 && array_access->idx >= (size_t)length) {
     fprintf(stderr, "Array index %zu out of bounds for length %lld\n", array_access->idx, length);
     return 1;
   }
 
-  const DataType *element_type = ident->d_type->d_union.a_type.element_type;
+  const DataType *element_type = ident->d_type.d_union.a_type.element_type;
   if (expr_type != NULL && !do_data_types_match(element_type, expr_type)) {
     fprintf(stderr, "Expected type %s, got %s\n", d_type_to_string(expr_type), d_type_to_string(element_type));
     return 1;
   }
 
   array_access->d_type = element_type;
-  array_access->term_ident.scope = ident->scope;
-  array_access->variable = ident->d_type->d_union.a_type.element_type->variable;
+  array_access->ident_key.scope = ident->scope;
+  array_access->variable = ident->d_type.d_union.a_type.element_type->variable;
 
   return 0;
 }

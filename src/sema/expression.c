@@ -32,7 +32,7 @@ unsigned char analyse_term_expression(SemaState *state, TerminalExpr *term, cons
 
   switch (term->item.t_type) {
   case TERM_IDENTIFIER:
-    return analyse_identifier(state, &term->item.t_union.ident, expr_type);
+    return analyse_ident_key(state, &term->item.t_union.ident_key, expr_type);
   case TERM_LITERAL:
     return analyse_literal(&term->item.t_union.lit, term->sign, expr_type);
   case TERM_FUNC_CALL:

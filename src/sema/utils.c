@@ -9,34 +9,18 @@
 
 #define INT_BASE 10
 
-unsigned char insert_identifier(SemaState *state, const char *name, const DataType *d_type) {
-  const Identifier *existing = get_identifier(state, name);
-  if (existing != NULL) {
-    fprintf(stderr, "Variable %s shadows existing variable in scope\n", existing->name);
-    return 1;
-  }
-
-  Identifier new_ident = {
-      .d_type = d_type,
-      .name = name,
-      .scope = state->scopes.elements[state->scopes.count - 1],
-  };
-
-  dyn_array_insert(&state->identifiers, new_ident);
-  return 0;
-}
-
 const Identifier *get_identifier(const SemaState *state, const char *name) {
-  for (size_t i = 0; i < state->identifiers.count; i++) {
-    if (strcmp(state->identifiers.elements[i].name, name) != 0) {
+  for (size_t i = 0; i < state->program->identifiers.count; i++) {
+    const Identifier *current = &state->program->identifiers.elements[i];
+    if (strcmp(current->name, name) != 0) {
       continue;
     }
 
-    if (!is_identifier_in_scope(&state->scopes, &state->identifiers.elements[i])) {
+    if (!is_identifier_in_scope(&state->scopes, current)) {
       continue;
     }
 
-    return &state->identifiers.elements[i];
+    return current;
   }
   return NULL;
 }

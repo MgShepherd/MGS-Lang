@@ -1,4 +1,5 @@
 #include "sema/type_definition.h"
+#include "parsing/type.h"
 #include "sema/utils.h"
 #include <assert.h>
 #include <stdio.h>
@@ -7,7 +8,7 @@
 
 int field_compare(const void *field1, const void *field2);
 
-unsigned char analyse_type_definition(TypeDefinition *type_def) {
+unsigned char analyse_type_definition(SemaState *state, TypeDefinition *type_def) {
   assert(type_def->td_kind == TD_STRUCT);
   StructDefinition *struct_def = &type_def->td_union.s_def;
 
@@ -24,13 +25,14 @@ unsigned char analyse_type_definition(TypeDefinition *type_def) {
       return 1;
     }
 
+    const Identifier *ident = &state->program->identifiers.elements[current_field->ident_idx];
     for (size_t i = 0; i < num_provided_fields; i++) {
-      if (strcmp(provided_field_names[i], current_field->term_ident.name) == 0) {
-        fprintf(stderr, "Field %s provided multiple times in struct definition\n", current_field->term_ident.name);
+      if (strcmp(provided_field_names[i], ident->name) == 0) {
+        fprintf(stderr, "Field %s provided multiple times in struct definition\n", ident->name);
         return 1;
       }
     }
-    provided_field_names[num_provided_fields++] = current_field->term_ident.name;
+    provided_field_names[num_provided_fields++] = ident->name;
   }
 
   return 0;
@@ -39,5 +41,6 @@ unsigned char analyse_type_definition(TypeDefinition *type_def) {
 int field_compare(const void *item1, const void *item2) {
   const Field *field1 = (Field *)item1;
   const Field *field2 = (Field *)item2;
-  return strcmp(field1->term_ident.name, field2->term_ident.name);
+
+  return strcmp(field1->name, field2->name);
 }

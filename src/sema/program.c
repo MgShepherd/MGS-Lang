@@ -8,29 +8,25 @@
 #include <stdio.h>
 #include <string.h>
 
-#define NUM_VARIABLES_ESTIMATE 10
 #define NUM_SCOPES_ESTIMATE 5
 
 unsigned char analyse_func(SemaState *state, Function *func);
 unsigned char analyse_parameters(SemaState *state, Fields *parameters);
 
 unsigned char analyse_program(Program *program) {
-  Identifiers identifiers;
-  dyn_array_init(&identifiers, sizeof(Identifier), NUM_VARIABLES_ESTIMATE);
-  assert(identifiers.elements != NULL);
   Scopes scopes;
   dyn_array_init(&scopes, sizeof(void *), NUM_SCOPES_ESTIMATE);
   assert(scopes.elements != NULL);
 
   SemaState state = {
-      .identifiers = identifiers,
+      .program = program,
       .functions = program->functions,
       .type_defs = program->type_defs,
       .scopes = scopes,
   };
 
   for (size_t i = 0; i < program->type_defs.count; i++) {
-    if (analyse_type_definition(&program->type_defs.elements[i]) != 0) {
+    if (analyse_type_definition(&state, &program->type_defs.elements[i]) != 0) {
       free_sema_state(&state);
       return 1;
     }
@@ -76,10 +72,7 @@ unsigned char analyse_block(SemaState *state, Block *block, const DataType *func
   return 0;
 }
 
-void free_sema_state(SemaState *state) {
-  dyn_array_free(&state->identifiers);
-  dyn_array_free(&state->scopes);
-}
+void free_sema_state(SemaState *state) { dyn_array_free(&state->scopes); }
 
 unsigned char analyse_func(SemaState *state, Function *func) {
   if (analyse_parameters(state, &func->parameters) != 0) {
@@ -96,11 +89,8 @@ unsigned char analyse_func(SemaState *state, Function *func) {
 unsigned char analyse_parameters(SemaState *state, Fields *parameters) {
   for (size_t i = 0; i < parameters->count; i++) {
     Field *param = &parameters->elements[i];
-    if (insert_identifier(state, param->term_ident.name, &param->d_type) != 0) {
-      return 1;
-    }
-
-    param->term_ident.scope = state->identifiers.elements[state->identifiers.count - 1].scope;
+    Identifier *ident = &state->program->identifiers.elements[param->ident_idx];
+    ident->scope = state->scopes.elements[state->scopes.count - 1];
   }
   return 0;
 }

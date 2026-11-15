@@ -28,9 +28,9 @@ int64_t get_array_length(SemaState *state, const Expression *expr) {
     const ArrayLiteral *array_lit = &term->t_union.array_literal;
     return array_lit->items.count;
   case TERM_IDENTIFIER:
-    const Identifier *ident = get_identifier(state, term->t_union.ident.name);
-    assert(ident->d_type->d_kind == D_ARRAY);
-    return ident->d_type->d_union.a_type.length;
+    const Identifier *ident = get_identifier(state, term->t_union.ident_key.name);
+    assert(ident->d_type.d_kind == D_ARRAY);
+    return ident->d_type.d_union.a_type.length;
     break;
   default:
     return -1;

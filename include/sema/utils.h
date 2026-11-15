@@ -3,8 +3,10 @@
 
 #include "sema/program.h"
 
-unsigned char insert_identifier(SemaState *state, const char *name, const DataType *d_type);
-
+/**
+ * get_identifier will get any identifier with a matching name which is in the current scope
+ * Will return NULL if no identifier can be found
+ */
 const Identifier *get_identifier(const SemaState *state, const char *name);
 
 const Function *get_function(const Functions *functions, const char *name);

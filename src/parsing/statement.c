@@ -115,6 +115,10 @@ void statement_free(Statement *statement) {
 unsigned char parse_dec_statement(Statement *statement, ParseState *state) {
   statement->s_type = S_NONE;
   DeclarationStatement dec;
+  Identifier identifier = {
+      .ptr = NULL,
+      .scope = NULL,
+  };
 
   const Token *ident = expect_next(T_IDENTIFIER, state);
   if (ident == NULL) {
@@ -122,7 +126,7 @@ unsigned char parse_dec_statement(Statement *statement, ParseState *state) {
     return 1;
   }
   assert(ident->item != NULL);
-  dec.term_ident.name = ident->item;
+  identifier.name = ident->item;
 
   if (expect_next(T_COLON, state) == NULL) {
     fprintf(stderr, "Failed to read colon for declaration statement\n");
@@ -133,6 +137,7 @@ unsigned char parse_dec_statement(Statement *statement, ParseState *state) {
     fprintf(stderr, "Failed to parse datatype for declaration statement\n");
     return 1;
   }
+  identifier.d_type = dec.d_type;
 
   if (expect_next(T_EQUALS, state) == NULL) {
     fprintf(stderr, "Failed to read equals for declaration statement\n");
@@ -149,6 +154,9 @@ unsigned char parse_dec_statement(Statement *statement, ParseState *state) {
     return 1;
   }
 
+  dyn_array_insert(&state->identifiers, identifier);
+  dec.ident_idx = state->identifiers.count - 1;
+
   statement->s_type = S_DECLARATION;
   statement->s_union.dec = dec;
 
@@ -163,11 +171,11 @@ unsigned char parse_assign_statement(Statement *statement, ParseState *state) {
   const TokenType next_type = peek_index(state->tokens, state->idx + 1);
 
   if (next_type == T_EQUALS) {
-    assign.a_output.a_type = A_IDENTIFIER;
-    if (parse_terminal_identifier(&assign.a_output.a_union.term_ident, state) != 0) {
-      fprintf(stderr, "Failed to read identifier for assignment statement\n");
+    if (parse_identifier_key(&assign.a_output.a_union.ident_key, state) != 0) {
+      fprintf(stderr, "Failed to process identifier name for assignment statement\n");
       return 1;
     }
+    assign.a_output.a_type = A_IDENTIFIER;
   } else if (next_type == T_DOT) {
     assign.a_output.a_type = A_STRUCT_FIELD;
     if (parse_struct_access(&assign.a_output.a_union.struct_field, state) != 0) {

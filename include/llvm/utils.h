@@ -2,16 +2,17 @@
 #define _LLVM_UTILS_H_
 
 #include "parsing/data_type.h"
+#include "parsing/type.h"
 #include "llvm/llvm.h"
 
 /**
- * load_identifier will return the ValueRef struct which represents the provided term_ident
+ * load_identifier will return the Identifer matching the provided IdentifierKey
  * Finds ValueRef which has matching name and scope as requested identifier
  * @param values     - The dynamic array of ValueRefs which contain all defined values
- * @param term_ident - The identifier we want to load
- * @return             The ValueRef representation of the identifier - NULL if not found
+ * @param ident_key  - The identifier we want to load
+ * @return           - The ValueRef representation of the identifier - NULL if not found
  */
-const ValueRef *load_identifier(const ValueRefs *values, const TerminalIdentifier *term_ident);
+const Identifier *load_identifier(const Identifiers *identifiers, const IdentifierKey *ident_key);
 
 /**
  * load_function will return the LlvmFunc struct which matches the provided identifier string

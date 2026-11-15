@@ -1,16 +1,17 @@
 #include "llvm/gep.h"
+#include "parsing/type.h"
 
 #include "llvm/utils.h"
 #include <assert.h>
 
-void build_array_length_check(IRState *state, const TerminalIdentifier *term_ident, const TypeDefinitionRef *type_def,
+void build_array_length_check(IRState *state, const IdentifierKey *ident_key, const TypeDefinitionRef *type_def,
                               LLVMValueRef index);
 
-LLVMValueRef get_element_ptr(IRState *state, const TerminalIdentifier *term_ident, const size_t *indices,
+LLVMValueRef get_element_ptr(IRState *state, const IdentifierKey *ident_key, const size_t *indices,
                              size_t num_indices) {
-  const ValueRef *outer_val = load_identifier(&state->values, term_ident);
-  assert(outer_val != NULL);
-  const LLVMTypeRef outer_type = get_type(state, outer_val->d_type);
+  const Identifier *ident = load_identifier(&state->program->identifiers, ident_key);
+  assert(ident_key != NULL && ident->ptr != NULL);
+  const LLVMTypeRef outer_type = get_type(state, &ident->d_type);
 
   LLVMValueRef llvm_indices[num_indices + 1];
 
@@ -22,17 +23,16 @@ LLVMValueRef get_element_ptr(IRState *state, const TerminalIdentifier *term_iden
   }
 
   // TODO: Improve how we create LLVM names in order to make IR easier to read/understand
-  return LLVMBuildInBoundsGEP2(state->builder, outer_type, outer_val->ptr, llvm_indices, num_indices + 1,
-                               "access_element");
+  return LLVMBuildInBoundsGEP2(state->builder, outer_type, ident->ptr, llvm_indices, num_indices + 1, "access_element");
 }
 
-LLVMValueRef get_array_element_ptr(IRState *state, const TerminalIdentifier *term_ident, const size_t *indices,
+LLVMValueRef get_array_element_ptr(IRState *state, const IdentifierKey *ident_key, const size_t *indices,
                                    size_t num_indices) {
   const TypeDefinitionRef *type_def = load_type_definition(&state->type_refs, ARRAY_TYPE_DEFINITION_NAME);
   assert(type_def != NULL);
 
   const size_t array_ptr_idx = 1;
-  const LLVMValueRef array_data_ptr = get_element_ptr(state, term_ident, &array_ptr_idx, 1);
+  const LLVMValueRef array_data_ptr = get_element_ptr(state, ident_key, &array_ptr_idx, 1);
   const LLVMValueRef array_data =
       LLVMBuildLoad2(state->builder, type_def->field_types[array_ptr_idx], array_data_ptr, "get_array_data");
 
@@ -40,21 +40,21 @@ LLVMValueRef get_array_element_ptr(IRState *state, const TerminalIdentifier *ter
   const LLVMTypeRef index_type = LLVMInt32TypeInContext(state->context);
   LLVMValueRef array_indices[] = {LLVMConstInt(index_type, indices[0], false)};
 
-  const ValueRef *outer_val = load_identifier(&state->values, term_ident);
-  const ArrayType *array_type = &outer_val->d_type->d_union.a_type;
+  const Identifier *ident = load_identifier(&state->program->identifiers, ident_key);
+  const ArrayType *array_type = &ident->d_type.d_union.a_type;
   // When length is -1, means the length is not known at compile time and we should add a runtime check on the length
   if (array_type->length == -1) {
-    build_array_length_check(state, term_ident, type_def, array_indices[0]);
+    build_array_length_check(state, ident_key, type_def, array_indices[0]);
   }
 
   return LLVMBuildGEP2(state->builder, index_type, array_data, array_indices, num_indices, "access_array");
 }
 
 // TODO: Update this to support multi-dimensional arrays
-void build_array_length_check(IRState *state, const TerminalIdentifier *term_ident, const TypeDefinitionRef *type_def,
+void build_array_length_check(IRState *state, const IdentifierKey *ident_key, const TypeDefinitionRef *type_def,
                               LLVMValueRef index) {
   size_t array_length_idx = 0;
-  LLVMValueRef array_length_ptr = get_element_ptr(state, term_ident, &array_length_idx, 1);
+  LLVMValueRef array_length_ptr = get_element_ptr(state, ident_key, &array_length_idx, 1);
   LLVMValueRef array_length =
       LLVMBuildLoad2(state->builder, type_def->field_types[array_length_idx], array_length_ptr, "get_array_len");
 

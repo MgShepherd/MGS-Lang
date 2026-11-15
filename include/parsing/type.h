@@ -2,6 +2,7 @@
 #define _PARSING_TYPE_H_
 
 #include "lexer.h"
+#include <llvm-c/Core.h>
 
 #define STATEMENT_TYPES                                                                                                \
   X(S_NONE)                                                                                                            \
@@ -148,9 +149,12 @@ typedef struct {
 
 typedef struct {
   const char *name;
+  DataType d_type;
   // Will be populated by sema
   const void *scope;
-} TerminalIdentifier;
+  // Will be populated by llvm
+  LLVMValueRef ptr;
+} Identifier;
 
 typedef struct {
   const Token *tok;
@@ -158,8 +162,15 @@ typedef struct {
   Literal literal;
 } TerminalLiteral;
 
+// IdentifierKey is used to allow us to retrieve identifiers from the Identifier array
 typedef struct {
-  TerminalIdentifier term_ident;
+  const char *name;
+  // scope will be populated as part of sema
+  const void *scope;
+} IdentifierKey;
+
+typedef struct {
+  IdentifierKey ident_key;
   const char **field_names;
   size_t num_field_nestings;
   // type_def, field_idxs, variable and d_type will be populated as part of semantic analysis
@@ -171,7 +182,7 @@ typedef struct {
 } StructAccess;
 
 typedef struct {
-  TerminalIdentifier term_ident;
+  IdentifierKey ident_key;
   // TODO: Update this to be able to support nested arrays
   const Token *idx_tok;
   // d_type and idx will be populated as part of semantic analysis
@@ -199,8 +210,9 @@ typedef struct {
 } ArrayLiteral;
 
 typedef struct {
+  // TODO: Can we refactor TerminalLiteral in the same way we have for identifier
   TerminalLiteral lit;
-  TerminalIdentifier ident;
+  IdentifierKey ident_key;
   FunctionCall func_call;
   StructLiteral struct_literal;
   StructAccess struct_access;
@@ -240,7 +252,10 @@ struct FieldAssignment {
 };
 
 typedef struct {
-  TerminalIdentifier term_ident;
+  size_t ident_idx;
+  // TODO: Name is stored here so that we can compare fields properly, is there a better approach?
+  const char *name;
+  // TODO: We may not need d_type here now that the identifier contains the data_type as well
   DataType d_type;
 } Field;
 
@@ -270,13 +285,14 @@ typedef struct {
 } Statements;
 
 typedef struct {
-  TerminalIdentifier term_ident;
+  size_t ident_idx;
+  // TODO: Do we need d_type here now that the identifier contains the data_type as well
   DataType d_type;
   Expression expr;
 } DeclarationStatement;
 
 typedef union {
-  TerminalIdentifier term_ident;
+  IdentifierKey ident_key;
   StructAccess struct_field;
   ArrayAccess array_index;
 } AssignmentOutputUnion;
@@ -361,8 +377,15 @@ typedef struct {
 } TypeDefinitions;
 
 typedef struct {
+  Identifier *elements;
+  size_t count;
+  size_t capacity;
+} Identifiers;
+
+typedef struct {
   Functions functions;
   TypeDefinitions type_defs;
+  Identifiers identifiers;
   // requires_array_type will be filled in during sema
   // This is needed since we have a single global array type, which we only want to define if the program actually uses
   // arrays
@@ -372,6 +395,7 @@ typedef struct {
 typedef struct {
   const Tokens *tokens;
   size_t idx;
+  Identifiers identifiers;
 } ParseState;
 
 /*

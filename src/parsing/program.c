@@ -1,5 +1,8 @@
 #include "parsing/program.h"
 
+#include "parsing/function.h"
+#include "parsing/type_definition.h"
+
 #include "dynamic_array.h"
 #include "lexer.h"
 #include <assert.h>
@@ -19,6 +22,8 @@ unsigned char parse_program(Program *program, const Tokens *tokens) {
 
   dyn_array_init(&program->functions, sizeof(Function), capacity);
   dyn_array_init(&program->type_defs, sizeof(TypeDefinition), USER_TYPES_ARRAY_LEN);
+
+  // NEXT TODO: Add ParseState into logic with idx and tokens, prep for store Identifier list
 
   size_t idx = 0;
   while (idx < tokens->count) {

@@ -4,6 +4,7 @@
 #include "lexer.h"
 #include "parsing/data_type.h"
 #include "parsing/statement.h"
+#include "parsing/type_definition.h"
 #include "parsing/utils.h"
 #include <stdio.h>
 

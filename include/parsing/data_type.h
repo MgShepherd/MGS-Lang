@@ -4,30 +4,6 @@
 #include "parsing/type.h"
 #include <stdint.h>
 
-typedef struct DataType DataType;
-
-typedef struct {
-  const char *name;
-} StructType;
-
-typedef struct {
-  DataType *element_type;
-  // length will be populated as part of sema - if length is unknown at compile time, -1 will be used here
-  int64_t length;
-} ArrayType;
-
-typedef struct {
-  PrimitiveType p_type;
-  StructType s_type;
-  ArrayType a_type;
-} DataTypeUnion;
-
-struct DataType {
-  DataTypeUnion d_union;
-  DataTypeKind d_kind;
-  bool variable;
-};
-
 unsigned char parse_data_type(DataType *data_type, const Tokens *tokens, size_t *idx);
 
 const char *d_type_to_string(const DataType *data_type);

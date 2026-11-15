@@ -1,5 +1,6 @@
 #include "parsing/type_definition.h"
 #include "dynamic_array.h"
+#include "parsing/data_type.h"
 #include "parsing/utils.h"
 #include <assert.h>
 #include <stdio.h>

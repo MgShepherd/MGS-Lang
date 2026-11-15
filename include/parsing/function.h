@@ -1,15 +1,7 @@
 #ifndef _PARSING_FUNCTION_H_
 #define _PARSING_FUNCTION_H_
 
-#include "parsing/statement.h"
-#include "parsing/type_definition.h"
-
-typedef struct {
-  const char *name;
-  DataType return_type;
-  Fields parameters;
-  Block block;
-} Function;
+#include "parsing/type.h"
 
 unsigned char parse_function(Function *function, const Tokens *tokens, size_t *idx);
 

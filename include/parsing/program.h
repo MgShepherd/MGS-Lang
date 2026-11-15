@@ -2,29 +2,7 @@
 #define _PARSING_PROGRAM_H_
 
 #include "lexer.h"
-#include "parsing/function.h"
-#include "parsing/type_definition.h"
-
-typedef struct {
-  Function *elements;
-  size_t count;
-  size_t capacity;
-} Functions;
-
-typedef struct {
-  TypeDefinition *elements;
-  size_t count;
-  size_t capacity;
-} TypeDefinitions;
-
-typedef struct {
-  Functions functions;
-  TypeDefinitions type_defs;
-  // requires_array_type will be filled in during sema
-  // This is needed since we have a single global array type, which we only want to define if the program actually uses
-  // arrays
-  bool requires_array_type;
-} Program;
+#include "parsing/type.h"
 
 /*
  * parse_program will convert the filled tokens into a Program Syntax Tree

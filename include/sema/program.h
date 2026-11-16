@@ -1,10 +1,8 @@
 #ifndef _SEMA_PROGRAM_H_
 #define _SEMA_PROGRAM_H_
 
+#include "parsing/type.h"
 #include <stdlib.h>
-
-#include "parsing/data_type.h"
-#include "parsing/program.h"
 
 typedef struct {
   const void **elements;

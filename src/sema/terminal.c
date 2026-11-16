@@ -57,29 +57,29 @@ unsigned char analyse_ident_key(SemaState *state, IdentifierKey *ident_key, cons
   return 0;
 }
 
-unsigned char analyse_literal(TerminalLiteral *term_lit, const Token *sign, const DataType *expr_type) {
-  switch (term_lit->tok->t_type) {
+unsigned char analyse_literal(Literal *lit, const Token *sign, const DataType *expr_type) {
+  switch (lit->tok->t_type) {
   case T_NUMERIC_LIT:
     if (!is_integer_type(expr_type)) {
-      fprintf(stderr, "Numeric literal %s used in non-numerical expression type: %s\n", term_lit->tok->item,
+      fprintf(stderr, "Numeric literal %s used in non-numerical expression type: %s\n", lit->tok->item,
               d_type_to_string(expr_type));
       return 1;
     }
     const bool is_negative = sign != NULL && sign->t_type == T_MINUS;
-    return analyse_numeric_literal(term_lit, is_negative, expr_type);
+    return analyse_numeric_literal(lit, is_negative, expr_type);
   case T_TRUE:
   case T_FALSE:
     if (expr_type->d_kind != D_PRIMITIVE || expr_type->d_union.p_type != P_BOOL) {
-      fprintf(stderr, "Boolean literal %s used in non-boolean expression type: %s\n", term_lit->tok->item,
+      fprintf(stderr, "Boolean literal %s used in non-boolean expression type: %s\n", lit->tok->item,
               d_type_to_string(expr_type));
       return 1;
     }
 
-    term_lit->literal.d_type = expr_type;
-    term_lit->literal.l_union.b = term_lit->tok->t_type == T_TRUE;
+    lit->d_type = expr_type;
+    lit->l_union.b = lit->tok->t_type == T_TRUE;
     return 0;
   default:
-    fprintf(stderr, "Unexpected token type for terminal expression: %s\n", t_type_to_string(term_lit->tok->t_type));
+    fprintf(stderr, "Unexpected token type for terminal expression: %s\n", t_type_to_string(lit->tok->t_type));
     return 1;
   }
 
@@ -267,47 +267,45 @@ unsigned char analyse_array_access(SemaState *state, ArrayAccess *array_access, 
   return 0;
 }
 
-unsigned char analyse_numeric_literal(TerminalLiteral *term_lit, bool is_negative, const DataType *expr_type) {
-  assert(term_lit->tok->t_type == T_NUMERIC_LIT && term_lit->tok->item != NULL);
-  term_lit->literal.d_type = expr_type;
+unsigned char analyse_numeric_literal(Literal *lit, bool is_negative, const DataType *expr_type) {
+  assert(lit->tok->t_type == T_NUMERIC_LIT && lit->tok->item != NULL);
+  lit->d_type = expr_type;
+  assert(lit->d_type->d_kind == D_PRIMITIVE);
 
   long long int_val;
-  if (tok_to_integer(&int_val, term_lit->tok, is_negative) != 0) {
+  if (tok_to_integer(&int_val, lit->tok, is_negative) != 0) {
     return 1;
   }
 
-  assert(term_lit->literal.d_type->d_kind == D_PRIMITIVE);
-
-  switch (term_lit->literal.d_type->d_union.p_type) {
+  switch (lit->d_type->d_union.p_type) {
   case P_I8:
     if (!is_number_in_range(int_val, INT8_MIN, INT8_MAX)) {
       fprintf(stderr, "Value %lld does not fit in i8 integer\n", int_val);
       return 1;
     }
-    term_lit->literal.l_union.i8 = (int8_t)int_val;
+    lit->l_union.i8 = (int8_t)int_val;
     break;
   case P_I16:
     if (!is_number_in_range(int_val, INT16_MIN, INT16_MAX)) {
       fprintf(stderr, "Value %lld does not fit in i16 integer\n", int_val);
       return 1;
     }
-    term_lit->literal.l_union.i16 = (int16_t)int_val;
+    lit->l_union.i16 = (int16_t)int_val;
     break;
   case P_I32:
     if (!is_number_in_range(int_val, INT32_MIN, INT32_MAX)) {
       fprintf(stderr, "Value %lld does not fit in i32 integer\n", int_val);
       return 1;
     }
-    term_lit->literal.l_union.i32 = (int32_t)int_val;
+    lit->l_union.i32 = (int32_t)int_val;
     break;
   case P_I64:
-    term_lit->literal.l_union.i64 = (int64_t)int_val;
+    lit->l_union.i64 = (int64_t)int_val;
     break;
   default:
     assert(false);
   }
 
-  assert(term_lit->tok->t_type == T_NUMERIC_LIT && term_lit->tok->item != NULL);
   return 0;
 }
 

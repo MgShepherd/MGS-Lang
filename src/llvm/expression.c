@@ -39,7 +39,7 @@ LLVMValueRef build_terminal_expr(IRState *state, const TerminalExpr *term, const
     result = build_identifier(state, &term->item.t_union.ident_key, d_type, store);
     break;
   case TERM_LITERAL:
-    result = build_literal(state, &term->item.t_union.lit.literal, d_type, store);
+    result = build_literal(state, &term->item.t_union.lit, d_type, store);
     break;
   case TERM_FUNC_CALL:
     result = build_func_call(state, &term->item.t_union.func_call, d_type, store);

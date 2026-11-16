@@ -131,12 +131,6 @@ struct DataType {
 };
 
 typedef struct {
-  LiteralUnion l_union;
-  // d_type will be populated as part of semantic analysis
-  const DataType *d_type;
-} Literal;
-
-typedef struct {
   Expression *elements;
   size_t count;
   size_t capacity;
@@ -158,9 +152,10 @@ typedef struct {
 
 typedef struct {
   const Token *tok;
-  // Will be populated by sema
-  Literal literal;
-} TerminalLiteral;
+  // l_union and d_type will be populated as part of semantic analysis
+  LiteralUnion l_union;
+  const DataType *d_type;
+} Literal;
 
 // IdentifierKey is used to allow us to retrieve identifiers from the Identifier array
 typedef struct {
@@ -210,8 +205,7 @@ typedef struct {
 } ArrayLiteral;
 
 typedef struct {
-  // TODO: Can we refactor TerminalLiteral in the same way we have for identifier
-  TerminalLiteral lit;
+  Literal lit;
   IdentifierKey ident_key;
   FunctionCall func_call;
   StructLiteral struct_literal;

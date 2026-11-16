@@ -1,5 +1,5 @@
 #include "sema/expression.h"
-#include "parsing/type.h"
+#include "parsing/data_type.h"
 #include "sema/terminal.h"
 #include "sema/utils.h"
 #include <assert.h>

@@ -15,7 +15,7 @@
 #define ARRAY_LEN_ESTIMATE 5
 
 unsigned char parse_terminal_expr(TerminalExpr *term, ParseState *state);
-unsigned char parse_terminal_literal(TerminalLiteral *term_literal, ParseState *state);
+unsigned char parse_literal(Literal *lit, ParseState *state);
 unsigned char parse_func_call(FunctionCall *func_call, ParseState *state);
 unsigned char parse_expression_list(Expressions *expressions, ParseState *state, const TokenType list_end_type);
 unsigned char parse_field_assignments(FieldAssignments *field_assignments, ParseState *state);
@@ -41,7 +41,7 @@ char *get_terminal_name(const Terminal *term) {
     assert(result > 0);
     break;
   case TERM_LITERAL:
-    const TerminalLiteral *lit = &term->t_union.lit;
+    const Literal *lit = &term->t_union.lit;
     // plus 1 to account for null terminator
     buffer = malloc(sizeof(char) * strlen(lit->tok->item) + 1);
     strcpy(buffer, lit->tok->item);
@@ -220,7 +220,7 @@ unsigned char parse_terminal_expr(TerminalExpr *term, ParseState *state) {
     return 0;
   }
 
-  if (parse_terminal_literal(&term->item.t_union.lit, state) != 0) {
+  if (parse_literal(&term->item.t_union.lit, state) != 0) {
     return 1;
   }
   term->item.t_type = TERM_LITERAL;
@@ -286,7 +286,7 @@ unsigned char parse_field_assignments(FieldAssignments *field_assignments, Parse
   return 0;
 }
 
-unsigned char parse_terminal_literal(TerminalLiteral *term_literal, ParseState *state) {
+unsigned char parse_literal(Literal *lit, ParseState *state) {
   static const TokenType LITERAL_TOKEN_TYPES[] = {T_NUMERIC_LIT, T_TRUE, T_FALSE};
   static const size_t LITERAL_TOKEN_LEN = sizeof(LITERAL_TOKEN_TYPES) / sizeof(TokenType);
 
@@ -294,7 +294,7 @@ unsigned char parse_terminal_literal(TerminalLiteral *term_literal, ParseState *
 
   for (size_t i = 0; i < LITERAL_TOKEN_LEN; i++) {
     if (next->t_type == LITERAL_TOKEN_TYPES[i]) {
-      term_literal->tok = next;
+      lit->tok = next;
       return 0;
     }
   }

@@ -28,7 +28,7 @@ const Identifier *load_identifier(const Identifiers *identifiers, const Identifi
   return NULL;
 }
 
-const LlvmFunc *load_function(const FuncRefs *funcs, const char *identifier) {
+const Function *load_function(const Functions *funcs, const char *identifier) {
   for (size_t i = 0; i < funcs->count; i++) {
     if (strcmp(funcs->elements[i].name, identifier) == 0) {
       return &funcs->elements[i];

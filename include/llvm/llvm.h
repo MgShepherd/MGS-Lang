@@ -1,31 +1,16 @@
 #ifndef _LLVM_H_
 #define _LLVM_H_
 
-#include "parsing/program.h"
+#include "parsing/type.h"
 #include "llvm/type_definition.h"
 #include <llvm-c/Core.h>
-
-typedef struct {
-  LLVMTypeRef *param_types;
-  size_t num_params;
-  LLVMTypeRef func_type;
-  LLVMValueRef ptr;
-  const char *name;
-} LlvmFunc;
-
-typedef struct {
-  LlvmFunc *elements;
-  size_t count;
-  size_t capacity;
-} FuncRefs;
 
 struct IRState {
   LLVMContextRef context;
   LLVMModuleRef module;
   LLVMBuilderRef builder;
   LLVMValueRef current_func;
-  const Program *program;
-  FuncRefs funcs;
+  Program *program;
   TypeDefinitionRefs type_refs;
 };
 
@@ -36,6 +21,6 @@ struct IRState {
  * All LLVM state is cleaned up as part of this function, no additional cleanup neccessary
  * Returns 0 on success, 1 on error
  */
-unsigned char program_to_object_file(const Program *program, const char *file_name, bool llvm_debug);
+unsigned char program_to_object_file(Program *program, const char *file_name, bool llvm_debug);
 
 #endif // _LLVM_H_

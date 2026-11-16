@@ -1,7 +1,6 @@
 #include "llvm/llvm.h"
 #include "dynamic_array.h"
 #include "parsing/data_type.h"
-#include "parsing/expression.h"
 #include "parsing/type.h"
 #include "llvm-c/Types.h"
 #include "llvm/expression.h"
@@ -24,9 +23,9 @@
 #define TYPE_DEFINITIONS_LEN_ESTIMATE 5
 #define ARRAY_REALLOC_FACTOR 2
 
-unsigned char init_ir_state(IRState *state, const Program *program);
+unsigned char init_ir_state(IRState *state, Program *program);
 
-unsigned char build_function(IRState *state, const Function *func);
+unsigned char build_function(IRState *state, Function *func);
 
 unsigned char build_statements(IRState *state, const Statements *statements);
 unsigned char build_statement(IRState *state, const Statement *statement);
@@ -41,7 +40,7 @@ unsigned char generate_object_file(const IRState *state, const char *file_name);
 
 void dispose_ir_state(IRState *state);
 
-unsigned char program_to_object_file(const Program *program, const char *file_name, bool llvm_debug) {
+unsigned char program_to_object_file(Program *program, const char *file_name, bool llvm_debug) {
   assert(program != NULL);
 
   IRState state;
@@ -63,16 +62,16 @@ unsigned char program_to_object_file(const Program *program, const char *file_na
   param_types[0] = LLVMInt32TypeInContext(state.context);
   LLVMTypeRef exit_type = LLVMFunctionType(LLVMVoidTypeInContext(state.context), param_types, 1, false);
   LLVMValueRef func_ptr = LLVMAddFunction(state.module, "exit", exit_type);
-  const LlvmFunc exit_func = {
+  const Function exit_func = {
       .param_types = param_types,
-      .num_params = 1,
       .ptr = func_ptr,
       .func_type = exit_type,
       .name = "exit",
   };
-  dyn_array_insert(&state.funcs, exit_func);
+  dyn_array_insert(&state.program->functions, exit_func);
 
-  for (size_t i = 0; i < program->functions.count; i++) {
+  // Subtract 1 from the count here so that we don't build the exit function
+  for (size_t i = 0; i < program->functions.count - 1; i++) {
     if (build_function(&state, &program->functions.elements[i]) != 0) {
       dispose_ir_state(&state);
       return 1;
@@ -101,8 +100,7 @@ unsigned char program_to_object_file(const Program *program, const char *file_na
   return 0;
 }
 
-unsigned char init_ir_state(IRState *state, const Program *program) {
-  dyn_array_init(&state->funcs, sizeof(LlvmFunc), FUNC_LEN_ESTIMATE);
+unsigned char init_ir_state(IRState *state, Program *program) {
   dyn_array_init(&state->type_refs, sizeof(TypeDefinitionRef), TYPE_DEFINITIONS_LEN_ESTIMATE);
 
   // TODO: This creation logic will need updating when supporting multiple source files
@@ -114,38 +112,35 @@ unsigned char init_ir_state(IRState *state, const Program *program) {
   return 0;
 }
 
-unsigned char build_function(IRState *state, const Function *func) {
+unsigned char build_function(IRState *state, Function *func) {
   LLVMTypeRef return_type = get_type(state, &func->return_type);
 
-  LLVMTypeRef *param_types = malloc(sizeof(LLVMTypeRef) * func->parameters.count);
-  if (param_types == NULL) {
-    fprintf(stderr, "Failed to allocate required space for function parameters\n");
-    return 1;
-  }
+  func->param_types = malloc(sizeof(LLVMTypeRef) * func->parameters.count);
+  assert(func->param_types != NULL);
 
   for (size_t i = 0; i < func->parameters.count; i++) {
-    param_types[i] = get_type(state, &func->parameters.elements[i].d_type);
+    func->param_types[i] = get_type(state, &func->parameters.elements[i].d_type);
   }
-  LLVMTypeRef func_type = LLVMFunctionType(return_type, param_types, func->parameters.count, false);
-  LLVMValueRef llvm_func = LLVMAddFunction(state->module, func->name, func_type);
+  func->func_type = LLVMFunctionType(return_type, func->param_types, func->parameters.count, false);
+  func->ptr = LLVMAddFunction(state->module, func->name, func->func_type);
 
-  LLVMBasicBlockRef block = LLVMAppendBasicBlockInContext(state->context, llvm_func, func->name);
+  LLVMBasicBlockRef block = LLVMAppendBasicBlockInContext(state->context, func->ptr, func->name);
   LLVMPositionBuilderAtEnd(state->builder, block);
 
   if (func->parameters.count > 0) {
     LLVMValueRef params[func->parameters.count];
-    LLVMGetParams(llvm_func, params);
+    LLVMGetParams(func->ptr, params);
 
     for (size_t i = 0; i < func->parameters.count; i++) {
       const Field *param = &func->parameters.elements[i];
       Identifier *ident = &state->program->identifiers.elements[param->ident_idx];
-      ident->ptr = LLVMBuildAlloca(state->builder, param_types[i], ident->name);
+      ident->ptr = LLVMBuildAlloca(state->builder, func->param_types[i], ident->name);
       assert(ident->ptr != NULL);
       LLVMBuildStore(state->builder, params[i], ident->ptr);
     }
   }
 
-  state->current_func = llvm_func;
+  state->current_func = func->ptr;
   for (size_t i = 0; i < func->block.body.count; i++) {
     if (build_statement(state, &func->block.body.elements[i]) != 0) {
       fprintf(stderr, "Failed to build statement\n");
@@ -158,20 +153,10 @@ unsigned char build_function(IRState *state, const Function *func) {
     LLVMBuildRetVoid(state->builder);
   }
 
-  if (LLVMVerifyFunction(llvm_func, LLVMPrintMessageAction) != 0) {
+  if (LLVMVerifyFunction(func->ptr, LLVMPrintMessageAction) != 0) {
     fprintf(stderr, "Failed to build function\n");
     return 1;
   }
-
-  const LlvmFunc func_llvm = {
-      .param_types = param_types,
-      .func_type = func_type,
-      .num_params = func->parameters.count,
-      .ptr = llvm_func,
-      .name = func->name,
-  };
-
-  dyn_array_insert(&state->funcs, func_llvm);
 
   return 0;
 }
@@ -216,6 +201,8 @@ unsigned char build_statement(IRState *state, const Statement *statement) {
 }
 
 void build_return_statement(IRState *state, const ReturnStatement *ret) {
+  printf("building return statement\n");
+  printf("Return statement d_type: %s\n", d_type_to_string(ret->d_type));
   assert(ret != NULL);
 
   const LLVMTypeRef statement_type = get_type(state, ret->d_type);
@@ -359,11 +346,6 @@ unsigned char generate_object_file(const IRState *state, const char *file_name) 
 }
 
 void dispose_ir_state(IRState *state) {
-  for (size_t i = 0; i < state->funcs.count; i++) {
-    free(state->funcs.elements[i].param_types);
-  }
-
-  dyn_array_free(&state->funcs);
   for (size_t i = 0; i < state->type_refs.count; i++) {
     free(state->type_refs.elements[i].field_types);
   }

@@ -356,6 +356,10 @@ typedef struct {
   DataType return_type;
   Fields parameters;
   Block block;
+  // Will be filled is as part of llvm
+  LLVMTypeRef *param_types;
+  LLVMTypeRef func_type;
+  LLVMValueRef ptr;
 } Function;
 
 typedef struct {

@@ -1,26 +1,25 @@
 #ifndef _LLVM_UTILS_H_
 #define _LLVM_UTILS_H_
 
-#include "parsing/data_type.h"
 #include "parsing/type.h"
 #include "llvm/llvm.h"
 
 /**
  * load_identifier will return the Identifer matching the provided IdentifierKey
  * Finds ValueRef which has matching name and scope as requested identifier
- * @param values     - The dynamic array of ValueRefs which contain all defined values
- * @param ident_key  - The identifier we want to load
- * @return           - The ValueRef representation of the identifier - NULL if not found
+ * @param identifiers - The dynamic array of Identifiers which contain all defined values
+ * @param ident_key   - The identifier we want to load
+ * @return            - The ValueRef representation of the identifier - NULL if not found
  */
 const Identifier *load_identifier(const Identifiers *identifiers, const IdentifierKey *ident_key);
 
 /**
- * load_function will return the LlvmFunc struct which matches the provided identifier string
+ * load_function will return the Function struct which matches the provided identifier string
  * @param funcs      - The dynamic array of funcs which contain all defined functions
  * @param identifier - The identifier of the function we want to load
- * @return             The LlvmFunc representation of the function - NULL if not found
+ * @return             The matched function - NULL if not found
  */
-const LlvmFunc *load_function(const FuncRefs *funcs, const char *identifier);
+const Function *load_function(const Functions *funcs, const char *identifier);
 
 /**
  * load_type_definition will return the TypeDefinitionRef which matches the provided identifier string

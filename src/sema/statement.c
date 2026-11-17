@@ -1,7 +1,6 @@
 #include "sema/statement.h"
 
 #include "dynamic_array.h"
-#include "parsing/expression.h"
 #include "parsing/type.h"
 #include "sema/data_type.h"
 #include "sema/expression.h"

@@ -50,6 +50,10 @@ const char *d_type_to_string(const DataType *data_type) {
   switch (data_type->d_kind) {
   case D_PRIMITIVE:
     return p_type_to_string(data_type->d_union.p_type);
+  case D_ARRAY:
+    return "ARRAY";
+  case D_STRUCT:
+    return "STRUCT";
   default:
     assert(false);
   }

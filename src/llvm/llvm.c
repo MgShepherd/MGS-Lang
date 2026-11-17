@@ -201,8 +201,6 @@ unsigned char build_statement(IRState *state, const Statement *statement) {
 }
 
 void build_return_statement(IRState *state, const ReturnStatement *ret) {
-  printf("building return statement\n");
-  printf("Return statement d_type: %s\n", d_type_to_string(ret->d_type));
   assert(ret != NULL);
 
   const LLVMTypeRef statement_type = get_type(state, ret->d_type);

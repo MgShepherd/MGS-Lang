@@ -28,10 +28,16 @@ const Identifier *load_identifier(const Identifiers *identifiers, const Identifi
   return NULL;
 }
 
-const LlvmFunc *load_function(const FuncRefs *funcs, const char *identifier) {
-  for (size_t i = 0; i < funcs->count; i++) {
-    if (strcmp(funcs->elements[i].name, identifier) == 0) {
-      return &funcs->elements[i];
+const Function *load_function(const IRState *state, const char *identifier) {
+  for (size_t i = 0; i < state->program->functions.count; i++) {
+    if (strcmp(state->program->functions.elements[i].name, identifier) == 0) {
+      return &state->program->functions.elements[i];
+    }
+  }
+
+  for (size_t i = 0; i < state->external_funcs.count; i++) {
+    if (strcmp(state->external_funcs.elements[i].name, identifier) == 0) {
+      return &state->external_funcs.elements[i];
     }
   }
 

@@ -17,6 +17,9 @@ void function_free(Function *function) {
   data_type_free(&function->return_type);
   statements_free(&function->block.body);
   dyn_array_free(&function->parameters);
+  if (function->param_types != NULL) {
+    free(function->param_types);
+  }
 }
 
 unsigned char parse_function(Function *function, ParseState *state) {

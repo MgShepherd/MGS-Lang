@@ -356,6 +356,10 @@ typedef struct {
   DataType return_type;
   Fields parameters;
   Block block;
+  // Will be filled is as part of llvm
+  LLVMTypeRef *param_types;
+  LLVMTypeRef func_type;
+  LLVMValueRef ptr;
 } Function;
 
 typedef struct {
@@ -377,6 +381,7 @@ typedef struct {
 } Identifiers;
 
 typedef struct {
+  // TODO: Really these should become fixed arrays that they they can't be accidently re-allocated after parsing
   Functions functions;
   TypeDefinitions type_defs;
   Identifiers identifiers;

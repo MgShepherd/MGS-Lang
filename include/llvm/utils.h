@@ -15,11 +15,12 @@ const Identifier *load_identifier(const Identifiers *identifiers, const Identifi
 
 /**
  * load_function will return the Function struct which matches the provided identifier string
+ * Will first look through user defined functions, and then check external functions
  * @param funcs      - The dynamic array of funcs which contain all defined functions
  * @param identifier - The identifier of the function we want to load
  * @return             The matched function - NULL if not found
  */
-const Function *load_function(const Functions *funcs, const char *identifier);
+const Function *load_function(const IRState *state, const char *identifier);
 
 /**
  * load_type_definition will return the TypeDefinitionRef which matches the provided identifier string

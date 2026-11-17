@@ -381,6 +381,7 @@ typedef struct {
 } Identifiers;
 
 typedef struct {
+  // TODO: Really these should become fixed arrays that they they can't be accidently re-allocated after parsing
   Functions functions;
   TypeDefinitions type_defs;
   Identifiers identifiers;

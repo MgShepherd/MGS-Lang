@@ -1,6 +1,6 @@
 #include "llvm/llvm.h"
 #include "dynamic_array.h"
-#include "parsing/data_type.h"
+#include "parsing/function.h"
 #include "parsing/type.h"
 #include "llvm-c/Types.h"
 #include "llvm/expression.h"
@@ -22,8 +22,9 @@
 #define FUNC_LEN_ESTIMATE 5
 #define TYPE_DEFINITIONS_LEN_ESTIMATE 5
 #define ARRAY_REALLOC_FACTOR 2
+#define EXTERNAL_FUNCS_LEN_ESTIMATE 1
 
-unsigned char init_ir_state(IRState *state, Program *program);
+unsigned char init_ir_state(IRState *state, const Program *program);
 
 unsigned char build_function(IRState *state, Function *func);
 
@@ -40,7 +41,7 @@ unsigned char generate_object_file(const IRState *state, const char *file_name);
 
 void dispose_ir_state(IRState *state);
 
-unsigned char program_to_object_file(Program *program, const char *file_name, bool llvm_debug) {
+unsigned char program_to_object_file(const Program *program, const char *file_name, bool llvm_debug) {
   assert(program != NULL);
 
   IRState state;
@@ -68,10 +69,9 @@ unsigned char program_to_object_file(Program *program, const char *file_name, bo
       .func_type = exit_type,
       .name = "exit",
   };
-  dyn_array_insert(&state.program->functions, exit_func);
+  dyn_array_insert(&state.external_funcs, exit_func);
 
-  // Subtract 1 from the count here so that we don't build the exit function
-  for (size_t i = 0; i < program->functions.count - 1; i++) {
+  for (size_t i = 0; i < program->functions.count; i++) {
     if (build_function(&state, &program->functions.elements[i]) != 0) {
       dispose_ir_state(&state);
       return 1;
@@ -100,8 +100,9 @@ unsigned char program_to_object_file(Program *program, const char *file_name, bo
   return 0;
 }
 
-unsigned char init_ir_state(IRState *state, Program *program) {
+unsigned char init_ir_state(IRState *state, const Program *program) {
   dyn_array_init(&state->type_refs, sizeof(TypeDefinitionRef), TYPE_DEFINITIONS_LEN_ESTIMATE);
+  dyn_array_init(&state->external_funcs, sizeof(Function), EXTERNAL_FUNCS_LEN_ESTIMATE);
 
   // TODO: This creation logic will need updating when supporting multiple source files
   state->context = LLVMContextCreate();
@@ -344,6 +345,10 @@ unsigned char generate_object_file(const IRState *state, const char *file_name) 
 }
 
 void dispose_ir_state(IRState *state) {
+  for (size_t i = 0; i < state->external_funcs.count; i++) {
+    function_free(&state->external_funcs.elements[i]);
+  }
+  dyn_array_free(&state->external_funcs);
   for (size_t i = 0; i < state->type_refs.count; i++) {
     free(state->type_refs.elements[i].field_types);
   }

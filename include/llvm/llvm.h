@@ -10,7 +10,8 @@ struct IRState {
   LLVMModuleRef module;
   LLVMBuilderRef builder;
   LLVMValueRef current_func;
-  Program *program;
+  const Program *program;
+  Functions external_funcs;
   TypeDefinitionRefs type_refs;
 };
 
@@ -21,6 +22,6 @@ struct IRState {
  * All LLVM state is cleaned up as part of this function, no additional cleanup neccessary
  * Returns 0 on success, 1 on error
  */
-unsigned char program_to_object_file(Program *program, const char *file_name, bool llvm_debug);
+unsigned char program_to_object_file(const Program *program, const char *file_name, bool llvm_debug);
 
 #endif // _LLVM_H_

@@ -67,7 +67,7 @@ void build_array_length_check(IRState *state, const IdentifierKey *ident_key, co
 
   LLVMPositionBuilderAtEnd(state->builder, exit_block);
 
-  const Function *exit_func = load_function(&state->program->functions, "exit");
+  const Function *exit_func = load_function(state, "exit");
   assert(exit_func != NULL);
   LLVMValueRef exit_code = LLVMConstInt(LLVMInt32TypeInContext(state->context), 1, false);
   LLVMBuildCall2(state->builder, exit_func->func_type, exit_func->ptr, &exit_code, 1, "");

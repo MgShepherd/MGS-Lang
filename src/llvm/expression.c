@@ -178,7 +178,7 @@ LLVMValueRef build_identifier(const IRState *state, const IdentifierKey *ident_k
 }
 
 LLVMValueRef build_func_call(IRState *state, const FunctionCall *func_call, const LLVMTypeRef d_type, bool store) {
-  const Function *func = load_function(&state->program->functions, func_call->name);
+  const Function *func = load_function(state, func_call->name);
   assert(func != NULL);
 
   LLVMValueRef params[func->parameters.count];

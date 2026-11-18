@@ -16,6 +16,7 @@ unsigned char process_next_token(Token *token, const char *input, size_t input_l
 unsigned char process_word_token(Token *token, const char *input, size_t input_len, size_t *idx);
 unsigned char process_number_token(Token *token, const char *input, size_t input_len, size_t *idx);
 unsigned char process_symbol_token(Token *token, const char *input, size_t input_len, size_t *idx);
+void process_comment(const char *input, size_t input_len, size_t *idx);
 
 #define X(N)                                                                                                           \
   case N:                                                                                                              \
@@ -54,6 +55,20 @@ unsigned char lexer_process_tokens(Tokens *tokens, const char *data) {
 
   size_t idx = 0;
   while (idx < data_len) {
+    while (idx < data_len && isspace(data[idx])) {
+      idx += 1;
+    }
+
+    if (idx >= data_len) {
+      break;
+    }
+
+    if (data[idx] == '/' && data[idx + 1] == '/') {
+      idx += 2;
+      process_comment(data, data_len, &idx);
+      continue;
+    }
+
     Token tok;
     if (process_next_token(&tok, data, data_len, &idx) != 0) {
       fprintf(stderr, "Failed to process token starting from: %c\n", data[idx]);
@@ -73,14 +88,6 @@ unsigned char lexer_process_tokens(Tokens *tokens, const char *data) {
 unsigned char process_next_token(Token *token, const char *input, size_t input_len, size_t *idx) {
   assert(*idx < input_len);
   token->t_type = T_NONE;
-
-  while (*idx < input_len && isspace(input[*idx])) {
-    *idx += 1;
-  }
-
-  if (*idx == input_len) {
-    return 0;
-  }
 
   if (isalpha(input[*idx]) || input[*idx] == '_') {
     return process_word_token(token, input, input_len, idx);
@@ -214,4 +221,11 @@ unsigned char process_symbol_token(Token *token, const char *input, size_t input
   token->item = NULL;
   *idx += 1;
   return 0;
+}
+
+void process_comment(const char *input, size_t input_len, size_t *idx) {
+  while (*idx < input_len && input[*idx] != '\n') {
+    *idx += 1;
+  }
+  *idx += 1;
 }

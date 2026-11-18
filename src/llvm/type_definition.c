@@ -39,8 +39,8 @@ void build_array_type_definition(IRState *state) {
   assert(field_types != NULL);
 
   // We are using an int32 to represent the length of the array as this matches what LLVM uses for a lot of indexing ops
-  field_types[0] = LLVMInt32TypeInContext(state->context);
-  field_types[1] = LLVMPointerTypeInContext(state->context, DEFAULT_ADDRESS_SPACE);
+  field_types[ARRAY_LENGTH_FIELD_IDX] = LLVMInt32TypeInContext(state->context);
+  field_types[ARRAY_ELEMENTS_FIELD_IDX] = LLVMPointerTypeInContext(state->context, DEFAULT_ADDRESS_SPACE);
 
   type_ref.ref = LLVMStructCreateNamed(state->context, ARRAY_TYPE_DEFINITION_NAME);
   LLVMStructSetBody(type_ref.ref, field_types, NUM_ARRAY_TYPE_DEF_FIELDS, false);

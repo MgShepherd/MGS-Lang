@@ -1,6 +1,7 @@
 #include "sema/program.h"
 
 #include "dynamic_array.h"
+#include "parsing/type.h"
 #include "sema/data_type.h"
 #include "sema/statement.h"
 #include "sema/type_definition.h"
@@ -91,6 +92,12 @@ unsigned char analyse_parameters(SemaState *state, Fields *parameters) {
     Field *param = &parameters->elements[i];
     Identifier *ident = &state->program->identifiers.elements[param->ident_idx];
     ident->scope = state->scopes.elements[state->scopes.count - 1];
+
+    // Always set array parameters to have -1 length so runtime bounds checks will be added
+    if (param->d_type.d_kind == D_ARRAY) {
+      param->d_type.d_union.a_type.length = -1;
+      ident->d_type.d_union.a_type.length = -1;
+    }
   }
   return 0;
 }

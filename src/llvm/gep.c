@@ -1,6 +1,7 @@
 #include "llvm/gep.h"
 #include "parsing/type.h"
 
+#include "llvm/type_definition.h"
 #include "llvm/utils.h"
 #include <assert.h>
 
@@ -31,7 +32,7 @@ LLVMValueRef get_array_element_ptr(IRState *state, const IdentifierKey *ident_ke
   const TypeDefinitionRef *type_def = load_type_definition(&state->type_refs, ARRAY_TYPE_DEFINITION_NAME);
   assert(type_def != NULL);
 
-  const size_t array_ptr_idx = 1;
+  const size_t array_ptr_idx = ARRAY_ELEMENTS_FIELD_IDX;
   const LLVMValueRef array_data_ptr = get_element_ptr(state, ident_key, &array_ptr_idx, 1);
   const LLVMValueRef array_data =
       LLVMBuildLoad2(state->builder, type_def->field_types[array_ptr_idx], array_data_ptr, "get_array_data");
@@ -53,7 +54,7 @@ LLVMValueRef get_array_element_ptr(IRState *state, const IdentifierKey *ident_ke
 // TODO: Update this to support multi-dimensional arrays
 void build_array_length_check(IRState *state, const IdentifierKey *ident_key, const TypeDefinitionRef *type_def,
                               LLVMValueRef index) {
-  size_t array_length_idx = 0;
+  size_t array_length_idx = ARRAY_LENGTH_FIELD_IDX;
   LLVMValueRef array_length_ptr = get_element_ptr(state, ident_key, &array_length_idx, 1);
   LLVMValueRef array_length =
       LLVMBuildLoad2(state->builder, type_def->field_types[array_length_idx], array_length_ptr, "get_array_len");

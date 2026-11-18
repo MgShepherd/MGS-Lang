@@ -41,6 +41,17 @@ main: func() -> i64 {
 	return my_array[1];
 }
 
+-- TEST passing array into function
+-- EXPECTED_STATUS_CODE 12
+get_second: func(my_arr: []i64) -> i64 {
+  return my_arr[1];
+}
+
+main: func() -> i64 {
+  my_array: []i64 = [10, 12];
+	return get_second(my_array);
+}
+
 -- TEST returning arrays with different lengths from function
 -- EXPECTED_STATUS_CODE 5
 get_array: func() -> []i64 {
@@ -67,6 +78,17 @@ get_array: func() -> []i64 {
 main: func() -> i64 {
   my_array: []i64 = get_array();
 	return my_array[3];
+}
+
+-- TEST Array access out of bounds from function param should exit with code 1
+-- EXPECTED_STATUS_CODE 1
+get_fifth: func(my_arr: []i64) -> i64 {
+	return my_arr[4];
+}
+
+main: func() -> i64 {
+  my_array: []i64 = [1,2,3,4];
+	return get_fifth(my_array);
 }
 
 -- TEST array type does not match function return type

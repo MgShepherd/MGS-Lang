@@ -12,6 +12,7 @@ typedef struct {
 
 typedef struct {
   const Program *program;
+  // TODO: Why are we not using the program functions and type_defs here?
   const Functions functions;
   const TypeDefinitions type_defs;
   Scopes scopes;

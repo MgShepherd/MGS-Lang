@@ -8,6 +8,8 @@
 #define ARRAY_TYPE_DEFINITION_NAME "!ARRAY"
 // 2 fields in a array internal struct representation - first is the pointer to the elements, second is the length
 #define NUM_ARRAY_TYPE_DEF_FIELDS 2
+#define ARRAY_LENGTH_FIELD_IDX 0
+#define ARRAY_ELEMENTS_FIELD_IDX 1
 
 typedef struct IRState IRState;
 

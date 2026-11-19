@@ -285,11 +285,20 @@ LLVMValueRef build_array_access(IRState *state, const ArrayAccess *array_access,
 }
 
 LLVMValueRef build_struct_access(IRState *state, const StructAccess *struct_access, bool store) {
-  assert(struct_access->type_def != NULL && struct_access->type_def->td_kind == TD_STRUCT);
-  const StructDefinition *struct_def = &struct_access->type_def->td_union.s_def;
-  assert(struct_def != NULL);
+  const Identifier *ident = load_identifier(&state->program->identifiers, &struct_access->ident_key);
 
-  const TypeDefinitionRef *type_def = load_type_definition(&state->type_refs, struct_def->name);
+  const TypeDefinitionRef *type_def = NULL;
+  if (ident->d_type.d_kind == D_STRUCT) {
+    assert(struct_access->type_def != NULL && struct_access->type_def->td_kind == TD_STRUCT);
+    const StructDefinition *struct_def = &struct_access->type_def->td_union.s_def;
+    assert(struct_def != NULL);
+
+    type_def = load_type_definition(&state->type_refs, struct_def->name);
+  } else if (ident->d_type.d_kind == D_ARRAY) {
+    type_def = load_type_definition(&state->type_refs, ARRAY_TYPE_DEFINITION_NAME);
+  }
+  assert(type_def != NULL);
+
   const LLVMTypeRef field_type = get_type(state, struct_access->d_type);
   assert(type_def != NULL && field_type != NULL);
 

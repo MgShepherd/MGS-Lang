@@ -41,6 +41,18 @@ main: func() -> i64 {
 	return my_array[1];
 }
 
+-- TEST getting length of array
+-- EXPECTED_STATUS_CODE 20
+main: func() -> i64 {
+  my_array: []i64 = [1, 2, 3, 4, 5];
+	if my_array.length > 10 {
+		 return 10;
+	} else if my_array.length > 4 {
+		return 20;
+	}
+	return 30;
+}
+
 -- TEST passing array into function
 -- EXPECTED_STATUS_CODE 12
 get_second: func(my_arr: []i64) -> i64 {

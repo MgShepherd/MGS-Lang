@@ -6,12 +6,20 @@
 #include "sema/expression.h"
 #include "sema/utils.h"
 #include "utils.h"
+#include "llvm/type_definition.h"
 
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
 
+static const DataType LENGTH_TYPE = {.d_kind = D_PRIMITIVE, .d_union = {.p_type = P_I32}};
+
 int field_assignment_compare(const void *item1, const void *item2);
+
+unsigned char analyse_array_length_access(StructAccess *struct_access, const DataType *expr_type,
+                                          const Identifier *ident);
+unsigned char analyse_struct_field_access(SemaState *state, StructAccess *struct_access, const DataType *expr_type,
+                                          const Identifier *ident);
 
 unsigned char analyse_func_call(SemaState *state, const FunctionCall *func_call, const DataType *expr_type) {
   const Function *func = get_function(&state->functions, func_call->name);
@@ -150,70 +158,17 @@ unsigned char analyse_struct_access(SemaState *state, StructAccess *struct_acces
     fprintf(stderr, "Undefined variable: %s\n", struct_access->ident_key.name);
     return 1;
   }
-  assert(ident->d_type.d_kind == D_STRUCT);
 
-  const StructType *current_type = &ident->d_type.d_union.s_type;
-  Field *field = NULL;
-  size_t current_nested_level = 0;
-
-  struct_access->field_idxs = malloc(sizeof(size_t) * struct_access->num_field_nestings);
-  assert(struct_access->field_idxs != NULL);
-
-  while (current_nested_level < struct_access->num_field_nestings) {
-    const TypeDefinition *type_def = get_type_def(&state->type_defs, current_type->name);
-    if (current_nested_level == 0) {
-      struct_access->type_def = type_def;
-    }
-
-    assert(type_def->td_kind == TD_STRUCT);
-    const StructDefinition *struct_def = &type_def->td_union.s_def;
-
-    bool found = false;
-    for (size_t i = 0; i < struct_def->fields.count; i++) {
-      field = &struct_def->fields.elements[i];
-      // TODO: This doesn't really make sense for the field to be an identifier, should look to change this
-      const Identifier *ident = &state->program->identifiers.elements[field->ident_idx];
-      if (strcmp(ident->name, struct_access->field_names[current_nested_level]) == 0) {
-        field = &struct_def->fields.elements[i];
-        struct_access->field_idxs[current_nested_level] = i;
-        found = true;
-        break;
-      }
-    }
-
-    if (!found) {
-      field = NULL;
-      break;
-    }
-
-    current_nested_level += 1;
-    if (field->d_type.d_kind != D_STRUCT) {
-      break;
-    }
-
-    current_type = &field->d_type.d_union.s_type;
-  }
-
-  char *field_name = join_strings(struct_access->field_names, struct_access->num_field_nestings, '.');
-  if (field == NULL || current_nested_level < struct_access->num_field_nestings) {
-    fprintf(stderr, "Undefined field %s for struct %s\n", field_name, struct_access->type_def->td_union.s_def.name);
-    free(field_name);
+  // Array length access is treated as struct access (internally an array is a struct)
+  switch (ident->d_type.d_kind) {
+  case D_STRUCT:
+    return analyse_struct_field_access(state, struct_access, expr_type, ident);
+  case D_ARRAY:
+    return analyse_array_length_access(struct_access, expr_type, ident);
+  default:
+    fprintf(stderr, "Invalid Identifier kind %s for struct acccess\n", d_type_to_string(&ident->d_type));
     return 1;
   }
-
-  if (expr_type != NULL && !do_data_types_match(&field->d_type, expr_type)) {
-    fprintf(stderr, "Field %s expected type %s, got %s\n", field_name, d_type_to_string(expr_type),
-            d_type_to_string(&field->d_type));
-    free(field_name);
-    return 1;
-  }
-
-  struct_access->d_type = &field->d_type;
-  struct_access->ident_key.scope = ident->scope;
-  struct_access->variable = ident->d_type.variable;
-
-  free(field_name);
-  return 0;
 }
 
 unsigned char analyse_array_literal(SemaState *state, ArrayLiteral *array_lit, const DataType *expr_type) {
@@ -313,4 +268,98 @@ int field_assignment_compare(const void *item1, const void *item2) {
   const FieldAssignment *field_assign1 = (FieldAssignment *)item1;
   const FieldAssignment *field_assign2 = (FieldAssignment *)item2;
   return strcmp(field_assign1->name, field_assign2->name);
+}
+
+unsigned char analyse_array_length_access(StructAccess *struct_access, const DataType *expr_type,
+                                          const Identifier *ident) {
+  if (struct_access->num_field_nestings != 1) {
+    fprintf(stderr, "Nested array field accessing not supported\n");
+    return 1;
+  }
+
+  if (strcmp("length", struct_access->field_names[0]) != 0) {
+    fprintf(stderr, "Only the length property can be accessed for arrays\n");
+    return 1;
+  }
+
+  struct_access->field_idxs = malloc(sizeof(size_t) * struct_access->num_field_nestings);
+  assert(struct_access->field_idxs != NULL);
+
+  struct_access->field_idxs[0] = ARRAY_LENGTH_FIELD_IDX;
+
+  if (expr_type != NULL && !do_data_types_match(&LENGTH_TYPE, expr_type)) {
+    fprintf(stderr, "Expected type %s, but was an array length expression\n", d_type_to_string(expr_type));
+    return 1;
+  }
+
+  struct_access->d_type = &LENGTH_TYPE;
+  struct_access->ident_key.scope = ident->scope;
+  struct_access->variable = ident->d_type.variable;
+
+  return 0;
+}
+unsigned char analyse_struct_field_access(SemaState *state, StructAccess *struct_access, const DataType *expr_type,
+                                          const Identifier *ident) {
+  const StructType *current_type = &ident->d_type.d_union.s_type;
+  Field *field = NULL;
+  size_t current_nested_level = 0;
+
+  struct_access->field_idxs = malloc(sizeof(size_t) * struct_access->num_field_nestings);
+  assert(struct_access->field_idxs != NULL);
+
+  while (current_nested_level < struct_access->num_field_nestings) {
+    const TypeDefinition *type_def = get_type_def(&state->type_defs, current_type->name);
+    if (current_nested_level == 0) {
+      struct_access->type_def = type_def;
+    }
+
+    assert(type_def->td_kind == TD_STRUCT);
+    const StructDefinition *struct_def = &type_def->td_union.s_def;
+
+    bool found = false;
+    for (size_t i = 0; i < struct_def->fields.count; i++) {
+      field = &struct_def->fields.elements[i];
+      // TODO: This doesn't really make sense for the field to be an identifier, should look to change this
+      const Identifier *ident = &state->program->identifiers.elements[field->ident_idx];
+      if (strcmp(ident->name, struct_access->field_names[current_nested_level]) == 0) {
+        field = &struct_def->fields.elements[i];
+        struct_access->field_idxs[current_nested_level] = i;
+        found = true;
+        break;
+      }
+    }
+
+    if (!found) {
+      field = NULL;
+      break;
+    }
+
+    current_nested_level += 1;
+    if (field->d_type.d_kind != D_STRUCT) {
+      break;
+    }
+
+    current_type = &field->d_type.d_union.s_type;
+  }
+
+  char *field_name = join_strings(struct_access->field_names, struct_access->num_field_nestings, '.');
+  if (field == NULL || current_nested_level < struct_access->num_field_nestings) {
+    fprintf(stderr, "Undefined field %s for struct %s\n", field_name, struct_access->type_def->td_union.s_def.name);
+    free(field_name);
+    return 1;
+  }
+
+  if (expr_type != NULL && !do_data_types_match(&field->d_type, expr_type)) {
+    fprintf(stderr, "Field %s expected type %s, got %s\n", field_name, d_type_to_string(expr_type),
+            d_type_to_string(&field->d_type));
+    free(field_name);
+    return 1;
+  }
+
+  struct_access->d_type = &field->d_type;
+  struct_access->ident_key.scope = ident->scope;
+  struct_access->variable = ident->d_type.variable;
+
+  free(field_name);
+  return 0;
 }
